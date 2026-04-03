@@ -1,0 +1,70 @@
+// src/modules/sales/utils/sales-grouping.ts
+
+import type {
+  CartLineItem,
+  DisplayExpenseLine,
+  DisplayProductGroup,
+} from "../types/sales.types";
+
+export const buildProductGroupKey = (item: CartLineItem) =>
+  [
+    item.kind,
+    item.productId ?? "",
+    item.variantId ?? "",
+    item.name.trim().toLowerCase(),
+    item.unit ?? "",
+    item.price,
+  ].join("|");
+
+export const groupProductItems = (
+  productItems: CartLineItem[]
+): DisplayProductGroup[] => {
+  const groups = new Map<string, DisplayProductGroup>();
+
+  for (const item of productItems) {
+    const groupKey = buildProductGroupKey(item);
+
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, {
+        groupKey,
+        displayType: "product",
+        name: item.name,
+        unit: item.unit,
+        price: item.price,
+        productId: item.productId,
+        variantId: item.variantId,
+        sizeLines: [],
+        totalQuantity: 0,
+        totalAmount: 0,
+      });
+    }
+
+    const current = groups.get(groupKey)!;
+    current.sizeLines.push({
+      rowId: item.rowId,
+      length: item.length,
+      quantity: item.quantity,
+      lineTotal: item.lineTotal,
+    });
+    current.totalQuantity += item.quantity;
+    current.totalAmount += item.lineTotal;
+  }
+
+  return Array.from(groups.values());
+};
+
+export const buildOrderedDisplayItems = (
+  groupedProductItems: DisplayProductGroup[],
+  expenseItems: CartLineItem[]
+) => {
+  return [
+    ...groupedProductItems,
+    ...expenseItems.map(
+      (item) =>
+        ({
+          ...item,
+          displayType: "expense" as const,
+        }) satisfies DisplayExpenseLine
+    ),
+  ];
+};

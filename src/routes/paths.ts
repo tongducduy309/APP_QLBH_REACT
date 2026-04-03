@@ -1,0 +1,15 @@
+export const paths = {
+  login: "/login",
+  dashboard: "/",
+  sales: "/sales",
+  inventory: "/inventory",
+  customers: "/customers",
+  transactions: "/transactions",
+  taxReport: "/reports/tax",
+  quoteReport: "/reports/quotes",
+  statistics: "/statistics",
+  barcode: "/barcode",
+  purchaseReceipts: "/purchase-receipts",
+  settings: "/settings",
+  forbidden: "/forbidden",
+};
