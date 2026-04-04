@@ -21,6 +21,8 @@ type Props = {
   onChangePaidAmount: (value: number) => void;
   onReset: () => void;
   onCheckout: () => void;
+  checkoutDisabled?: boolean;
+  checkoutLoading?: boolean;
 };
 
 export function PaymentSummaryCard(props: Props) {
@@ -124,8 +126,8 @@ export function PaymentSummaryCard(props: Props) {
           Làm mới đơn
         </Button>
 
-        <Button className="w-full" onClick={props.onCheckout}>
-          Thanh toán
+        <Button onClick={props.onCheckout} disabled={props.checkoutDisabled}>
+          {props.checkoutLoading ? "Đang thanh toán..." : "Thanh toán"}
         </Button>
       </div>
     </>

@@ -1,3 +1,5 @@
+import { LineKind } from "./sales.types";
+
 export type ProductType = "A" | "B" | "C" | "D";
 export type PriceMode = "A" | "B" | "C"; // A: retail, B: store, C: custom
 
@@ -13,7 +15,7 @@ export type InventoryProduct = {
 };
 
 export type OrderedProduct = {
-  id: number | null;
+  kind: LineKind;
   name: string;
   unit: string;
   price: number;
@@ -21,6 +23,7 @@ export type OrderedProduct = {
   quantity: number;
   productId: number | null;
   variantId?: number | null;
+  inventoryId?: number | null;
 };
 
 export type CurvingOptions = {
@@ -51,3 +54,4 @@ export type OrderProductDialogProps = {
   product?: Partial<InventoryProduct>;
   onOrder: (order: OrderedProduct) => void;
 };
+

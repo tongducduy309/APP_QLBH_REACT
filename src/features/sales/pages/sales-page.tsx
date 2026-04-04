@@ -1,13 +1,14 @@
-// src/modules/sales/pages/SalesPage.tsx
-
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
-import { getNextOrderCode } from "@/services/order-api";
+import { getNextOrderCode, createOrder } from "@/services/order-api";
 import {
   InventoryRes,
   OrderProductDialog,
 } from "../components/order-product-dialog";
-import { CustomerPickerDialog, CustomerItem } from "../components/customer-picker-dialog";
+import {
+  CustomerPickerDialog,
+  CustomerItem,
+} from "../components/customer-picker-dialog";
 import { ProductSelectorCard } from "../components/ProductSelectorCard";
 import { OtherExpenseCard } from "../components/OtherExpenseCard";
 import { OrderedItemsCard } from "../components/OrderedItemsCard";
@@ -15,55 +16,21 @@ import { CustomerOrderSummaryCard } from "../components/CustomerOrderSummaryCard
 import { PaymentSummaryCard } from "../components/PaymentSummaryCard";
 import { CustomerOrderInfoDialog } from "../components/CustomerOrderInfoDialog";
 import { useSalesOrder } from "../hooks/useSalesOrder";
-import type { Product } from "../types/sales.types";
-
-const products: Product[] = [
-  {
-    id: 1,
-    sku: "SP001",
-    name: "Tôn lạnh",
-    category: "Tôn",
-    stock: 24,
-    price: 320000,
-    retailPrice: 320000,
-    storePrice: 300000,
-    cost: 260000,
-    baseUnit: "mét",
-    status: "Còn hàng",
-    variantId: 101,
-    variantCode: "0.45",
-  },
-  {
-    id: 2,
-    sku: "SP002",
-    name: "Tôn sóng vuông",
-    category: "Tôn",
-    stock: 8,
-    price: 410000,
-    retailPrice: 410000,
-    storePrice: 390000,
-    cost: 340000,
-    baseUnit: "mét",
-    status: "Sắp hết",
-    variantId: 102,
-    variantCode: "0.50",
-  },
-  {
-    id: 3,
-    sku: "SP003",
-    name: "Tôn phẳng",
-    category: "Phụ kiện",
-    stock: 0,
-    price: 290000,
-    retailPrice: 290000,
-    storePrice: 270000,
-    cost: 220000,
-    baseUnit: "mét",
-    status: "Hết hàng",
-    variantId: 103,
-    variantCode: "1.00",
-  },
-];
+import type {
+  OrderCreateReq,
+  OrderDetailCreateReq,
+  Product,
+} from "../types/sales.types";
+import { mapInventoryProductsToSalesProducts } from "../utils/sales-mappers";
+import { getAllInventory } from "@/services/product-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -78,47 +45,57 @@ export function SalesPage() {
   const [customerOrderDialogOpen, setCustomerOrderDialogOpen] = useState(false);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
 
-  const [customers, setCustomers] = useState<CustomerItem[]>([
-    {
-      id: 1,
-      name: "Nguyễn Văn An",
-      phone: "0909123456",
-      address: "Tam Kỳ, Quảng Nam",
-      groupKey: "A",
-    },
-    {
-      id: 2,
-      name: "Trần Thị Bình",
-      phone: "0912345678",
-      address: "Hội An, Quảng Nam",
-      groupKey: "B",
-    },
-    {
-      id: 3,
-      name: "Lê Minh Cường",
-      phone: "0988123123",
-      address: "Đà Nẵng",
-      groupKey: "C",
-    },
-  ]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
+
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [missingCustomerDialogOpen, setMissingCustomerDialogOpen] =
+    useState(false);
+
+  const [selectedCustomerFromPicker, setSelectedCustomerFromPicker] =
+    useState<CustomerItem | null>(null);
+
+
 
   const filteredProducts = useMemo(() => {
     if (tab === "Tất cả") return products;
     return products.filter((item) => item.status === tab);
-  }, [tab]);
+  }, [tab, products]);
+
+  const isCartEmpty = useMemo(() => {
+    return sales.orderedDisplayItems.length === 0;
+  }, [sales.orderedDisplayItems]);
+
+  const hasCustomerInfo = useMemo(() => {
+    return Boolean(
+      sales.customerOrderInfo.customerName?.trim() ||
+        sales.customerOrderInfo.customerPhone?.trim() ||
+        sales.customerOrderInfo.customerAddress?.trim() ||
+        sales.customerOrderInfo.customerId
+    );
+  }, [sales.customerOrderInfo]);
+
+
+  const fetchProducts = useCallback(async () => {
+      try {
+        setProductsLoading(true);
+        const inventoryProducts = await getAllInventory();
+        const mappedProducts =
+          mapInventoryProductsToSalesProducts(inventoryProducts);
+        setProducts(mappedProducts);
+      } catch (error) {
+        console.error("Lỗi lấy danh sách sản phẩm bán hàng", error);
+        setProducts([]);
+      } finally {
+        setProductsLoading(false);
+      }
+    },[]);
+  
 
   useEffect(() => {
-    const fetchOrderCode = async () => {
-      try {
-        const code = await getNextOrderCode();
-        sales.setCustomerOrderInfo((prev) => ({
-          ...prev,
-          orderCode: code,
-        }));
-      } catch {}
-    };
+    
 
-    fetchOrderCode();
+    fetchProducts();
   }, []);
 
   const openOrderDialog = (product: Product) => {
@@ -128,12 +105,8 @@ export function SalesPage() {
   };
 
   const handleChooseCustomer = (customer: CustomerItem) => {
-    sales.setCustomerOrderInfo((prev) => ({
-      ...prev,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      customerAddress: customer.address,
-    }));
+    setSelectedCustomerFromPicker(customer);
+    setCustomerPickerOpen(false);
   };
 
   const handleSaveNewCustomer = async (
@@ -145,7 +118,6 @@ export function SalesPage() {
       groupKey: customer.name?.trim()?.[0]?.toUpperCase() || "#",
     };
 
-    setCustomers((prev) => [newCustomer, ...prev]);
 
     sales.setCustomerOrderInfo((prev) => ({
       ...prev,
@@ -157,9 +129,90 @@ export function SalesPage() {
     setCustomerPickerOpen(false);
   };
 
+  const buildOrderPayload = (): OrderCreateReq => {
+    const orderDetailReqs: OrderDetailCreateReq[] = sales.cartItems.map(
+      (item) => ({
+        productVariantId: item.variantId ?? null,
+        name: item.name,
+        length: item.length ?? 0,
+        quantity: item.quantity ?? 0,
+        price: item.price ?? 0,
+        baseUnit: item.unit ?? "",
+        inventoryId: item.inventoryId ?? null,
+      })
+    );
+
+    return {
+      customerId: sales.customerOrderInfo.customerId ?? null,
+      nameCustomer: sales.customerOrderInfo.customerName?.trim() || undefined,
+      phoneCustomer: sales.customerOrderInfo.customerPhone?.trim() || undefined,
+      addressCustomer:
+        sales.customerOrderInfo.customerAddress?.trim() || undefined,
+      tax: sales.taxAmount ?? 0,
+      note: sales.customerOrderInfo.note?.trim() || undefined,
+      paidAmount: sales.paidAmount ?? 0,
+      shippingFee: sales.shippingFee ?? 0,
+      orderDetailCreateReqs:orderDetailReqs,
+      createdAt:
+        sales.customerOrderInfo.createdDate ||
+        new Date().toISOString(),
+    };
+  };
+
+  const submitCheckout = async () => {
+    if (isCartEmpty) {
+      toast.error("Giỏ hàng đang trống.");
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+
+      const payload = buildOrderPayload();
+      const createdOrder = await createOrder(payload);
+
+      toast.success("Tạo đơn hàng thành công.");
+
+      sales.resetWholeOrder();
+      fetchProducts();
+
+      const code = await getNextOrderCode().catch(() => "");
+      sales.setCustomerOrderInfo({
+        customerId: null,
+        customerName: "",
+        customerPhone: "",
+        customerAddress: "",
+        orderCode: code,
+        createdDate: new Date().toISOString(),
+        note: "",
+        saveAsNewCustomer: false,
+      });
+    } catch (error) {
+      console.error("Lỗi tạo đơn hàng", error);
+      toast.error("Không thể tạo đơn hàng.");
+    } finally {
+      setCheckoutLoading(false);
+      setMissingCustomerDialogOpen(false);
+    }
+  };
+
+  const handleCheckoutClick = async () => {
+    if (isCartEmpty) {
+      toast.error("Giỏ hàng đang trống.");
+      return;
+    }
+
+    if (!hasCustomerInfo) {
+      setMissingCustomerDialogOpen(true);
+      return;
+    }
+
+    await submitCheckout();
+  };
+
   return (
     <PageShell>
-      <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr] bg-white p-4">
+      <div className="grid gap-6 bg-white p-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-6">
           <ProductSelectorCard
             tab={tab}
@@ -176,7 +229,7 @@ export function SalesPage() {
           />
         </div>
 
-        <div className="space-y-6 ">
+        <div className="space-y-6">
           <OrderedItemsCard
             items={sales.orderedDisplayItems}
             onEditProduct={(group) => {
@@ -193,6 +246,7 @@ export function SalesPage() {
                 storePrice: matchedProduct?.storePrice ?? group.price,
                 cost: matchedProduct?.cost ?? 0,
                 baseUnit: matchedProduct?.baseUnit ?? group.unit ?? "mét",
+                stock: matchedProduct?.stock ?? 0,
                 variantId: matchedProduct?.variantId ?? group.variantId ?? null,
                 variantCode: matchedProduct?.variantCode ?? "",
               } as Product);
@@ -225,10 +279,9 @@ export function SalesPage() {
             onChangeDiscount={sales.setDiscount}
             onChangePaidAmount={sales.setPaidAmount}
             onReset={sales.resetWholeOrder}
-            onCheckout={() => {
-              const payload = sales.handleCheckout();
-              console.log("ORDER_PAYLOAD", payload);
-            }}
+            onCheckout={handleCheckoutClick}
+            checkoutDisabled={isCartEmpty || checkoutLoading}
+            checkoutLoading={checkoutLoading}
           />
         </div>
       </div>
@@ -241,24 +294,63 @@ export function SalesPage() {
         }}
         product={sales.selectedProduct ?? {}}
         editValue={sales.editDialogValue}
-        onOrder={sales.editingGroupKey ? sales.handleUpdateOrder : sales.handleAddOrder}
+        onOrder={
+          sales.editingGroupKey
+            ? sales.handleUpdateOrder
+            : sales.handleAddOrder
+        }
       />
 
       <CustomerOrderInfoDialog
-        open={customerOrderDialogOpen}
-        onClose={() => setCustomerOrderDialogOpen(false)}
-        value={sales.customerOrderInfo}
-        onChange={sales.setCustomerOrderInfo}
-        onOpenCustomerPicker={() => setCustomerPickerOpen(true)}
-      />
+  open={customerOrderDialogOpen}
+  onClose={() => {
+    setCustomerOrderDialogOpen(false);
+    setSelectedCustomerFromPicker(null);
+  }}
+  value={sales.customerOrderInfo}
+  onChange={sales.setCustomerOrderInfo}
+  onOpenCustomerPicker={() => setCustomerPickerOpen(true)}
+  selectedCustomer={selectedCustomerFromPicker}
+/>
 
       <CustomerPickerDialog
         open={customerPickerOpen}
         onOpenChange={setCustomerPickerOpen}
-        customers={customers}
+        // customers={customers}
         onChoose={handleChooseCustomer}
-        onSaveNew={handleSaveNewCustomer}
+        // onSaveNew={handleSaveNewCustomer}
       />
+
+      <Dialog
+        open={missingCustomerDialogOpen}
+        onOpenChange={setMissingCustomerDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chưa có thông tin khách hàng</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Bạn chưa điền thông tin khách hàng. Bạn vẫn muốn tiếp tục thanh toán
+              và tạo đơn hàng chứ?
+            </p>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setMissingCustomerDialogOpen(false)}
+                disabled={checkoutLoading}
+              >
+                Quay lại
+              </Button>
+              <Button onClick={submitCheckout} disabled={checkoutLoading}>
+                {checkoutLoading ? "Đang thanh toán..." : "Vẫn tiếp tục"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

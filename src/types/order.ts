@@ -1,25 +1,34 @@
-export interface OrderReq {
-  code?: string;
-  customerId?: number | null;
-  orderDetails?: unknown[];
-  note?: string;
-};
+import { CustomerRes } from "@/features/customers/types/customer.types";
+import { ProductVariant } from "./product";
 
-export interface PaidDeptReq {
-  orderId: string;
-  amount: number;
-};
+export interface OrderDetailRes {
+  id: number;       
+  length: number;     
+  quantity: number;   
+  price:number;
+  totalQuantity:number;
+  inventoryId: number | null;
+  sku: string;
+  name: string;
+  productVariant: ProductVariant; 
+  baseUnit: string;
+  index:number|null;
+}
 
 export interface OrderRes {
-  id: string;
-  code: string;
-  customerId?: number | null;
-  totalAmount?: number;
+  id: string;                 
+  code: string;                 
+  customer?: CustomerRes | null; 
   note?: string;
-};
-
-export interface ResponseEntity<T = unknown> {
-  status: number;
-  message: string;
-  data: T;
-};
+  tax?: number;    
+  taxAmount?: number;
+  paidAmount: number;
+  remainingAmount: number;
+  shippingFee: number;
+  subtotal: number;
+  paidDept: number;
+  changeAmount: number;
+  total:number;
+  details: OrderDetailRes[];    
+  createdAt: string;
+}

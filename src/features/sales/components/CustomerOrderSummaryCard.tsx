@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import type { CustomerOrderInfo } from "../types/sales.types";
+import { formatDateToDDMMYYYY } from "@/utils/date";
 
 type Props = {
   value: CustomerOrderInfo;
@@ -14,7 +15,7 @@ export function CustomerOrderSummaryCard({ value, onEdit }: Props) {
       <div className="border-b bg-sky-50 px-4 py-3">
         <p className="font-semibold">Thông tin khách hàng & hóa đơn</p>
         <p className="text-sm text-muted-foreground">
-          Ngày tạo: {value.createdDate || "-"}
+          Ngày tạo: {formatDateToDDMMYYYY(value.createdDate)}
         </p>
       </div>
 

@@ -2,16 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import type {
-  DisplayExpenseLine,
-  DisplayProductGroup,
+import {
+  LINE_KIND_LABEL,
+  type DisplayExpenseLine,
+  type DisplayInventoryGroup,
+  type DisplayNonInventoryGroup,
 } from "../types/sales.types";
 
-type OrderedItem = DisplayProductGroup | DisplayExpenseLine;
+type OrderedItem = DisplayInventoryGroup | DisplayNonInventoryGroup | DisplayExpenseLine;
 
 type Props = {
   items: OrderedItem[];
-  onEditProduct: (group: DisplayProductGroup) => void;
+  onEditProduct: (group: DisplayInventoryGroup | DisplayNonInventoryGroup) => void;
   onRemoveExpense: (rowId: string) => void;
   onRemoveGroup: (groupKey: string) => void;
 };
@@ -63,7 +65,7 @@ export function OrderedItemsCard({
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <p className="font-medium">{line.name}</p>
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                      Chi phí khác
+                      {LINE_KIND_LABEL[line.displayType]}
                     </span>
                   </div>
 
@@ -114,7 +116,7 @@ export function OrderedItemsCard({
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <p className="font-medium">{line.name}</p>
                   <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700">
-                    Sản phẩm
+                    {LINE_KIND_LABEL[line.displayType]}
                   </span>
                 </div>
 

@@ -12,9 +12,10 @@ import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { NumberInput } from "@/components/ui/number-input";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, TriangleAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { OrderedProduct } from "../types/order-product.types";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -22,23 +23,14 @@ type PriceMode = "A" | "B";
 export type InventoryRes = {
   id?: number | null;
   variantId?: number | null;
+  inventoryId?: number | null;
   name?: string;
   variantCode?: string;
   baseUnit?: string;
   retailPrice?: number;
   storePrice?: number;
   cost?: number;
-};
-
-export type OrderedProduct = {
-  id: number | null;
-  name: string;
-  unit: string;
-  price: number;
-  length: number | null;
-  quantity: number;
-  productId: number | null;
-  variantId?: number | null;
+  stock?: number;
 };
 
 type OrderSizeLine = {
@@ -69,6 +61,7 @@ export type EditableOrderedGroup = {
   price: number;
   productId: number | null;
   variantId?: number | null;
+  inventoryId?: number | null;
   sizeLines: Array<{
     length: number;
     quantity: number;
@@ -140,6 +133,9 @@ export function OrderProductDialog({
   const [isProductNameManuallyEdited, setIsProductNameManuallyEdited] =
     useState(false);
 
+  const [isOverStockDialogOpen, setIsOverStockDialogOpen] = useState(false);
+  const [allowOutsideStock, setAllowOutsideStock] = useState(false);
+
   const lengthRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
@@ -161,6 +157,8 @@ export function OrderProductDialog({
       );
       setProductName(editValue.name || "");
       setIsProductNameManuallyEdited(true);
+      setAllowOutsideStock(false);
+      setIsOverStockDialogOpen(false);
 
       setTimeout(() => {
         const first = editValue.sizeLines[0];
@@ -177,8 +175,10 @@ export function OrderProductDialog({
     setUnit(product?.baseUnit ?? "");
     const firstLine = createSizeLine();
     setSizeLines([firstLine]);
-    setProductName("");
+    setProductName(defaultComputedName);
     setIsProductNameManuallyEdited(false);
+    setAllowOutsideStock(false);
+    setIsOverStockDialogOpen(false);
 
     setTimeout(() => {
       lengthRefs.current[firstLine.id]?.focus();
@@ -237,6 +237,8 @@ export function OrderProductDialog({
     return form.price;
   }, [form]);
 
+  const availableStock = useMemo(() => Number(product?.stock ?? 0), [product?.stock]);
+
   const profitAmount = useMemo(() => {
     return Number(computedUnitPrice || 0) - Number(product?.cost || 0);
   }, [computedUnitPrice, product?.cost]);
@@ -253,8 +255,16 @@ export function OrderProductDialog({
   }, [sizeLines, computedUnitPrice]);
 
   const totalQuantity = useMemo(() => {
-    return sizeLines.reduce((sum, line) => sum + Number(line.quantity || 0), 0);
+    return sizeLines.reduce((sum, line) => sum + (Number(line.quantity || 0))*(line.length?Number(line.length||0):1),0);
   }, [sizeLines]);
+
+  const exceededQuantity = useMemo(() => {
+    return Math.max(0, totalQuantity - availableStock);
+  }, [totalQuantity, availableStock]);
+
+  const isOverStock = useMemo(() => {
+    return totalQuantity > availableStock;
+  }, [totalQuantity, availableStock]);
 
   const addSizeLine = () => {
     const newLine = createSizeLine();
@@ -422,11 +432,9 @@ export function OrderProductDialog({
     return true;
   };
 
-  const handleSubmit = () => {
-    if (!validateForm()) return;
-
+  const submitOrders = () => {
     const orders: OrderedProduct[] = sizeLines.map((line) => ({
-      id: null,
+      kind: allowOutsideStock?"non_inventory":"inventory",
       name: productName.trim(),
       unit: unit || "",
       price: computedUnitPrice,
@@ -434,6 +442,7 @@ export function OrderProductDialog({
       quantity: Number(line.quantity || 0),
       productId: product?.id ?? editValue?.productId ?? null,
       variantId: product?.variantId ?? editValue?.variantId ?? null,
+      inventoryId: product?.inventoryId ?? editValue?.inventoryId ?? null,
     }));
 
     if ((form.type === "B" || form.type === "C") && form.curving.enabled) {
@@ -443,7 +452,8 @@ export function OrderProductDialog({
       );
 
       orders.push({
-        id: null,
+        
+        kind: "expense",
         name: "Công Uốn Vòm",
         unit: "tấm",
         price: form.curving.price || 0,
@@ -451,344 +461,445 @@ export function OrderProductDialog({
         quantity: totalCurvingQty,
         productId: null,
         variantId: null,
+        inventoryId: null,
       });
     }
 
     onOrder(orders);
     toast.success(editValue ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm.");
-
     onOpenChange(false);
   };
 
+  const handleSubmit = () => {
+    if (!validateForm()) return;
+
+    if (isOverStock && !allowOutsideStock) {
+      setIsOverStockDialogOpen(true);
+      return;
+    }
+
+    submitOrders();
+  };
+
+  const handleConfirmOutsideStock = () => {
+    if (!allowOutsideStock) {
+      toast.error("Bạn cần xác nhận lấy hàng ngoài kho.");
+      return;
+    }
+
+    setIsOverStockDialogOpen(false);
+    submitOrders();
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="flex max-h-[92vh] flex-col overflow-hidden p-0 sm:max-w-5xl"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        <DialogHeader className="shrink-0 border-b px-6 py-4">
-          <DialogTitle>{editValue ? "Chỉnh sửa sản phẩm" : "Đặt hàng"}</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="flex max-h-[92vh] flex-col overflow-hidden p-0 sm:max-w-5xl"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <DialogHeader className="shrink-0 border-b px-6 py-4">
+            <DialogTitle>{editValue ? "Chỉnh sửa sản phẩm" : "Đặt hàng"}</DialogTitle>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-5">
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="product-name">Tên sản phẩm</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="product-name"
-                  value={productName}
-                  onChange={(e) => {
-                    setProductName(e.target.value);
-                    setIsProductNameManuallyEdited(true);
-                  }}
-                />
-                {!editValue && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setProductName(defaultComputedName);
-                      setIsProductNameManuallyEdited(false);
+          <div className="flex-1 overflow-y-auto px-6 py-5">
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="product-name">Tên sản phẩm</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="product-name"
+                    value={productName}
+                    onChange={(e) => {
+                      setProductName(e.target.value);
+                      setIsProductNameManuallyEdited(true);
                     }}
-                  >
-                    Tự động
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {!editValue && (
-              <>
-                <div className="space-y-3">
-                  <Label>Loại sản phẩm</Label>
-                  <RadioGroup
-                    value={form.type}
-                    onValueChange={(value) => setProductType(value as ProductType)}
-                    className="grid grid-cols-2 gap-2 md:grid-cols-4"
-                  >
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="A" id="type-a" />
-                      <span>Không</span>
-                    </label>
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="B" id="type-b" />
-                      <span>Sóng Vuông</span>
-                    </label>
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="C" id="type-c" />
-                      <span>Sóng La Phông</span>
-                    </label>
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="D" id="type-d" />
-                      <span>Phẳng</span>
-                    </label>
-                  </RadioGroup>
+                  />
+                  {!editValue && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setProductName(defaultComputedName);
+                        setIsProductNameManuallyEdited(false);
+                      }}
+                    >
+                      Tự động
+                    </Button>
+                  )}
                 </div>
+              </div>
 
-                {(form.type === "B" || form.type === "C") && (
-                  <div className="space-y-4 rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        id="curving"
-                        checked={form.curving.enabled}
-                        onCheckedChange={(checked) =>
-                          setCurvingEnabled(Boolean(checked))
-                        }
-                      />
-                      <Label htmlFor="curving">Uốn vòm</Label>
-                    </div>
-
-                    {form.curving.enabled && (
-                      <div className="space-y-2">
-                        <Label htmlFor="curving-price">Đơn giá uốn vòm</Label>
-                        <NumberInput
-                          id="curving-price"
-                          value={form.curving.price}
-                          onValueChange={setCurvingPrice}
-                        />
-                      </div>
-                    )}
+              {!editValue && (
+                <>
+                  <div className="space-y-3">
+                    <Label>Loại sản phẩm</Label>
+                    <RadioGroup
+                      value={form.type}
+                      onValueChange={(value) => setProductType(value as ProductType)}
+                      className="grid grid-cols-2 gap-2 md:grid-cols-4"
+                    >
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="A" id="type-a" />
+                        <span>Không</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="B" id="type-b" />
+                        <span>Sóng Vuông</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="C" id="type-c" />
+                        <span>Sóng La Phông</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="D" id="type-d" />
+                        <span>Phẳng</span>
+                      </label>
+                    </RadioGroup>
                   </div>
-                )}
 
-                {form.type === "D" && (
-                  <div className="space-y-4 rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <Checkbox
-                        id="has-groove"
-                        checked={form.flatSheet.hasGroove}
-                        onCheckedChange={(checked) =>
-                          setFlatSheetGroove(Boolean(checked))
-                        }
-                      />
-                      <Label htmlFor="has-groove">Nhấn máng</Label>
-                    </div>
-
-                    <div className="grid gap-4 md:grid-cols-3">
-                      <div className="space-y-2">
-                        <Label>Khổ / 120 cm</Label>
-                        <NumberInput
-                          value={form.flatSheet.width}
-                          onValueChange={setFlatSheetWidth}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label>Số tấm</Label>
-                        <select
-                          className="h-10 w-full rounded-md border bg-background px-3"
-                          value={form.flatSheet.panelCount}
-                          onChange={(e) =>
-                            setFlatSheetPanelCount(Number(e.target.value))
+                  {(form.type === "B" || form.type === "C") && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="curving"
+                          checked={form.curving.enabled}
+                          onCheckedChange={(checked) =>
+                            setCurvingEnabled(Boolean(checked))
                           }
-                        >
-                          <option value={1}>1</option>
-                          <option value={2}>2</option>
-                          <option value={3}>3</option>
-                        </select>
+                        />
+                        <Label htmlFor="curving">Uốn vòm</Label>
                       </div>
 
-                      <div className="space-y-2 md:col-span-3">
-                        <Label>Kích thước từng tấm (cm)</Label>
-                        <div
-                          className={`grid gap-2 ${
-                            form.flatSheet.panelCount === 1
-                              ? "grid-cols-1"
-                              : form.flatSheet.panelCount === 2
-                              ? "grid-cols-2"
-                              : "grid-cols-3"
-                          }`}
-                        >
-                          {form.flatSheet.panelSizes.map((panelSize, index) => (
-                            <NumberInput
-                              key={index}
-                              value={panelSize}
-                              onValueChange={(value) =>
-                                setFlatSheetPanelSizeAt(index, value)
-                              }
-                            />
-                          ))}
+                      {form.curving.enabled && (
+                        <div className="space-y-2">
+                          <Label htmlFor="curving-price">Đơn giá uốn vòm</Label>
+                          <NumberInput
+                            id="curving-price"
+                            value={form.curving.price}
+                            onValueChange={setCurvingPrice}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {form.type === "D" && (
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <div className="flex items-center gap-3">
+                        <Checkbox
+                          id="has-groove"
+                          checked={form.flatSheet.hasGroove}
+                          onCheckedChange={(checked) =>
+                            setFlatSheetGroove(Boolean(checked))
+                          }
+                        />
+                        <Label htmlFor="has-groove">Nhấn máng</Label>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label>Khổ / 120 cm</Label>
+                          <NumberInput
+                            value={form.flatSheet.width}
+                            onValueChange={setFlatSheetWidth}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Số tấm</Label>
+                          <select
+                            className="h-10 w-full rounded-md border bg-background px-3"
+                            value={form.flatSheet.panelCount}
+                            onChange={(e) =>
+                              setFlatSheetPanelCount(Number(e.target.value))
+                            }
+                          >
+                            <option value={1}>1</option>
+                            <option value={2}>2</option>
+                            <option value={3}>3</option>
+                          </select>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-3">
+                          <Label>Kích thước từng tấm (cm)</Label>
+                          <div
+                            className={`grid gap-2 ${
+                              form.flatSheet.panelCount === 1
+                                ? "grid-cols-1"
+                                : form.flatSheet.panelCount === 2
+                                ? "grid-cols-2"
+                                : "grid-cols-3"
+                            }`}
+                          >
+                            {form.flatSheet.panelSizes.map((panelSize, index) => (
+                              <NumberInput
+                                key={index}
+                                value={panelSize}
+                                onValueChange={(value) =>
+                                  setFlatSheetPanelSizeAt(index, value)
+                                }
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Label>Loại giá</Label>
+                    <RadioGroup
+                      value={priceMode}
+                      onValueChange={(value) => setPriceMode(value as PriceMode)}
+                      className="grid grid-cols-2 gap-2"
+                    >
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="A" id="price-a" />
+                        <span>Giá bán lẻ</span>
+                      </label>
+                      <label className="flex items-center gap-2 rounded-md border p-3">
+                        <RadioGroupItem value="B" id="price-b" />
+                        <span>Giá cửa hàng</span>
+                      </label>
+                    </RadioGroup>
                   </div>
-                )}
+                </>
+              )}
 
-                <div className="space-y-3">
-                  <Label>Loại giá</Label>
-                  <RadioGroup
-                    value={priceMode}
-                    onValueChange={(value) => setPriceMode(value as PriceMode)}
-                    className="grid grid-cols-2 gap-2"
-                  >
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="A" id="price-a" />
-                      <span>Giá bán lẻ</span>
-                    </label>
-                    <label className="flex items-center gap-2 rounded-md border p-3">
-                      <RadioGroupItem value="B" id="price-b" />
-                      <span>Giá cửa hàng</span>
-                    </label>
-                  </RadioGroup>
-                </div>
-              </>
-            )}
-
-            <div className="grid gap-4 md:grid-cols-[1fr_140px]">
-              <div className="space-y-2">
-                <Label htmlFor="price">Đơn giá</Label>
-                <NumberInput
-                  id="price"
-                  value={form.price}
-                  onValueChange={(value) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      price: value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unit">Đơn vị</Label>
-                <Input
-                  id="unit"
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold">Danh sách kích thước đặt hàng</p>
-                  <p className="text-sm text-muted-foreground">
-                    Có thể thêm nhiều dòng chiều dài và số lượng khác nhau
-                  </p>
+              <div className="grid gap-4 md:grid-cols-[1fr_140px]">
+                <div className="space-y-2">
+                  <Label htmlFor="price">Đơn giá</Label>
+                  <NumberInput
+                    id="price"
+                    value={form.price}
+                    onValueChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        price: value,
+                      }))
+                    }
+                  />
                 </div>
 
-                <Button type="button" variant="outline" onClick={addSizeLine}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Thêm kích thước
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Đơn vị</Label>
+                  <Input
+                    id="unit"
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                  />
+                </div>
               </div>
+
+              <Separator />
 
               <div className="space-y-4">
-                {sizeLines.map((line) => {
-                  const lineTotal =
-                    Number(line.length || 0) *
-                    Number(line.quantity || 0) *
-                    Number(computedUnitPrice || 0);
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold">Danh sách kích thước đặt hàng</p>
+                    <p className="text-sm text-muted-foreground">
+                      Có thể thêm nhiều dòng chiều dài và số lượng khác nhau
+                    </p>
+                  </div>
 
-                  return (
-                    <div key={line.id} className="rounded-xl border p-4">
-                      <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
-                        <div className="space-y-2">
-                          <Label>Chiều dài</Label>
-                          <NumberInput
-                            ref={(el) => {
-                              lengthRefs.current[line.id] = el;
-                            }}
-                            value={line.length}
-                            onValueChange={(value) =>
-                              updateSizeLine(line.id, {
-                                ...line,
-                                length: value,
-                              })
-                            }
-                          />
-                        </div>
+                  <Button type="button" variant="outline" onClick={addSizeLine}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Thêm kích thước
+                  </Button>
+                </div>
 
-                        <div className="space-y-2">
-                          <Label>Số lượng</Label>
-                          <NumberInput
-                            value={line.quantity}
-                            onValueChange={(value) =>
-                              updateSizeLine(line.id, {
-                                ...line,
-                                quantity: value,
-                              })
-                            }
-                          />
-                        </div>
+                <div className="space-y-4">
+                  {sizeLines.map((line) => {
+                    const lineTotal =
+                      Number(line.length || 0) *
+                      Number(line.quantity || 0) *
+                      Number(computedUnitPrice || 0);
 
-                        <div className="space-y-2">
-                          <Label>Thành tiền</Label>
-                          <Input value={formatCurrency(lineTotal)} readOnly />
-                        </div>
+                    return (
+                      <div key={line.id} className="rounded-xl border p-4">
+                        <div className="grid gap-4 md:grid-cols-[1fr_1fr_1fr_auto] md:items-end">
+                          <div className="space-y-2">
+                            <Label>Chiều dài</Label>
+                            <NumberInput
+                              ref={(el) => {
+                                lengthRefs.current[line.id] = el;
+                              }}
+                              value={line.length}
+                              onValueChange={(value) =>
+                                updateSizeLine(line.id, {
+                                  ...line,
+                                  length: value,
+                                })
+                              }
+                            />
+                          </div>
 
-                        <div className="flex md:justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => removeSizeLine(line.id)}
-                            disabled={sizeLines.length === 1}
-                            className="text-red-500 hover:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="space-y-2">
+                            <Label>Số lượng</Label>
+                            <NumberInput
+                              value={line.quantity}
+                              onValueChange={(value) =>
+                                updateSizeLine(line.id, {
+                                  ...line,
+                                  quantity: value,
+                                })
+                              }
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Thành tiền</Label>
+                            <Input value={formatCurrency(lineTotal)} readOnly />
+                          </div>
+
+                          <div className="flex md:justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => removeSizeLine(line.id)}
+                              disabled={sizeLines.length === 1}
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="shrink-0 border-t bg-background px-6 py-4 shadow-[0_-6px_16px_rgba(0,0,0,0.06)]">
-          <div className="space-y-2 rounded-lg border bg-muted/30 p-4 text-sm">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Tên hiển thị</span>
-              <span className="text-right font-medium">{productName || "-"}</span>
+          <div className="shrink-0 border-t bg-background px-6 py-4 shadow-[0_-6px_16px_rgba(0,0,0,0.06)]">
+            <div className="space-y-2 rounded-lg border bg-muted/30 p-4 text-sm">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Tên hiển thị</span>
+                <span className="text-right font-medium">{productName || "-"}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Tồn kho hiện tại</span>
+                <span className="font-medium">{availableStock}</span>
+              </div>
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Tổng số lượng</span>
+                <span className={isOverStock ? "font-medium text-red-600" : "font-medium"}>
+                  {totalQuantity} {isOverStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
+                </span>
+              </div>
+
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Giá vốn chênh lệch</span>
+                <span
+                  className={
+                    profitAmount >= 0
+                      ? "font-medium text-emerald-600"
+                      : "font-medium text-red-600"
+                  }
+                >
+                  {formatCurrency(profitAmount)}
+                </span>
+              </div>
+
+              {/* <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Đơn giá thực tế khi lưu</span>
+                <span className="font-semibold">
+                  {formatCurrency(computedUnitPrice)}
+                </span>
+              </div> */}
+
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-muted-foreground">Tạm tính</span>
+                <span className="font-semibold">{formatCurrency(subtotal)}</span>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Tổng số lượng</span>
-              <span className="font-medium">{totalQuantity}</span>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Hủy
+              </Button>
+              <Button onClick={handleSubmit}>
+                {editValue ? "Lưu chỉnh sửa" : "Đặt hàng"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isOverStockDialogOpen} onOpenChange={setIsOverStockDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <TriangleAlert className="h-5 w-5" />
+              Số lượng vượt quá tồn kho
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm">
+              <p className="font-medium text-red-700">
+                Sản phẩm này không đủ tồn kho để đáp ứng đơn hàng.
+              </p>
+
+              <div className="mt-3 space-y-2 text-foreground">
+                <div className="flex items-center justify-between">
+                  <span>Tồn kho hiện tại</span>
+                  <span className="font-medium">{availableStock}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Tổng số lượng đặt</span>
+                  <span className="font-medium">{totalQuantity}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Số lượng thiếu</span>
+                  <span className="font-medium text-red-600">
+                    {exceededQuantity}
+                  </span>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Giá vốn chênh lệch</span>
-              <span
-                className={
-                  profitAmount >= 0
-                    ? "font-medium text-emerald-600"
-                    : "font-medium text-red-600"
-                }
+            <label
+              htmlFor="allow-outside-stock"
+              className={`inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all ${
+                allowOutsideStock
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-background hover:bg-muted"
+              }`}
+            >
+              <Checkbox
+                id="allow-outside-stock"
+                checked={allowOutsideStock}
+                onCheckedChange={(checked) => setAllowOutsideStock(Boolean(checked))}
+              />
+              <span>Tôi xác nhận lấy hàng ngoài kho cho phần thiếu này</span>
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsOverStockDialogOpen(false);
+                  setAllowOutsideStock(false);
+                }}
               >
-                {formatCurrency(profitAmount)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Đơn giá thực tế khi lưu</span>
-              <span className="font-semibold">
-                {formatCurrency(computedUnitPrice)}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Tạm tính</span>
-              <span className="font-semibold">{formatCurrency(subtotal)}</span>
+                Quay lại
+              </Button>
+              <Button
+                onClick={handleConfirmOutsideStock}
+                disabled={!allowOutsideStock}
+              >
+                Xác nhận tiếp tục
+              </Button>
             </div>
           </div>
-
-          <div className="mt-4 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Hủy
-            </Button>
-            <Button onClick={handleSubmit}>
-              {editValue ? "Lưu chỉnh sửa" : "Đặt hàng"}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

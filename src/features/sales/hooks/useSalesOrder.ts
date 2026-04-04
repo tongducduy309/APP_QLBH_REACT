@@ -1,6 +1,6 @@
 // src/modules/sales/hooks/useSalesOrder.ts
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { OrderedProduct } from "../types/order-product.types";
 import type {
   CartLineItem,
@@ -24,8 +24,9 @@ import {
   mapExpenseToCartLine,
   mapOrderedProductsToCartLines,
 } from "../utils/sales-mappers";
+import { getNextOrderCode } from "@/services/order-api";
 
-const todayInputValue = new Date().toISOString().slice(0, 10);
+const todayInputValue = new Date().toISOString();
 
 export const createOrderCodeFallback = () => {
   const now = new Date();
@@ -63,8 +64,13 @@ export function useSalesOrder() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingGroupKey, setEditingGroupKey] = useState<string | null>(null);
 
-  const productItems = useMemo(
-    () => cartItems.filter((item) => item.kind === "product"),
+  // const nonInventoryItems = useMemo(
+  //   () => cartItems.filter((item) => item.kind === "non_inventory"),
+  //   [cartItems]
+  // );
+
+  const inventoryItems = useMemo(
+    () => cartItems.filter((item) => item.kind === "inventory" || item.kind === "non_inventory"),
     [cartItems]
   );
 
@@ -74,8 +80,8 @@ export function useSalesOrder() {
   );
 
   const groupedProductItems = useMemo(
-    () => groupProductItems(productItems),
-    [productItems]
+    () => groupProductItems(inventoryItems),
+    [inventoryItems]
   );
 
   const orderedDisplayItems = useMemo(
@@ -105,8 +111,8 @@ export function useSalesOrder() {
   }, [editingGroup]);
 
   const productSubtotal = useMemo(
-    () => productItems.reduce((sum, item) => sum + item.lineTotal, 0),
-    [productItems]
+    () => inventoryItems.reduce((sum, item) => sum + item.lineTotal, 0),
+    [inventoryItems]
   );
 
   const otherExpenseSubtotal = useMemo(
@@ -154,7 +160,7 @@ export function useSalesOrder() {
     setCartItems((prev) => {
       const remain = prev.filter(
         (item) =>
-          item.kind !== "product" ||
+          item.kind !== "inventory" ||
           buildProductGroupKey(item) !== editingGroup.groupKey
       );
       return [...remain, ...updatedLines];
@@ -199,7 +205,7 @@ export function useSalesOrder() {
   const removeProductGroup = (groupKey: string) => {
     setCartItems((prev) =>
       prev.filter(
-        (item) => item.kind !== "product" || buildProductGroupKey(item) !== groupKey
+        (item) => (item.kind !== "inventory" && item.kind !== "non_inventory") || buildProductGroupKey(item) !== groupKey
       )
     );
   };
@@ -231,6 +237,7 @@ export function useSalesOrder() {
       createdDate: todayInputValue,
       note: "",
     });
+    fetchOrderCode();
   };
 
   const handleCheckout = () => {
@@ -261,6 +268,23 @@ export function useSalesOrder() {
     };
   };
 
+  const fetchOrderCode = useCallback(async () => {
+      try {
+        const code = await getNextOrderCode();
+        setCustomerOrderInfo((prev) => ({
+          ...prev,
+          orderCode: code,
+        }));
+      } catch {}
+    }, []);
+      
+
+  useEffect(() => {
+    
+
+    fetchOrderCode();
+  }, []);
+
   return {
     cartItems,
     setCartItems,
@@ -287,7 +311,7 @@ export function useSalesOrder() {
     editingGroup,
     editDialogValue,
 
-    productItems,
+    inventoryItems,
     expenseItems,
     groupedProductItems,
     orderedDisplayItems,

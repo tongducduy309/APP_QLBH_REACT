@@ -4,6 +4,7 @@ import { ConfigProvider, theme } from "antd";
 import { AppProvider } from "@/app/providers/app-provider";
 // import "antd/dist/reset.css";
 import "@/styles/globals.css";
+import viVN from "antd/locale/vi_VN";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -15,6 +16,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           colorPrimary: "#0f172a",
         },
       }}
+      locale={viVN}
     >
       <AppProvider />
     </ConfigProvider>

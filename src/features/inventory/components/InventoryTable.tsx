@@ -240,31 +240,38 @@ export function InventoryTable({
                                     dataIndex: "variantCode",
                                     key: "variantCode",
                                     width: 140,
-                                    render: (value: string) => value || "-",
+                                    render: (_, variant) => {
+                                        if (!variant.variantCode) return "-";
+                                        if (variant.weight) return <Tooltip title={<div className="space-y-1 text-sm">
+                                            <div>Loại: {variant.variantCode}</div>
+                                            <div>Trọng lượng: {variant.weight}</div>
+                                        </div>}>{variant.variantCode} {`(${variant.weight})`}</Tooltip>;
+                                        return variant.variantCode;
+                                    },
                                 },
+                                // {
+                                //     title: "Trọng lượng",
+                                //     dataIndex: "weight",
+                                //     key: "weight",
+                                //     width: 110,
+                                //     render: (value: number) => Number(value ?? 0),
+                                // },
                                 {
-                                    title: "Trọng lượng",
-                                    dataIndex: "weight",
-                                    key: "weight",
-                                    width: 110,
-                                    render: (value: number) => Number(value ?? 0),
-                                },
-                                {
-                                    title: "Giá bán lẻ",
-                                    dataIndex: "retailPrice",
-                                    key: "retailPrice",
+                                    title: "Giá bán lẻ / Giá cửa hàng",
+                                    dataIndex: "retailPrice_storePrice",
+                                    key: "retailPrice_storePrice",
                                     width: 150,
-                                    render: (value: number) =>
-                                        formatCurrency(Number(value ?? 0)),
+                                    render: (value: number, variant: ProductVariantInventoryRes) =>
+                                        formatCurrency(Number(variant.retailPrice ?? 0)) + " / " + formatCurrency(Number(variant.storePrice ?? 0)),
                                 },
-                                {
-                                    title: "Giá cửa hàng",
-                                    dataIndex: "storePrice",
-                                    key: "storePrice",
-                                    width: 150,
-                                    render: (value: number) =>
-                                        formatCurrency(Number(value ?? 0)),
-                                },
+                                // {
+                                //     title: "Giá cửa hàng",
+                                //     dataIndex: "storePrice",
+                                //     key: "storePrice",
+                                //     width: 150,
+                                //     render: (value: number) =>
+                                //         formatCurrency(Number(value ?? 0)),
+                                // },
                                 {
                                     title: "Giá vốn",
                                     dataIndex: "costPrice",
@@ -272,6 +279,13 @@ export function InventoryTable({
                                     width: 150,
                                     render: (value: number) =>
                                         formatCurrency(Number(value ?? 0)),
+                                },
+                                {
+                                    title: "Mã kho",
+                                    dataIndex: "inventoryId",
+                                    key: "inventoryId",
+                                    width: 100,
+                                    render: (value: string) => value || "-",
                                 },
                                 {
                                     title: "Tồn kho",

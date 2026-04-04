@@ -50,9 +50,9 @@ export function ProductDialog({
   const getVariantKey = (variant: ProductVariantInventoryRes, index: number) =>
     String(
       variant.inventoryId ??
-        variant.variantId ??
-        variant.sku ??
-        `new-${index}`
+      variant.variantId ??
+      variant.sku ??
+      `new-${index}`
     );
 
   const handleAddVariant = () => {
@@ -148,14 +148,28 @@ export function ProductDialog({
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label>Mô tả</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="product-description">Mô tả</Label>
+                  <span
+                    className={`text-xs ${(value.description?.length ?? 0) >= 250
+                        ? "text-red-500"
+                        : "text-muted-foreground"
+                      }`}
+                  >
+                    {value.description?.length ?? 0}/250
+                  </span>
+                </div>
+
                 <Textarea
-                  value={value.description}
+                  id="product-description"
+                  value={value.description ?? ""}
+                  maxLength={250}
                   onChange={(e) =>
                     onChange({ ...value, description: e.target.value })
                   }
                   placeholder="Ghi chú thêm về sản phẩm..."
                   rows={4}
+                  className="resize-none"
                 />
               </div>
             </div>

@@ -3,7 +3,8 @@
 import type {
   CartLineItem,
   DisplayExpenseLine,
-  DisplayProductGroup,
+  DisplayInventoryGroup,
+  DisplayNonInventoryGroup,
 } from "../types/sales.types";
 
 export const buildProductGroupKey = (item: CartLineItem) =>
@@ -14,29 +15,32 @@ export const buildProductGroupKey = (item: CartLineItem) =>
     item.name.trim().toLowerCase(),
     item.unit ?? "",
     item.price,
+    item.inventoryId ?? ""
   ].join("|");
 
 export const groupProductItems = (
   productItems: CartLineItem[]
-): DisplayProductGroup[] => {
-  const groups = new Map<string, DisplayProductGroup>();
+): (DisplayInventoryGroup | DisplayNonInventoryGroup)[] => {
+  const groups = new Map<string, DisplayInventoryGroup | DisplayNonInventoryGroup>();
 
   for (const item of productItems) {
     const groupKey = buildProductGroupKey(item);
 
     if (!groups.has(groupKey)) {
+      const displayType = item.kind === "non_inventory" ? "non_inventory" : "inventory";
       groups.set(groupKey, {
         groupKey,
-        displayType: "product",
+        displayType,
         name: item.name,
         unit: item.unit,
         price: item.price,
         productId: item.productId,
         variantId: item.variantId,
+        inventoryId: item.inventoryId,
         sizeLines: [],
         totalQuantity: 0,
         totalAmount: 0,
-      });
+      } as DisplayInventoryGroup | DisplayNonInventoryGroup);
     }
 
     const current = groups.get(groupKey)!;
@@ -54,7 +58,7 @@ export const groupProductItems = (
 };
 
 export const buildOrderedDisplayItems = (
-  groupedProductItems: DisplayProductGroup[],
+  groupedProductItems: (DisplayInventoryGroup | DisplayNonInventoryGroup)[],
   expenseItems: CartLineItem[]
 ) => {
   return [

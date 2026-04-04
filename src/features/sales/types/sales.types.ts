@@ -19,12 +19,14 @@ export type Product = {
 };
 
 export type CustomerOrderInfo = {
+  customerId?: number | null;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
   orderCode: string;
   createdDate: string;
   note: string;
+  saveAsNewCustomer?: boolean;
 };
 
 export type OtherExpenseDraft = {
@@ -35,7 +37,13 @@ export type OtherExpenseDraft = {
   unit: string;
 };
 
-export type LineKind = "product" | "expense";
+export type LineKind = "inventory" | "expense" | "non_inventory";
+
+export const LINE_KIND_LABEL: Record<LineKind, string> = {
+  inventory: "Hàng trong kho",
+  non_inventory: "Hàng ngoài kho",
+  expense: "Chi phí khác",
+};
 
 export type CartLineItem = {
   rowId: string;
@@ -48,11 +56,30 @@ export type CartLineItem = {
   lineTotal: number;
   productId?: number | null;
   variantId?: number | null;
+  inventoryId?: number | null;
 };
 
-export type DisplayProductGroup = {
+export type DisplayInventoryGroup = {
   groupKey: string;
-  displayType: "product";
+  displayType: "inventory";
+  name: string;
+  unit?: string;
+  price: number;
+  productId?: number | null;
+  variantId?: number | null;
+  sizeLines: Array<{
+    rowId: string;
+    length: number;
+    quantity: number;
+    lineTotal: number;
+  }>;
+  totalQuantity: number;
+  totalAmount: number;
+};
+
+export type DisplayNonInventoryGroup = {
+  groupKey: string;
+  displayType: "non_inventory";
   name: string;
   unit?: string;
   price: number;
@@ -95,3 +122,25 @@ export type SalesSummary = {
 };
 
 export type HandleOrderSubmit = (orders: OrderedProduct[]) => void;
+
+export interface OrderDetailCreateReq {
+  productVariantId?: number | null;  
+  name?: string;  
+  length?: number;     
+  quantity?: number;   
+  price?: number;
+  baseUnit?:string;
+  inventoryId?: number | null;
+}
+export interface OrderCreateReq {
+  customerId?: number|null; 
+  nameCustomer?: string;
+  phoneCustomer?: string;
+  addressCustomer?: string;
+  tax?: number|null;      
+  note?: string;                
+  paidAmount: number;         
+  shippingFee: number;         
+  orderDetailCreateReqs: OrderDetailCreateReq[]; 
+  createdAt:string;
+}

@@ -29,6 +29,11 @@ export function validateProductForm(
     return false;
   }
 
+  if (form.description?.length > 250) {
+    toast.error("Mô tả không được vượt quá 250 ký tự.");
+    return false;
+  }
+
 //   const duplicatedSku = inventoryItems.some((item) => {
 //     const sameSku = item.sku.trim().toLowerCase() === form.sku.trim().toLowerCase();
 //     const isSameEditingItem = item.id === editingProductId;
