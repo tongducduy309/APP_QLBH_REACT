@@ -110,3 +110,8 @@
     cursor: pointer;
   }
 }
+
+
+.ant-table-tbody .ant-table-row.ant-table-row-selected >.ant-table-cell {
+  background-color: #e7e7e7a8 !important; 
+}

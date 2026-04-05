@@ -32,3 +32,11 @@ export interface OrderRes {
   details: OrderDetailRes[];    
   createdAt: string;
 }
+
+export interface OrderRecentRes {
+  id: string;                 
+  code: string;                 
+  customerName?: string | null; 
+  createdAt: string;
+  total:number;
+}

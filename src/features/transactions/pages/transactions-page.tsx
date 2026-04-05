@@ -20,6 +20,8 @@ import { formatCurrency } from "@/lib/utils";
 import { formatDateTime } from "@/utils/date";
 import { removeVietnameseTones } from "@/utils/string";
 import { OrderRes } from "@/types/order";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const { RangePicker } = DatePicker;
 
@@ -28,7 +30,7 @@ export function TransactionsPage() {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-
+  const navigate = useNavigate();
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -52,7 +54,7 @@ export function TransactionsPage() {
   );
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order:OrderRes) => {
+    return orders.filter((order: OrderRes) => {
       const customerName = removeVietnameseTones(order.customer?.name || "");
       const phone = removeVietnameseTones(order.customer?.phone || "");
       const note = removeVietnameseTones(order.note || "");
@@ -163,6 +165,17 @@ export function TransactionsPage() {
         return <Tag color="red">Chưa thanh toán</Tag>;
       },
     },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 140,
+      fixed: "right",
+      render: (_, record) => (
+        <Button variant="link" onClick={() => navigate(`/transactions/${record.id}`)}>
+          Xem chi tiết
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -271,8 +284,8 @@ export function TransactionsPage() {
                       render: (_, detail) =>
                         formatCurrency(
                           (detail.price ?? 0) *
-                            (detail.quantity ?? 0) *
-                            (detail.length || 1)
+                          (detail.quantity ?? 0) *
+                          (detail.length || 1)
                         ),
                     },
                   ]}

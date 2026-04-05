@@ -5,6 +5,7 @@ export const paths = {
   inventory: "/inventory",
   customers: "/customers",
   transactions: "/transactions",
+  transactionDetail: "/transactions/:id",
   taxReport: "/reports/tax",
   quoteReport: "/reports/quotes",
   statistics: "/statistics",

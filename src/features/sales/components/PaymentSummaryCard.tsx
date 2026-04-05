@@ -3,11 +3,13 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
+import { EllipsisVertical, FileText } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Props = {
   shippingFee: number;
   taxPercent: number;
-  discount: number;
   paidAmount: number;
   productSubtotal: number;
   otherExpenseSubtotal: number;
@@ -17,12 +19,14 @@ type Props = {
   changeAmount: number;
   onChangeShippingFee: (value: number) => void;
   onChangeTaxPercent: (value: number) => void;
-  onChangeDiscount: (value: number) => void;
   onChangePaidAmount: (value: number) => void;
   onReset: () => void;
   onCheckout: () => void;
   checkoutDisabled?: boolean;
   checkoutLoading?: boolean;
+  checkedPrintInvoice?: boolean;
+  onCheckedPrintInvoice: (value: boolean) => void;
+  onDownloadQuote: () => void;
 };
 
 export function PaymentSummaryCard(props: Props) {
@@ -49,15 +53,6 @@ export function PaymentSummaryCard(props: Props) {
           />
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Giảm giá</label>
-          <Input
-            type="number"
-            min={0}
-            value={props.discount}
-            onChange={(e) => props.onChangeDiscount(Number(e.target.value) || 0)}
-          />
-        </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Tiền khách thanh toán</label>
@@ -88,10 +83,6 @@ export function PaymentSummaryCard(props: Props) {
           <span className="font-semibold">{formatCurrency(props.shippingFee)}</span>
         </div>
 
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-muted-foreground">Giảm giá</span>
-          <span className="font-semibold">- {formatCurrency(props.discount)}</span>
-        </div>
 
         <div className="mb-2 flex items-center justify-between">
           <span className="text-muted-foreground">
@@ -121,14 +112,42 @@ export function PaymentSummaryCard(props: Props) {
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <Button variant="outline" className="w-full" onClick={props.onReset}>
-          Làm mới đơn
-        </Button>
+      <label
+              htmlFor="allow-outside-stock"
+              className={`inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all `}
+            >
+              <Checkbox
+                id="allow-outside-stock"
+                checked={props.checkedPrintInvoice}
+                onCheckedChange={(checked) => props.onCheckedPrintInvoice(Boolean(checked))}
+              />
+              <span>In hóa đơn khi thanh toán</span>
+            </label>
 
-        <Button onClick={props.onCheckout} disabled={props.checkoutDisabled}>
-          {props.checkoutLoading ? "Đang thanh toán..." : "Thanh toán"}
-        </Button>
+      <div className="flex gap-3 w-full items-center">
+        <div className="grid gap-3 md:grid-cols-2 w-full">
+          <Button variant="outline" className="w-full" onClick={props.onReset}>
+            Làm mới đơn
+          </Button>
+
+          <Button onClick={props.onCheckout} disabled={props.checkoutDisabled}>
+            {props.checkoutLoading ? "Đang thanh toán..." : "Thanh toán"}
+          </Button>
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <EllipsisVertical />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuGroup>
+              <DropdownMenuItem onClick={props.onDownloadQuote} disabled={props.checkoutDisabled}>Tải bảng báo giá</DropdownMenuItem>
+              {/* <DropdownMenuItem disabled={props.checkoutDisabled}>In bảng báo giá</DropdownMenuItem> */}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </>
   );

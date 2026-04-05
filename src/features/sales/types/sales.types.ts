@@ -144,3 +144,25 @@ export interface OrderCreateReq {
   orderDetailCreateReqs: OrderDetailCreateReq[]; 
   createdAt:string;
 }
+
+export interface OrderDetailUpdateReq {
+  productVariantId?: number | null;  
+  name?: string;  
+  length?: number;     
+  quantity?: number;   
+  price?: number;
+  baseUnit?:string;
+  inventoryId?: number | null;
+}
+export interface OrderUpdateReq {
+  customerId?: number|null; 
+  nameCustomer?: string;
+  phoneCustomer?: string;
+  addressCustomer?: string;
+  tax?: number|null;      
+  note?: string;                
+  paidAmount: number;         
+  shippingFee: number;         
+  orderDetailUpdateReqs: OrderDetailUpdateReq[]; 
+  createdAt:string;
+}

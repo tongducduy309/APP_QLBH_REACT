@@ -3,8 +3,13 @@ import { PageShell } from "@/components/layout/page-shell";
 import { dashboardStats, revenueTrend, transactions } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useDashboard } from "../hooks/useDashboard";
+import { OrderRecentRes } from "@/types/order";
+import { useNavigate } from "react-router-dom";
 
 export function DashboardPage() {
+  const dashboard = useDashboard();
+  const navigate = useNavigate();
   return (
     <PageShell>
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -42,12 +47,12 @@ export function DashboardPage() {
             <CardDescription>3 hóa đơn mới nhất</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {transactions.map((item) => (
-              <div key={item.id} className="rounded-2xl border p-4">
+            {dashboard.recentOrders.map((item:OrderRecentRes) => (
+              <div key={item.id} className="rounded-2xl border p-4 cursor-pointer" onClick={() => navigate(`/transactions/${item.id}`)}>
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-medium">{item.id}</p>
-                    <p className="text-sm text-muted-foreground">{item.customer}</p>
+                    <p className="font-medium">{item.code}</p>
+                    <p className="text-sm text-muted-foreground">{item.customerName}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold">{formatCurrency(item.total)}</p>

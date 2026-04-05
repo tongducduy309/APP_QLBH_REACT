@@ -16,13 +16,14 @@ import { PurchaseReceiptsPage } from "@/features/purchase-receipts/pages/purchas
 import { SettingsPage } from "@/features/settings/pages/settings-page";
 import { ForbiddenPage } from "@/features/errors/pages/forbidden-page";
 import { NotFoundPage } from "@/features/errors/pages/not-found-page";
+import { OrderDetailPage } from "@/features/transactions/pages/OrderDetailPage";
 
 export const router = createBrowserRouter([
   {
     element: <GuestRoute />,
     children: [
       {
-        element: <AuthLayout />,
+        element: <LoginPage />,
         children: [{ path: "/login", element: <LoginPage /> }],
       },
     ],
@@ -38,6 +39,7 @@ export const router = createBrowserRouter([
           { path: "/inventory", element: <InventoryPage /> },
           { path: "/customers", element: <CustomersPage /> },
           { path: "/transactions", element: <TransactionsPage /> },
+          { path: "/transactions/:id", element: <OrderDetailPage /> },
           { path: "/reports/tax", element: <TaxReportPage /> },
           { path: "/reports/quotes", element: <QuoteReportPage /> },
           { path: "/statistics", element: <StatisticsPage /> },
