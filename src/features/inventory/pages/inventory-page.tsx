@@ -1,11 +1,10 @@
-// src/modules/inventory/pages/InventoryPage.tsx
-
 import { PageShell } from "@/components/layout/page-shell";
 import { InventoryEditDialog } from "../components/InventoryEditDialog";
 import { InventoryStats } from "../components/InventoryStats";
 import { InventoryTable } from "../components/InventoryTable";
 import { ProductDialog } from "../components/ProductDialog";
 import { useInventoryPage } from "../hooks/useInventoryPage";
+import { PurchaseReceiptDialog } from "@/features/purchase-receipts/components/PurchaseReceiptDialog";
 
 export function InventoryPage() {
   const inventory = useInventoryPage();
@@ -24,6 +23,7 @@ export function InventoryPage() {
         onCreate={inventory.openCreateDialog}
         onEditProduct={inventory.openEditDialog}
         onEditInventory={inventory.openEditInventoryDialog}
+        onImportStock={inventory.openPurchaseReceiptDialog}
       />
 
       <ProductDialog
@@ -48,6 +48,18 @@ export function InventoryPage() {
         onClose={() => inventory.setIsInventoryDialogOpen(false)}
         onChange={inventory.setInventoryEditForm}
         onSubmit={inventory.handleSaveInventory}
+      />
+
+      <PurchaseReceiptDialog
+        open={inventory.isPurchaseReceiptDialogOpen}
+        variantLabel={inventory.purchaseReceiptVariantLabel}
+        value={inventory.purchaseReceiptForm}
+        loading={inventory.isSubmittingPurchaseReceipt}
+        onClose={() => {
+          inventory.setIsPurchaseReceiptDialogOpen(false);
+        }}
+        onChange={inventory.setPurchaseReceiptForm}
+        onSubmit={inventory.handleCreatePurchaseReceipt}
       />
     </PageShell>
   );
