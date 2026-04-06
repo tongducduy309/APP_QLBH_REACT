@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { ProtectedRoute, GuestRoute } from "@/app/router/guards";
 import { MainLayout } from "@/layouts/main-layout";
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page";
@@ -19,11 +19,24 @@ import { OrderDetailPage } from "@/features/transactions/pages/OrderDetailPage";
 
 export const router = createBrowserRouter([
   {
+  path: "/",
+  element: <ProtectedRoute />,
+  children: [
+    {
+      element: <MainLayout />,
+      children: [
+    { index: true, element: <Navigate to="/sales" replace /> },
+    { path: "sales", element: <SalesPage /> },
+  ],
+    }
+  ]
+},
+  {
     element: <GuestRoute />,
     children: [
       {
+        path: "/login",
         element: <LoginPage />,
-        children: [{ path: "/login", element: <LoginPage /> }],
       },
     ],
   },
@@ -33,8 +46,8 @@ export const router = createBrowserRouter([
       {
         element: <MainLayout />,
         children: [
-          { path: "/", element: <DashboardPage /> },
-          { path: "/sales", element: <SalesPage /> },
+          { path: "/dashboard", element: <DashboardPage /> },
+          // { path: "/sales", element: <SalesPage /> },
           { path: "/inventory", element: <InventoryPage /> },
           { path: "/customers", element: <CustomersPage /> },
           { path: "/transactions", element: <TransactionsPage /> },

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateTime } from "@/utils/date";
-import type { OrderDetailRes, OrderRes } from "@/types/order";
+import { OrderStatus, type OrderDetailRes, type OrderRes } from "@/types/order";
 import { getOrderById } from "@/services/order-api";
 import { downloadInvoice, previewInvoice, printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
 
@@ -234,6 +234,9 @@ export function OrderDetailPage() {
                             </Descriptions.Item>
                             <Descriptions.Item label="Trạng thái thanh toán">
                                 {paymentStatus}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Trạng thái hóa đơn">
+                                {order.status === OrderStatus.CONFIRMED ? <Tag color="green">Chính thức</Tag> : <Tag color="red">Bản nháp</Tag>}
                             </Descriptions.Item>
                             <Descriptions.Item label="Ghi chú">
                                 {order.note || "-"}

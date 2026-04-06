@@ -1,5 +1,6 @@
 // src/modules/sales/types/sales.types.ts
 
+import { OrderStatus } from "@/types/order";
 import type { OrderedProduct } from "../types/order-product.types";
 
 export type Product = {
@@ -143,6 +144,7 @@ export interface OrderCreateReq {
   shippingFee: number;         
   orderDetailCreateReqs: OrderDetailCreateReq[]; 
   createdAt:string;
+  status: OrderStatus;
 }
 
 export interface OrderDetailUpdateReq {
@@ -165,4 +167,5 @@ export interface OrderUpdateReq {
   shippingFee: number;         
   orderDetailUpdateReqs: OrderDetailUpdateReq[]; 
   createdAt:string;
+  status: OrderStatus;
 }

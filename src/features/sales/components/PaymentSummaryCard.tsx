@@ -27,6 +27,7 @@ type Props = {
   checkedPrintInvoice?: boolean;
   onCheckedPrintInvoice: (value: boolean) => void;
   onDownloadQuote: () => void;
+  onSaveDraft: () => void;
 };
 
 export function PaymentSummaryCard(props: Props) {
@@ -145,6 +146,7 @@ export function PaymentSummaryCard(props: Props) {
             <DropdownMenuGroup>
               <DropdownMenuItem onClick={props.onDownloadQuote} disabled={props.checkoutDisabled}>Tải bảng báo giá</DropdownMenuItem>
               {/* <DropdownMenuItem disabled={props.checkoutDisabled}>In bảng báo giá</DropdownMenuItem> */}
+              <DropdownMenuItem onClick={props.onSaveDraft} disabled={props.checkoutDisabled}>Lưu nháp</DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>

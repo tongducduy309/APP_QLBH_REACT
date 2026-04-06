@@ -1,6 +1,11 @@
 import { CustomerRes } from "@/features/customers/types/customer.types";
 import { ProductVariant } from "./product";
 
+export enum OrderStatus {
+  DRAFT = "DRAFT",
+  CONFIRMED = "CONFIRMED",
+}
+
 export interface OrderDetailRes {
   id: number;       
   length: number;     
@@ -31,6 +36,7 @@ export interface OrderRes {
   total:number;
   details: OrderDetailRes[];    
   createdAt: string;
+  status: OrderStatus;
 }
 
 export interface OrderRecentRes {

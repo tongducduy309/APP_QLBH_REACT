@@ -32,6 +32,7 @@ import { useSalesOrders } from "../hooks/useSalesOrder";
 import { mapSalesDraftToOrderRes } from "@/features/print/utils/order-print-mapper";
 import { printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
 import { downloadQuotation } from "@/features/print/services/Quotation-pdf-print.service";
+import { OrderStatus } from "@/types/order";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -141,7 +142,7 @@ export function SalesPage() {
     setClosingOrderId(null);
   };
 
-  const buildOrderPayload = (): OrderCreateReq => {
+  const buildOrderPayload = (status: OrderStatus): OrderCreateReq => {
     const orderDetailCreateReqs: OrderDetailCreateReq[] = sales.cartItems.map(
       (item) => ({
         productVariantId: item.variantId ?? null,
@@ -167,6 +168,7 @@ export function SalesPage() {
       orderDetailCreateReqs,
       createdAt:
         sales.customerOrderInfo.createdDate || new Date().toISOString(),
+      status: status,
     };
   };
 
@@ -178,7 +180,7 @@ export function SalesPage() {
 
     try {
       setCheckoutLoading(true);
-      const payload = buildOrderPayload();
+      const payload = buildOrderPayload(OrderStatus.CONFIRMED);
       await createOrder(payload);
       if (checkedPrintInvoice) {
         printInvoice(printableOrder!, {
@@ -207,6 +209,38 @@ export function SalesPage() {
       setCheckoutLoading(false);
     }
   };
+
+  const handleSaveDraft = useCallback(async () => {
+    if (isCartEmpty) {
+      toast.error("Giỏ hàng đang trống.");
+      return;
+    }
+
+    try {
+      setCheckoutLoading(true);
+      const payload = buildOrderPayload(OrderStatus.DRAFT);
+      await createOrder(payload);
+      toast.success("Lưu đơn hàng thành công.");
+
+      const completedId = sales.activeOrderId;
+      if (completedId) {
+        sales.forceRemoveOrder(completedId);
+      }
+
+      // await fetchProducts();
+
+      setMissingCustomerDialogOpen(false);
+      setCustomerOrderDialogOpen(false);
+      setCustomerPickerOpen(false);
+      setDialogOpen(false);
+      setSelectedCustomerFromPicker(null);
+    } catch (error) {
+      console.error("Lỗi lưu đơn hàng", error);
+      toast.error("Không thể lưu đơn hàng.");
+    } finally {
+      setCheckoutLoading(false);
+    }
+  }, [isCartEmpty]);
 
   const handleCheckoutClick = async () => {
     if (isCartEmpty) {
@@ -361,6 +395,7 @@ export function SalesPage() {
               onDownloadQuote={handleDownloadQuote}
               checkedPrintInvoice={checkedPrintInvoice}
               onCheckedPrintInvoice={setCheckedPrintInvoice}
+              onSaveDraft={handleSaveDraft}
             />
           </div>
         </div>

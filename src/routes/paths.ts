@@ -1,6 +1,6 @@
 export const paths = {
   login: "/login",
-  dashboard: "/",
+  dashboard: "/dashboard",
   sales: "/sales",
   inventory: "/inventory",
   customers: "/customers",

@@ -3,13 +3,16 @@ export interface LoginReq {
   password: string;
 }
 
+export interface AuthUserDto {
+  id: number | string;
+  username: string;
+  fullName?: string;
+  role?: string;
+}
+
 export interface LoginRes {
+  data: LoginRes;
   accessToken: string;
   refreshToken?: string;
-  user?: {
-    id: number | string;
-    username: string;
-    fullName?: string;
-    role?: string;
-  };
+  user?: AuthUserDto;
 }

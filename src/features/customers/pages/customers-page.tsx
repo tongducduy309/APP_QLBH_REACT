@@ -73,7 +73,7 @@ export function CustomersPage() {
         setCustomers(res);
       } catch (error) {
         console.error("Lỗi lấy khách hàng", error);
-        toast.error("Không thể tải danh sách khách hàng.");
+        toast.error("Không thể tải danh sách khách hàng."+error);
       } finally {
         setLoading(false);
       }

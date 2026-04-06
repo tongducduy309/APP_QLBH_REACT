@@ -19,7 +19,7 @@ import { getOrders } from "@/services/order-api";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateTime } from "@/utils/date";
 import { removeVietnameseTones } from "@/utils/string";
-import { OrderRes } from "@/types/order";
+import { OrderRes, OrderStatus } from "@/types/order";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
@@ -109,12 +109,12 @@ export function TransactionsPage() {
         </div>
       ),
     },
-    {
-      title: "Số mặt hàng",
-      key: "detailsCount",
-      width: 120,
-      render: (_, record) => record.details?.length ?? 0,
-    },
+    // {
+    //   title: "Số mặt hàng",
+    //   key: "detailsCount",
+    //   width: 120,
+    //   render: (_, record) => record.details?.length ?? 0,
+    // },
     {
       title: "Thời gian",
       dataIndex: "createdAt",
@@ -163,6 +163,14 @@ export function TransactionsPage() {
         }
 
         return <Tag color="red">Chưa thanh toán</Tag>;
+      },
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      width: 120,
+      render: (_, record) => {
+        return <Tag color={record.status === OrderStatus.CONFIRMED ? "green" : "red"}>{record.status === OrderStatus.CONFIRMED ? "Chính thức" : "Bản nháp"}</Tag>;
       },
     },
     {

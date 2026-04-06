@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -32,12 +32,13 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 export function LoginPage() {
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from || "/";
+  // const from = (location.state as { from?: string } | null)?.from || "/";
+
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -52,7 +53,7 @@ export function LoginPage() {
       setLoading(true);
       await login(values);
       toast.success("Đăng nhập thành công");
-      navigate(from, { replace: true });
+      navigate("/sales");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Đăng nhập thất bại");
     } finally {
