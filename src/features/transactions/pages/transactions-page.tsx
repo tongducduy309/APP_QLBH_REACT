@@ -262,7 +262,7 @@ export function TransactionsPage() {
                       title: "Tổng số lượng",
                       dataIndex: "totalQuantity",
                       key: "totalQuantity",
-                      render: (value: number, detail) => {
+                      render: (_: number, detail) => {
                         return (detail.quantity ?? 0) * (detail.length || 1)
                       },
                     },

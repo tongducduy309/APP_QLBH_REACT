@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import type {
     InventoryEditForm,
-    ProductCreateReq,
     ProductForm,
     ProductVariantInventoryRes,
 } from "../types/inventory.types";
@@ -15,7 +14,6 @@ import {
     getTotalProductStock,
 } from "../utils/inventory.helpers";
 import {
-    buildProductRowFromForm,
     mapProductFormToCreateReq,
     mapProductFormToUpdateReq,
     mapProductToForm,
@@ -134,12 +132,12 @@ export function useInventoryPage() {
     const removeVariant = (variantIndex: number) => {
         setForm((prev) => ({
             ...prev,
-            variants: prev.variants.filter((variant, idx) => idx !== variantIndex),
+            variants: prev.variants.filter((_, idx) => idx !== variantIndex),
         }));
     };
 
     const handleSubmit = async () => {
-        const isValid = validateProductForm(form, inventoryItems, editingProductId);
+        const isValid = validateProductForm(form);
         if (!isValid) return;
 
         if (isEditingProduct && editingProductId !== null) {
@@ -151,7 +149,7 @@ export function useInventoryPage() {
                 setIsProductDialogOpen(false);
                 resetForm();
                 toast.success("Cập nhật sản phẩm thành công.");
-            }).catch((error) => {
+            }).catch(() => {
                 toast.error("Cập nhật sản phẩm thất bại.");
             });
 
@@ -174,7 +172,7 @@ export function useInventoryPage() {
                 resetForm();
                 //   setInventoryItems((prev) => [newProduct, ...prev]);
                 toast.success("Thêm mới sản phẩm thành công.");
-            }).catch((error) => {
+            }).catch(() => {
                 toast.error("Thêm mới sản phẩm thất bại.");
             });
 

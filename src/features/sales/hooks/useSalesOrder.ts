@@ -347,15 +347,15 @@ export function useSalesOrders() {
     [updateActiveOrder]
   );
 
-  const setDiscount = useCallback(
-    (value: number | ((prev: number) => number)) => {
-      updateActiveOrder((draft) => ({
-        ...draft,
-        discount: typeof value === "function" ? value(draft.discount) : value,
-      }));
-    },
-    [updateActiveOrder]
-  );
+  // const setDiscount = useCallback(
+  //   (value: number | ((prev: number) => number)) => {
+  //     updateActiveOrder((draft) => ({
+  //       ...draft,
+  //       discount: typeof value === "function" ? value(draft.discount) : value,
+  //     }));
+  //   },
+  //   [updateActiveOrder]
+  // );
 
   const setPaidAmount = useCallback(
     (value: number | ((prev: number) => number)) => {

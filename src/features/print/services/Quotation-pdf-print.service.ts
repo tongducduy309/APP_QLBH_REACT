@@ -3,11 +3,10 @@ import pdfFonts from "pdfmake/build/vfs_fonts";
 import type {
   Content,
   PageOrientation,
-  StyleDictionary,
   TDocumentDefinitions,
 } from "pdfmake/interfaces";
-import type { OrderRes } from "@/features/orders/types/order.types";
 import dayjs from "dayjs";
+import { OrderRes } from "@/types/order";
 const fontVfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any)?.vfs;
 if (fontVfs) {
   (pdfMake as any).vfs = fontVfs;

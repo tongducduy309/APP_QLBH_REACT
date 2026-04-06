@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageShell } from "@/components/layout/page-shell";
-import { dashboardStats, revenueTrend, transactions } from "@/lib/mock-data";
+import { dashboardStats, revenueTrend } from "@/lib/mock-data";
 import { formatCurrency } from "@/lib/utils";
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { useDashboard } from "../hooks/useDashboard";

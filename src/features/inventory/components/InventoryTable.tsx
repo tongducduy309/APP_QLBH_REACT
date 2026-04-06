@@ -261,7 +261,7 @@ export function InventoryTable({
                                     dataIndex: "retailPrice_storePrice",
                                     key: "retailPrice_storePrice",
                                     width: 150,
-                                    render: (value: number, variant: ProductVariantInventoryRes) =>
+                                    render: (_: number, variant: ProductVariantInventoryRes) =>
                                         formatCurrency(Number(variant.retailPrice ?? 0)) + " / " + formatCurrency(Number(variant.storePrice ?? 0)),
                                 },
                                 // {

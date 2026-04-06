@@ -17,15 +17,11 @@ import type { Product } from "../types/sales.types";
 import { removeVietnameseTones } from "@/utils/string";
 
 type Props = {
-  tab: string;
-  onTabChange: (value: string) => void;
   products: Product[];
   onOrderProduct: (product: Product) => void;
 };
 
 export function ProductSelectorCard({
-  tab,
-  onTabChange,
   products,
   onOrderProduct,
 }: Props) {
@@ -39,10 +35,6 @@ export function ProductSelectorCard({
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    // filter theo tab (status)
-    if (tab !== "Tất cả") {
-      result = result.filter((item) => item.status === tab);
-    }
 
     // search không dấu
     if (normalizedKeyword) {
@@ -62,7 +54,7 @@ export function ProductSelectorCard({
     }
 
     return result;
-  }, [products, tab, normalizedKeyword]);
+  }, [products, normalizedKeyword]);
 
   const productColumns: ColumnsType<Product> = [
     { title: "Mã", dataIndex: "sku", key: "sku", width: 110 },

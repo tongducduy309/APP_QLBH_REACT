@@ -3,8 +3,8 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
-import { EllipsisVertical, FileText } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { EllipsisVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type Props = {

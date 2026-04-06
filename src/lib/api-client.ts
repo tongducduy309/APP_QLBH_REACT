@@ -107,7 +107,7 @@ apiClient.interceptors.response.use(
       }
 
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           pendingRequests.push((newAccessToken: string) => {
             if (!originalRequest.headers) {
               originalRequest.headers = {} as AxiosRequestHeaders;

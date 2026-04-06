@@ -1,6 +1,5 @@
 import { createBrowserRouter } from "react-router-dom";
 import { ProtectedRoute, GuestRoute } from "@/app/router/guards";
-import { AuthLayout } from "@/layouts/auth-layout";
 import { MainLayout } from "@/layouts/main-layout";
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page";
 import { LoginPage } from "@/features/auth/pages/login-page";

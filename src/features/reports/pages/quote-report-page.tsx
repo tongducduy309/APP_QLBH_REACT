@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Checkbox,
   Input,
-  InputNumber,
   Radio,
   Select,
   Table,

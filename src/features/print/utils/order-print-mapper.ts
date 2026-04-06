@@ -1,5 +1,7 @@
-import type { OrderRes, OrderDetailRes } from "@/features/orders/types/order.types";
-import type { SalesOrderDraft } from "../hooks/useSalesOrder";
+
+import { SalesOrderDraft } from "@/features/sales/hooks/useSalesOrder";
+import { OrderDetailRes, OrderRes } from "@/types/order";
+
 
 export const mapSalesDraftToOrderRes = (
   draft: SalesOrderDraft,
@@ -11,7 +13,7 @@ export const mapSalesDraftToOrderRes = (
     total: number;
   }
 ): OrderRes => {
-  const details: OrderDetailRes[] = draft.cartItems.map((item, index) => ({
+  const details: OrderDetailRes[] = draft.cartItems.map((item: any, index: number) => ({
     id: index + 1,
     length: item.length,
     quantity: item.quantity,

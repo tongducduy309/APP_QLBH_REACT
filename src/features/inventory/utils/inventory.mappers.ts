@@ -10,7 +10,6 @@ import type {
 } from "../types/inventory.types";
 import {
   createInitialVariant,
-  getActiveVariants,
   getProductStatusFromVariants,
   getTotalProductStock,
 } from "./inventory.helpers";
@@ -93,10 +92,6 @@ export function buildProductRowFromForm(
 ): ProductInventoryRes {
   const sourceVariants: ProductVariantInventoryRes[] =
     form.variants.length > 0 ? form.variants : [createInitialVariant()];
-
-  const activeVariants = getActiveVariants(sourceVariants);
-  const primaryVariant =
-    activeVariants[0] ?? sourceVariants[0] ?? createInitialVariant();
 
   const totalStock = getTotalProductStock(sourceVariants);
 

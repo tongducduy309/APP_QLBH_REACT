@@ -229,6 +229,9 @@ export function OrderDetailPage() {
                             <Descriptions.Item label="Số điện thoại">
                                 {order.customer?.phone || "-"}
                             </Descriptions.Item>
+                            <Descriptions.Item label="Địa chỉ">
+                                {order.customer?.address || "-"}
+                            </Descriptions.Item>
                             <Descriptions.Item label="Trạng thái thanh toán">
                                 {paymentStatus}
                             </Descriptions.Item>

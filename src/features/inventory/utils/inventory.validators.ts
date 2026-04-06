@@ -1,12 +1,10 @@
 // src/modules/inventory/utils/inventory.validators.ts
 
 import { toast } from "sonner";
-import type { ProductForm, ProductInventoryRes } from "../types/inventory.types";
+import type { ProductForm } from "../types/inventory.types";
 
 export function validateProductForm(
-  form: ProductForm,
-  inventoryItems: ProductInventoryRes[],
-  editingProductId: number | null
+  form: ProductForm
 ) {
 
   if (!form.name.trim()) {

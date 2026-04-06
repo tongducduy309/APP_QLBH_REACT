@@ -135,7 +135,7 @@ export function CustomerPickerDialog({
                       {groupKey}
                     </div>
 
-                    {items.map((customer, index) => (
+                    {items.map((customer) => (
                       <button
                         key={customer.id}
                         type="button"

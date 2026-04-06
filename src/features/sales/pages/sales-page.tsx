@@ -30,8 +30,8 @@ import { toast } from "sonner";
 import { GripVertical, X } from "lucide-react";
 import { useSalesOrders } from "../hooks/useSalesOrder";
 import { mapSalesDraftToOrderRes } from "@/features/print/utils/order-print-mapper";
-import { previewInvoice, printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
-import { downloadQuotation, previewQuotation } from "@/features/print/services/Quotation-pdf-print.service";
+import { printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
+import { downloadQuotation } from "@/features/print/services/Quotation-pdf-print.service";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -41,7 +41,6 @@ const quickExpenseTemplates = [
 export function SalesPage() {
   const sales = useSalesOrders();
 
-  const [tab, setTab] = useState("Tất cả");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customerOrderDialogOpen, setCustomerOrderDialogOpen] = useState(false);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
@@ -49,7 +48,7 @@ export function SalesPage() {
     useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [productsLoading, setProductsLoading] = useState(false);
+  // const [productsLoading, setProductsLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkedPrintInvoice, setCheckedPrintInvoice] = useState(false);
   const [selectedCustomerFromPicker, setSelectedCustomerFromPicker] =
@@ -77,10 +76,6 @@ export function SalesPage() {
     sales.grandTotal,
   ]);
 
-  const filteredProducts = useMemo(() => {
-    if (tab === "Tất cả") return products;
-    return products.filter((item) => item.status === tab);
-  }, [tab, products]);
 
   const isCartEmpty = useMemo(() => {
     return sales.orderedDisplayItems.length === 0;
@@ -97,14 +92,14 @@ export function SalesPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      setProductsLoading(true);
+      // setProductsLoading(true);
       const inventoryProducts = await getAllInventory();
       setProducts(mapInventoryProductsToSalesProducts(inventoryProducts));
     } catch (error) {
       console.error("Lỗi lấy danh sách sản phẩm bán hàng", error);
       setProducts([]);
     } finally {
-      setProductsLoading(false);
+      // setProductsLoading(false);
     }
   }, []);
 
@@ -186,7 +181,7 @@ export function SalesPage() {
       const payload = buildOrderPayload();
       await createOrder(payload);
       if (checkedPrintInvoice) {
-        printInvoice(printableOrder, {
+        printInvoice(printableOrder!, {
           paperSize: "A4",
           pageOrientation: "portrait",
         });
@@ -299,9 +294,7 @@ export function SalesPage() {
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
             <ProductSelectorCard
-              tab={tab}
-              onTabChange={setTab}
-              products={filteredProducts}
+              products={products}
               onOrderProduct={openOrderDialog}
             // loading={productsLoading}
             />
