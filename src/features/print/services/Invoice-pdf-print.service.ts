@@ -1,6 +1,7 @@
 import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import type {
+  Alignment,
   Content,
   PageOrientation,
   StyleDictionary,
@@ -9,10 +10,7 @@ import type {
 import JsBarcode from "jsbarcode";
 import { OrderRes } from "@/types/order";
 
-const fontVfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any)?.vfs;
-if (fontVfs) {
-  (pdfMake as any).vfs = fontVfs;
-}
+(pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
 
 export type PaperSize = "A4" | "A5" | "A6";
 
@@ -239,32 +237,32 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
 
   for (const item of data.products) {
     body.push([
-      { text: index++, alignment: "center", style: "s12" },
+      { text: index++, alignment: "center" as Alignment, style: "s12" },
       { text: item.name || " ", style: "s12" },
-      { text: item.baseUnit || "-", alignment: "center", style: "s12" },
+      { text: item.baseUnit || "-", alignment: "center" as Alignment, style: "s12" },
       {
         text: item.length ? formatQuantity(item.length) : "-",
-        alignment: "center",
+        alignment: "center" as Alignment,
         style: "s12",
       },
       {
         text: item.quantity ? formatQuantity(item.quantity) : "-",
-        alignment: "center",
+        alignment: "center" as Alignment,
         style: "s12",
       },
       {
         text: item.totalQuantity ? formatQuantity(item.totalQuantity) : "-",
-        alignment: "center",
+        alignment: "center" as Alignment,
         style: "s12",
       },
       {
         text: item.price ? formatMoney(item.price) : "-",
-        alignment: "right",
+        alignment: "right" as Alignment,
         style: "s12",
       },
       {
         text: item.subtotal ? formatMoney(item.subtotal) : "-",
-        alignment: "right",
+        alignment: "right" as Alignment,
         style: "s12",
       },
     ]);
@@ -300,7 +298,7 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
           },
           {
             stack: [
-              { text: "Dịch Vụ", style: "companyMain2", alignment: "center" },
+              { text: "Dịch Vụ", style: "companyMain2", alignment: "center" as Alignment },
               { text: "Sắt Thép - Xà Gồ - Tôn Lạnh", style: "headerRight" },
               { text: "Tôn Kẽm - Tôn Màu - Uốn Vòm - Máng Xối", style: "headerRight" },
               { text: "Cắt Theo Yêu Cầu", style: "headerRight" },
@@ -310,9 +308,9 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
             stack: [
               { text: "BIÊN NHẬN GIAO HÀNG", style: "deliveryNoteTitle" },
               { text: `Số: ${data.code || "..."}`, style: "deliveryNoteCode" },
-              { image: barcodeBase64, width: 100, alignment: "center" },
+              { image: barcodeBase64, width: 100, alignment: "center" as Alignment },
             ],
-            alignment: "center",
+            alignment: "center" as Alignment,
           },
         ],
         [
@@ -385,7 +383,7 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
                   { text: "BIÊN NHẬN GIAO HÀNG", style: "deliveryNoteTitle" },
                   { text: `Số: ${data.code || "..."}`, style: "deliveryNoteCode" },
                 ],
-                alignment: "center",
+                alignment: "center" as Alignment,
               },
             ],
             [
@@ -401,7 +399,7 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
                 layout: "noBorders",
               },
               {},
-              { image: barcodeBase64, width: 100, alignment: "center" },
+              { image: barcodeBase64, width: 100, alignment: "center" as Alignment },
             ],
           ],
         }
@@ -419,11 +417,11 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
                     margin: [0, 0, 0, 0],
                   },
                 ],
-                alignment: "center",
+                alignment: "center" as Alignment,
               },
               {
                 stack: [
-                  { text: "Thông Tin Liên Hệ", style: "companyMain2", alignment: "center" },
+                  { text: "Thông Tin Liên Hệ", style: "companyMain2", alignment: "center" as Alignment },
                   {
                     stack: [
                       {
@@ -450,9 +448,9 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
                   { text: "Cắt Theo Yêu Cầu", style: "headerRight" },
                   { text: "BIÊN NHẬN GIAO HÀNG", style: "deliveryNoteTitle" },
                   { text: `Số: ${data.code || "..."}`, style: "deliveryNoteCode" },
-                  { image: barcodeBase64, width: 100, alignment: "center" },
+                  { image: barcodeBase64, width: 100, alignment: "center" as Alignment },
                 ],
-                alignment: "center",
+                alignment: "center" as Alignment,
               },
             ],
             [
@@ -620,8 +618,8 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
           [
             {
               stack: [
-                { text: "\n\nNgười Nhận Hàng", style: "s12", alignment: "center" },
-                { text: " ", style: "s12", alignment: "center" },
+                { text: "\n\nNgười Nhận Hàng", style: "s12", alignment: "center" as Alignment },
+                { text: " ", style: "s12", alignment: "center" as Alignment },
               ],
             },
             { text: "" },
@@ -630,9 +628,9 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
                 {
                   text: `Ngày ${ngay} Tháng ${thang} Năm ${nam}`,
                   style: "s12",
-                  alignment: "center",
+                  alignment: "center" as Alignment,
                 },
-                { text: "\nNgười Bán Hàng", style: "s12", alignment: "center" },
+                { text: "\nNgười Bán Hàng", style: "s12", alignment: "center" as Alignment },
               ],
             },
           ],
@@ -661,29 +659,29 @@ function buildInvoiceDocDefinition(
     opts.paperSize === "A4"
       ? {
         companyInfo: { fontSize: 10 },
-        companySub: { fontSize: 11, alignment: "center" },
-        companyMain: { fontSize: 14, bold: true, alignment: "center", margin: [0, 2] },
-        companyMain2: { fontSize: 12, bold: true, alignment: "center", margin: [0, 2] },
-        headerRight: { fontSize: 10, margin: [0, 1], alignment: "center" },
-        deliveryNoteTitle: { fontSize: 13, bold: true, margin: [0, 6, 0, 2], alignment: "center" },
-        deliveryNoteCode: { fontSize: 11, italics: true, alignment: "center" },
-        tableHeader: { bold: true, fontSize: 10, fillColor: "#f1c40f", alignment: "center" },
-        centerCell: { alignment: "center" },
-        priceCell: { alignment: "right" },
+        companySub: { fontSize: 11, alignment: "center" as Alignment },
+        companyMain: { fontSize: 14, bold: true, alignment: "center" as Alignment, margin: [0, 2] },
+        companyMain2: { fontSize: 12, bold: true, alignment: "center" as Alignment, margin: [0, 2] },
+        headerRight: { fontSize: 10, margin: [0, 1], alignment: "center" as Alignment },
+        deliveryNoteTitle: { fontSize: 13, bold: true, margin: [0, 6, 0, 2], alignment: "center" as Alignment },
+        deliveryNoteCode: { fontSize: 11, italics: true, alignment: "center" as Alignment },
+        tableHeader: { bold: true, fontSize: 10, fillColor: "#f1c40f", alignment: "center" as Alignment },
+        centerCell: { alignment: "center" as Alignment },
+        priceCell: { alignment: "right" as Alignment },
         s12: { fontSize: 12 },
         s11: { fontSize: 11 },
       }
       : {
         companyInfo: { fontSize: 9 },
-        companySub: { fontSize: 10, alignment: "center" },
-        companyMain: { fontSize: 12, bold: true, alignment: "center", margin: [0, 2] },
-        companyMain2: { fontSize: 11, bold: true, alignment: "center", margin: [0, 2] },
-        headerRight: { fontSize: 9, margin: [0, 1], alignment: "center" },
-        deliveryNoteTitle: { fontSize: 11, bold: true, margin: [0, 6, 0, 2], alignment: "center" },
-        deliveryNoteCode: { fontSize: 10, italics: true, alignment: "center" },
-        tableHeader: { bold: true, fontSize: 9, fillColor: "#f1c40f", alignment: "center" },
-        centerCell: { alignment: "center" },
-        priceCell: { alignment: "right" },
+        companySub: { fontSize: 10, alignment: "center" as Alignment },
+        companyMain: { fontSize: 12, bold: true, alignment: "center" as Alignment, margin: [0, 2] },
+        companyMain2: { fontSize: 11, bold: true, alignment: "center" as Alignment, margin: [0, 2] },
+        headerRight: { fontSize: 9, margin: [0, 1], alignment: "center" as Alignment },
+        deliveryNoteTitle: { fontSize: 11, bold: true, margin: [0, 6, 0, 2], alignment: "center" as Alignment },
+        deliveryNoteCode: { fontSize: 10, italics: true, alignment: "center" as Alignment },
+        tableHeader: { bold: true, fontSize: 9, fillColor: "#f1c40f", alignment: "center" as Alignment },
+        centerCell: { alignment: "center" as Alignment },
+        priceCell: { alignment: "right" as Alignment },
         s12: { fontSize: 10 },
         s11: { fontSize: 9 },
       };

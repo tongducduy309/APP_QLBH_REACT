@@ -7,10 +7,7 @@ import type {
 } from "pdfmake/interfaces";
 import dayjs from "dayjs";
 import { OrderRes } from "@/types/order";
-const fontVfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any)?.vfs;
-if (fontVfs) {
-  (pdfMake as any).vfs = fontVfs;
-}
+(pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
 
 export type PaperSize = "A4" | "A5" | "A6";
 
