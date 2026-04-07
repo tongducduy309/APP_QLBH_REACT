@@ -1,24 +1,19 @@
 import { create } from "zustand";
 import { introspect, login } from "@/services/auth-api";
-import type { LoginReq, LoginRes } from "@/features/auth/types/auth.types";
+import type { AuthUserRes, LoginReq, AuthRes } from "@/features/auth/types/auth.types";
 
-export type AuthUser = {
-  id?: number | string;
-  username: string;
-  fullName?: string;
-  role?: string;
-};
+
 
 type AuthState = {
   accessToken: string | null;
   refreshToken: string | null;
-  user: AuthUser | null;
+  user: AuthUserRes | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isCheckingAuth: boolean;
   login: (payload: LoginReq) => Promise<void>;
   logout: () => void;
-  setAuth: (payload: LoginRes) => void;
+  setAuth: (payload: AuthRes) => void;
   hydrate: () => void;
   verifyToken: () => Promise<boolean>;
 };
@@ -27,12 +22,12 @@ const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 const USER_KEY = "auth_user";
 
-function getStoredUser(): AuthUser | null {
+function getStoredUser(): AuthUserRes | null {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
 
   try {
-    return JSON.parse(raw) as AuthUser;
+    return JSON.parse(raw) as AuthUserRes;
   } catch {
     localStorage.removeItem(USER_KEY);
     return null;
@@ -47,10 +42,10 @@ function getStoredRefreshToken(): string | null {
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
-function persistAuth(payload: LoginRes) {
+function persistAuth(payload: AuthRes) {
   const accessToken = payload.accessToken;
   const refreshToken = payload.refreshToken ?? null;
-  const user: AuthUser | null = payload.user
+  const user: AuthUserRes | null = payload.user
     ? {
         id: payload.user.id,
         username: payload.user.username,
@@ -59,7 +54,7 @@ function persistAuth(payload: LoginRes) {
       }
     : null;
 
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken??"");
 
   if (refreshToken) {
     localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
@@ -162,7 +157,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       const result = await introspect(token);
 
-      if (!result) {
+      const {user} = persistAuth(result);
+
+      if (!result.active) {
         get().logout();
         return false;
       }
@@ -171,6 +168,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         accessToken: token,
         isAuthenticated: true,
         isCheckingAuth: false,
+        user
       });
 
       return true;

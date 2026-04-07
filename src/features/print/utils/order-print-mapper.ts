@@ -1,6 +1,6 @@
 
 import { SalesOrderDraft } from "@/features/sales/hooks/useSalesOrder";
-import { OrderDetailRes, OrderRes } from "@/types/order";
+import { OrderDetailRes, OrderRes, OrderStatus } from "@/types/order";
 
 
 export const mapSalesDraftToOrderRes = (
@@ -47,6 +47,7 @@ export const mapSalesDraftToOrderRes = (
     changeAmount: computed.changeAmount,
     total: computed.total,
     details,
+    status: OrderStatus.CONFIRMED,
     createdAt: draft.customerOrderInfo.createdDate || draft.createdAt,
   };
 };

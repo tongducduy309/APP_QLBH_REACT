@@ -1,5 +1,6 @@
 import { CustomerRes } from "@/features/customers/types/customer.types";
 import { ProductVariant } from "./product";
+import { LineKind } from "@/features/sales/types/sales.types";
 
 export enum OrderStatus {
   DRAFT = "DRAFT",
@@ -15,7 +16,8 @@ export interface OrderDetailRes {
   inventoryId: number | null;
   sku: string;
   name: string;
-  productVariant: ProductVariant; 
+  kind:LineKind;
+  productVariantId: number; 
   baseUnit: string;
   index:number|null;
 }
@@ -45,4 +47,29 @@ export interface OrderRecentRes {
   customerName?: string | null; 
   createdAt: string;
   total:number;
+}
+
+export interface OrderDetailUpdateReq {
+  id?: number | null;
+  kind?: LineKind;
+  productVariantId?: number | null;  
+  name?: string;  
+  length?: number;     
+  quantity?: number;   
+  price?: number;
+  baseUnit?:string;
+  inventoryId?: number | null;
+}
+export interface OrderUpdateReq {
+  customerId?: number|null; 
+  nameCustomer?: string;
+  phoneCustomer?: string;
+  addressCustomer?: string;
+  tax?: number|null;      
+  note?: string;                
+  paidAmount: number;         
+  shippingFee: number;         
+  orderDetailUpdateReqs: OrderDetailUpdateReq[]; 
+  createdAt:string;
+  status: OrderStatus;
 }

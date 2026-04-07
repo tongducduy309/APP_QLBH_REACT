@@ -156,7 +156,7 @@ export function buildMainOrder(params: {
 
   return {
     name: computedName,
-    kind: "inventory",
+    kind: "INVENTORY",
     unit,
     price: computedUnitPrice,
     length: form.length || 0,
@@ -169,7 +169,7 @@ export function buildMainOrder(params: {
 export function buildCurvingOrder(form: OrderProductForm): OrderedProduct {
   return {
     name: "Công Uốn Vòm",
-    kind: "expense",
+    kind: "EXPENSE",
     unit: "tấm",
     price: form.curving.price || 0,
     length: null,

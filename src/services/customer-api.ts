@@ -22,11 +22,11 @@ export async function createCustomer(customer: CustomerCreateReq): Promise<Custo
   return data.data as CustomerRes;
 }
 
-export async function deleteCustomer(id: string): Promise<void> {
+export async function deleteCustomer(id: number): Promise<void> {
   await apiClient.delete(`customers/${id}`);
 }
 
-export async function updateCustomer(id: string, req: CustomerUpdateReq): Promise<CustomerRes> {
+export async function updateCustomer(id: number, req: CustomerUpdateReq): Promise<CustomerRes> {
   const { data } = await apiClient.put(`customers/${id}`, req, { headers: { 'Content-Type': 'application/json' } });
   return data.data as CustomerRes;
 }

@@ -27,7 +27,7 @@ export const groupProductItems = (
     const groupKey = buildProductGroupKey(item);
 
     if (!groups.has(groupKey)) {
-      const displayType = item.kind === "non_inventory" ? "non_inventory" : "inventory";
+      const displayType = item.kind === "NON_INVENTORY" ? "NON_INVENTORY" : "INVENTORY";
       groups.set(groupKey, {
         groupKey,
         displayType,
@@ -67,7 +67,7 @@ export const buildOrderedDisplayItems = (
       (item) =>
         ({
           ...item,
-          displayType: "expense" as const,
+          displayType: "EXPENSE" as const,
         }) satisfies DisplayExpenseLine
     ),
   ];

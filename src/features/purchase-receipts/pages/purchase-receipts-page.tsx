@@ -123,7 +123,7 @@ function getMethodColor(method?: PurchaseReceiptMethod) {
     case "ADDITIVE":
       return "blue";
     case "SEPARATE":
-      return "green";
+      return "purple";
     default:
       return "default";
   }
@@ -257,7 +257,7 @@ export function PurchaseReceiptsPage() {
       ),
     },
     {
-      title: "Kiểu nhập",
+      title: "Phương thức nhập",
       dataIndex: "purchaseReceiptMethod",
       key: "purchaseReceiptMethod",
       render: (value?: PurchaseReceiptMethod) => (

@@ -53,7 +53,7 @@ export function OrderedItemsCard({
 
       <div className="max-h-[50vh] divide-y overflow-y-auto">
         {items.map((line, index) => {
-          if (line.displayType === "expense") {
+          if (line.displayType === "EXPENSE") {
             return (
               <div
                 key={line.rowId}

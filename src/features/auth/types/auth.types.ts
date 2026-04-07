@@ -3,16 +3,16 @@ export interface LoginReq {
   password: string;
 }
 
-export interface AuthUserDto {
+export interface AuthUserRes {
   id: number | string;
   username: string;
   fullName?: string;
   role?: string;
 }
 
-export interface LoginRes {
-  data: LoginRes;
+export interface AuthRes {
   accessToken: string;
   refreshToken?: string;
-  user?: AuthUserDto;
+  user?: AuthUserRes;
+  active:boolean;
 }

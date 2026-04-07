@@ -434,7 +434,7 @@ export function OrderProductDialog({
 
   const submitOrders = () => {
     const orders: OrderedProduct[] = sizeLines.map((line) => ({
-      kind: allowOutsideStock?"non_inventory":"inventory",
+      kind: allowOutsideStock?"NON_INVENTORY":"INVENTORY",
       name: productName.trim(),
       unit: unit || "",
       price: computedUnitPrice,
@@ -453,7 +453,7 @@ export function OrderProductDialog({
 
       orders.push({
         
-        kind: "expense",
+        kind: "EXPENSE",
         name: "Công Uốn Vòm",
         unit: "tấm",
         price: form.curving.price || 0,

@@ -10,6 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Link } from "react-router-dom";
+import { Eye } from "lucide-react";
+import { paths } from "@/routes/paths";
 import { formatCurrency } from "@/lib/utils";
 import type {
   ProductInventoryRes,
@@ -104,14 +107,27 @@ export function InventoryTable({
       dataIndex: "name",
       key: "name",
       width: 220,
-      render: (_, record) => (
-        <div>
-          <p className="font-medium">{record.name}</p>
-          <p className="text-xs text-muted-foreground">
-            {record.baseUnit || "mét"}
-          </p>
-        </div>
-      ),
+      render: (_, record) => {
+        const detailPath = paths.productDetail.replace(
+          ":id",
+          String(record.id)
+        );
+
+        return (
+          <div>
+            <Link
+              to={detailPath}
+              className="font-medium text-primary hover:underline"
+            >
+              {record.name}
+            </Link>
+
+            <p className="text-xs text-muted-foreground">
+              {record.baseUnit || "mét"}
+            </p>
+          </div>
+        );
+      },
     },
     {
       title: "Danh mục",
@@ -168,14 +184,34 @@ export function InventoryTable({
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
+      width: 200,
       fixed: "right",
-      render: (_, record) => (
-        <Button variant="outline" size="sm" onClick={() => onEditProduct(record)}>
-          <Pencil className="mr-2 h-4 w-4" />
-          Sửa
-        </Button>
-      ),
+      render: (_, record) => {
+        const detailPath = paths.productDetail.replace(
+          ":id",
+          String(record.id)
+        );
+
+        return (
+          <div className="flex gap-2">
+            <Link to={detailPath} className="!font-medium !text-primary">
+              <Button variant="outline" size="sm">
+                <Eye className="mr-2 h-4 w-4" />
+                Chi tiết
+              </Button>
+            </Link>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onEditProduct(record)}
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Sửa
+            </Button>
+          </div>
+        );
+      },
     },
   ];
 
@@ -231,7 +267,7 @@ export function InventoryTable({
                   render: (value) => value ?? "-",
                 },
                 {
-                  title: "Mã lô",
+                  title: "Mã kho",
                   dataIndex: "lotCode",
                   key: "lotCode",
                   width: 140,
@@ -341,20 +377,20 @@ export function InventoryTable({
                 normalizedKeyword.length === 0
                   ? record.variants ?? []
                   : (record.variants ?? []).filter((variant) => {
-                      const variantCode = removeVietnameseTones(
-                        variant.variantCode || ""
-                      );
-                      const sku = removeVietnameseTones(variant.sku || "");
-                      const lotCode = removeVietnameseTones(
-                        variant.lotCode || ""
-                      );
+                    const variantCode = removeVietnameseTones(
+                      variant.variantCode || ""
+                    );
+                    const sku = removeVietnameseTones(variant.sku || "");
+                    const lotCode = removeVietnameseTones(
+                      variant.lotCode || ""
+                    );
 
-                      return (
-                        variantCode.includes(normalizedKeyword) ||
-                        sku.includes(normalizedKeyword) ||
-                        lotCode.includes(normalizedKeyword)
-                      );
-                    });
+                    return (
+                      variantCode.includes(normalizedKeyword) ||
+                      sku.includes(normalizedKeyword) ||
+                      lotCode.includes(normalizedKeyword)
+                    );
+                  });
 
               return (
                 <div className="px-2 py-1">

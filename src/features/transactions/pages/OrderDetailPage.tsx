@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Descriptions, Empty, Spin, Table, Tag } from "antd";
+import { Button, Descriptions, Empty, Spin, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { ArrowLeft, Eye, FileDown, Printer } from "lucide-react";
+import { ArrowLeft, Eye, FileDown, Pencil, Printer, Trash2 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import {
@@ -12,11 +12,23 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
 import { formatDateTime } from "@/utils/date";
 import { OrderStatus, type OrderDetailRes, type OrderRes } from "@/types/order";
-import { getOrderById } from "@/services/order-api";
-import { downloadInvoice, previewInvoice, printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
+import { cancelOrder, getOrderById } from "@/services/order-api";
+import {
+    downloadInvoice,
+    previewInvoice,
+    printInvoice,
+} from "@/features/print/services/Invoice-pdf-print.service";
+import { Button as ShadcnButton } from "@/components/ui/button";
 
 export function OrderDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -25,22 +37,26 @@ export function OrderDetailPage() {
     const [order, setOrder] = useState<OrderRes | null>(null);
     const [loading, setLoading] = useState(false);
 
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [cancelConfirmed, setCancelConfirmed] = useState(false);
+    const [cancelLoading, setCancelLoading] = useState(false);
+
+    const fetchOrder = async () => {
+        if (!id) return;
+
+        try {
+            setLoading(true);
+            const res = await getOrderById(id);
+            setOrder(res);
+        } catch (error) {
+            console.error("Lỗi lấy chi tiết hóa đơn", error);
+            setOrder(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchOrder = async () => {
-            if (!id) return;
-
-            try {
-                setLoading(true);
-                const res = await getOrderById(id);
-                setOrder(res);
-            } catch (error) {
-                console.error("Lỗi lấy chi tiết hóa đơn", error);
-                setOrder(null);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchOrder();
     }, [id]);
 
@@ -74,6 +90,34 @@ export function OrderDetailPage() {
     const handleDownloadOrder = () => {
         if (!order) return;
         downloadInvoice(order);
+    };
+
+    const openCancelDialog = () => {
+        setCancelConfirmed(false);
+        setCancelDialogOpen(true);
+    };
+
+    const handleConfirmCancelOrder = async () => {
+        if (!order?.id || !cancelConfirmed) return;
+
+        try {
+            setCancelLoading(true);
+
+            await cancelOrder(order.id);
+
+            message.success("Đã hủy hóa đơn");
+
+            setCancelDialogOpen(false);
+            setCancelConfirmed(false);
+
+            await fetchOrder();
+            navigate("/transactions");
+        } catch (error) {
+            console.error("Lỗi hủy hóa đơn", error);
+            message.error("Hủy hóa đơn thất bại");
+        } finally {
+            setCancelLoading(false);
+        }
     };
 
     const detailColumns: ColumnsType<OrderDetailRes> = [
@@ -181,7 +225,10 @@ export function OrderDetailPage() {
         <PageShell>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                    <Button icon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(-1)}>
+                    <Button
+                        icon={<ArrowLeft className="h-4 w-4" />}
+                        onClick={() => navigate(-1)}
+                    >
                         Quay lại
                     </Button>
                     <div>
@@ -193,20 +240,42 @@ export function OrderDetailPage() {
                 </div>
 
                 <div className="flex gap-2">
-                    <Button icon={<FileDown className="h-4 w-4" />} onClick={handleDownloadOrder}>
+                    <Button
+                        icon={<FileDown className="h-4 w-4" />}
+                        onClick={handleDownloadOrder}
+                    >
                         Tải hóa đơn
                     </Button>
 
-                    <Button icon={<Eye className="h-4 w-4" />} onClick={handleViewOrder}>
+                    <Button
+                        icon={<Pencil size={16} />}
+                        onClick={() => navigate(`/transactions/edit/${order.id}`)}
+                    >
+                        Chỉnh sửa
+                    </Button>
+
+                    <Button
+                        icon={<Eye className="h-4 w-4" />}
+                        onClick={handleViewOrder}
+                    >
                         Xem hóa đơn
                     </Button>
 
-                    <Button icon={<Printer className="h-4 w-4" />} onClick={handlePrintOrder}>
+                    <Button
+                        icon={<Printer className="h-4 w-4" />}
+                        onClick={handlePrintOrder}
+                    >
                         In hóa đơn
                     </Button>
+
+                    <Button
+                        danger
+                        icon={<Trash2 className="h-4 w-4" />}
+                        onClick={openCancelDialog}
+                    >
+                        Hủy hóa đơn
+                    </Button>
                 </div>
-
-
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3">
@@ -236,7 +305,11 @@ export function OrderDetailPage() {
                                 {paymentStatus}
                             </Descriptions.Item>
                             <Descriptions.Item label="Trạng thái hóa đơn">
-                                {order.status === OrderStatus.CONFIRMED ? <Tag color="green">Chính thức</Tag> : <Tag color="red">Bản nháp</Tag>}
+                                {order.status === OrderStatus.CONFIRMED ? (
+                                    <Tag color="green">Chính thức</Tag>
+                                ) : (
+                                    <Tag color="red">Bản nháp</Tag>
+                                )}
                             </Descriptions.Item>
                             <Descriptions.Item label="Ghi chú">
                                 {order.note || "-"}
@@ -329,6 +402,67 @@ export function OrderDetailPage() {
                     />
                 </CardContent>
             </Card>
+
+            <Dialog
+                open={cancelDialogOpen}
+                onOpenChange={(open) => {
+                    setCancelDialogOpen(open);
+                    if (!open) {
+                        setCancelConfirmed(false);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Xác nhận hủy hóa đơn</DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                            Bạn có chắc chắn muốn hủy hóa đơn{" "}
+                            <span className="font-medium text-foreground">{order.code}</span>
+                            ? Nếu đồng ý, vui lòng tick vào ô xác nhận bên dưới.
+                        </p>
+
+                        <div className="flex items-start gap-3 rounded-md border p-3">
+                            <Checkbox
+                                id="confirm-cancel-order"
+                                checked={cancelConfirmed}
+                                onCheckedChange={(checked) =>
+                                    setCancelConfirmed(checked === true)
+                                }
+                            />
+                            <label
+                                htmlFor="confirm-cancel-order"
+                                className="text-sm leading-5"
+                            >
+                                Tôi xác nhận muốn hủy hóa đơn này
+                            </label>
+                        </div>
+
+                        <div className="flex justify-end gap-2">
+                            <ShadcnButton
+                                variant="outline"
+                                onClick={() => {
+                                    setCancelDialogOpen(false);
+                                    setCancelConfirmed(false);
+                                }}
+                                disabled={cancelLoading}
+                            >
+                                Quay lại
+                            </ShadcnButton>
+
+                            <ShadcnButton
+                                variant="destructive"
+                                onClick={handleConfirmCancelOrder}
+                                disabled={!cancelConfirmed || cancelLoading}
+                            >
+                                {cancelLoading ? "Đang hủy..." : "Xác nhận hủy"}
+                            </ShadcnButton>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </PageShell>
     );
 }

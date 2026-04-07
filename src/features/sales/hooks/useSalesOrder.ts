@@ -79,6 +79,17 @@ export type SalesOrderDraft = {
   createdAt: string;
 };
 
+type ReplaceActiveOrderDraftInput = {
+  cartItems?: CartLineItem[];
+  shippingFee?: number;
+  taxPercent?: number;
+  paidAmount?: number;
+  customerOrderInfo?: Partial<CustomerOrderInfo>;
+  otherExpenseDraft?: Partial<OtherExpenseDraft>;
+  selectedProduct?: Product | null;
+  editingGroupKey?: string | null;
+};
+
 type PersistedState = {
   activeOrderId: string | null;
   orders: SalesOrderDraft[];
@@ -233,6 +244,58 @@ export function useSalesOrders() {
     setOrders((prev) => [...prev, newDraft]);
     setActiveOrderId(newDraft.id);
   }, []);
+
+    const replaceActiveOrderDraft = useCallback(
+    (payload: ReplaceActiveOrderDraftInput) => {
+      updateActiveOrder((draft) => ({
+        ...draft,
+        cartItems: payload.cartItems ?? [],
+        shippingFee: Number(payload.shippingFee ?? 0),
+        taxPercent: Number(payload.taxPercent ?? 0),
+        paidAmount: Number(payload.paidAmount ?? 0),
+        customerOrderInfo: {
+          ...createDefaultCustomerOrderInfo(),
+          ...draft.customerOrderInfo,
+          ...(payload.customerOrderInfo ?? {}),
+        },
+        otherExpenseDraft: {
+          ...createDefaultOtherExpenseDraft(),
+          ...(payload.otherExpenseDraft ?? {}),
+        },
+        selectedProduct: payload.selectedProduct ?? null,
+        editingGroupKey: payload.editingGroupKey ?? null,
+      }));
+    },
+    [updateActiveOrder]
+  );
+
+  const setWholeOrderForEdit = useCallback(
+    ({
+      cartItems,
+      shippingFee,
+      taxPercent,
+      paidAmount,
+      customerOrderInfo,
+    }: {
+      cartItems: CartLineItem[];
+      shippingFee: number;
+      taxPercent: number;
+      paidAmount: number;
+      customerOrderInfo: Partial<CustomerOrderInfo>;
+    }) => {
+      replaceActiveOrderDraft({
+        cartItems,
+        shippingFee,
+        taxPercent,
+        paidAmount,
+        customerOrderInfo,
+        otherExpenseDraft: createDefaultOtherExpenseDraft(),
+        selectedProduct: null,
+        editingGroupKey: null,
+      });
+    },
+    [replaceActiveOrderDraft]
+  );
 
   const removeOrder = useCallback(
     (orderId: string) => {
@@ -435,12 +498,12 @@ export function useSalesOrders() {
 
   const inventoryItems = useMemo(() => {
     return cartItems.filter(
-      (item) => item.kind === "inventory" || item.kind === "non_inventory"
+      (item) => item.kind === "INVENTORY" || item.kind === "NON_INVENTORY"
     );
   }, [cartItems]);
 
   const expenseItems = useMemo(() => {
-    return cartItems.filter((item) => item.kind === "expense");
+    return cartItems.filter((item) => item.kind === "EXPENSE");
   }, [cartItems]);
 
   const groupedProductItems = useMemo(() => {
@@ -526,7 +589,7 @@ export function useSalesOrders() {
       updateActiveOrder((draft) => {
         const remain = draft.cartItems.filter(
           (item) =>
-            (item.kind !== "inventory" && item.kind !== "non_inventory") ||
+            (item.kind !== "INVENTORY" && item.kind !== "NON_INVENTORY") ||
             buildProductGroupKey(item) !== editingGroup.groupKey
         );
 
@@ -581,7 +644,7 @@ export function useSalesOrders() {
         ...draft,
         cartItems: draft.cartItems.filter(
           (item) =>
-            (item.kind !== "inventory" && item.kind !== "non_inventory") ||
+            (item.kind !== "INVENTORY" && item.kind !== "NON_INVENTORY") ||
             buildProductGroupKey(item) !== groupKey
         ),
       }));
@@ -753,5 +816,7 @@ export function useSalesOrders() {
     clearCart,
     resetWholeOrder: clearActiveOrder,
     handleCheckout,
+    replaceActiveOrderDraft,
+    setWholeOrderForEdit,
   };
 }

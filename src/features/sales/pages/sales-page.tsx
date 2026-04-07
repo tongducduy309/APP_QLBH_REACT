@@ -152,6 +152,7 @@ export function SalesPage() {
         price: item.price ?? 0,
         baseUnit: item.unit ?? "",
         inventoryId: item.inventoryId ?? null,
+        kind: item.kind,
       })
     );
 

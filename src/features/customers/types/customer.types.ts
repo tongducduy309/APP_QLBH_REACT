@@ -1,6 +1,6 @@
 // src/modules/customers/types/customer.types.ts
 export interface CustomerRes {
-  id?: string;
+  id?: number;
   name?: string;
   phone?: string;
   address?: string;
@@ -20,7 +20,7 @@ export interface CustomerCreateReq {
 }
 
 export interface CustomerUpdateReq {
-  id?: string;
+  id?:number;
   name?: string;
   phone?: string;
   address?: string;

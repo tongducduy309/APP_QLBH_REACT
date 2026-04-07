@@ -42,7 +42,7 @@ type CustomerTableRow =
     }
   | {
       rowType: "customer";
-      key: string;
+      key: number;
       customer: CustomerRes;
     };
 
@@ -63,7 +63,7 @@ export function CustomersPage() {
   const [form, setForm] = useState<CustomerCreateReq>(initialCreateForm);
   const [editingCustomer, setEditingCustomer] = useState<CustomerRes | null>(null);
 
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -147,7 +147,7 @@ export function CustomersPage() {
     }
   };
 
-  const handleDeleteCustomer = async (id?: string) => {
+  const handleDeleteCustomer = async (id?: number) => {
     if (!id) {
       toast.error("Không tìm thấy khách hàng để xóa.");
       return;
@@ -213,7 +213,7 @@ export function CustomersPage() {
 
       result.push({
         rowType: "customer",
-        key: customer.id ?? `customer-${customer.name}-${Math.random()}`,
+        key: customer.id ?? 0,
         customer,
       });
     }

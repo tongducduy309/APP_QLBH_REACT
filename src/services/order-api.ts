@@ -1,6 +1,6 @@
 import { OrderCreateReq } from "@/features/sales/types/sales.types";
 import { apiClient } from "@/lib/api-client";
-import { OrderRecentRes, OrderRes } from "@/types/order";
+import { OrderRecentRes, OrderRes, OrderUpdateReq } from "@/types/order";
 
 export async function getNextOrderCode(): Promise<string> {
   const { data } = await apiClient.get("/orders/next-code");
@@ -21,7 +21,7 @@ export async function getOrders(): Promise<OrderRes[]> {
 
 export async function updateOrder(
   id: string,
-  req: OrderCreateReq
+  req: OrderUpdateReq
 ): Promise<OrderRes> {
   const { data } = await apiClient.put(`/orders/${id}`, req, {
     headers: { "Content-Type": "application/json" },
@@ -37,4 +37,8 @@ export async function getRecentOrders(amount: number): Promise<OrderRecentRes[]>
 export async function getOrderById(id: string): Promise<OrderRes> {
   const { data } = await apiClient.get(`/orders/${id}`);
   return data.data as OrderRes;
+}
+
+export async function cancelOrder(id: string): Promise<void> {
+  await apiClient.delete(`/orders/${id}`);
 }

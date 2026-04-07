@@ -38,12 +38,12 @@ export type OtherExpenseDraft = {
   unit: string;
 };
 
-export type LineKind = "inventory" | "expense" | "non_inventory";
+export type LineKind = "INVENTORY" | "EXPENSE" | "NON_INVENTORY";
 
 export const LINE_KIND_LABEL: Record<LineKind, string> = {
-  inventory: "Hàng trong kho",
-  non_inventory: "Hàng ngoài kho",
-  expense: "Chi phí khác",
+  INVENTORY: "Hàng trong kho",
+  NON_INVENTORY: "Hàng ngoài kho",
+  EXPENSE: "Chi phí khác",
 };
 
 export type CartLineItem = {
@@ -62,7 +62,7 @@ export type CartLineItem = {
 
 export type DisplayInventoryGroup = {
   groupKey: string;
-  displayType: "inventory";
+  displayType: "INVENTORY";
   name: string;
   unit?: string;
   price: number;
@@ -80,7 +80,7 @@ export type DisplayInventoryGroup = {
 
 export type DisplayNonInventoryGroup = {
   groupKey: string;
-  displayType: "non_inventory";
+  displayType: "NON_INVENTORY";
   name: string;
   unit?: string;
   price: number;
@@ -97,7 +97,7 @@ export type DisplayNonInventoryGroup = {
 };
 
 export type DisplayExpenseLine = CartLineItem & {
-  displayType: "expense";
+  displayType: "EXPENSE";
 };
 
 export type EditableOrderedGroup = {
@@ -132,6 +132,7 @@ export interface OrderDetailCreateReq {
   price?: number;
   baseUnit?:string;
   inventoryId?: number | null;
+  kind: LineKind;
 }
 export interface OrderCreateReq {
   customerId?: number|null; 
@@ -147,25 +148,3 @@ export interface OrderCreateReq {
   status: OrderStatus;
 }
 
-export interface OrderDetailUpdateReq {
-  productVariantId?: number | null;  
-  name?: string;  
-  length?: number;     
-  quantity?: number;   
-  price?: number;
-  baseUnit?:string;
-  inventoryId?: number | null;
-}
-export interface OrderUpdateReq {
-  customerId?: number|null; 
-  nameCustomer?: string;
-  phoneCustomer?: string;
-  addressCustomer?: string;
-  tax?: number|null;      
-  note?: string;                
-  paidAmount: number;         
-  shippingFee: number;         
-  orderDetailUpdateReqs: OrderDetailUpdateReq[]; 
-  createdAt:string;
-  status: OrderStatus;
-}

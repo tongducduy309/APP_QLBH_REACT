@@ -4,7 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import { EllipsisVertical } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 
 type Props = {
@@ -28,12 +34,33 @@ type Props = {
   onCheckedPrintInvoice: (value: boolean) => void;
   onDownloadQuote: () => void;
   onSaveDraft: () => void;
+
+  editMode?: boolean;
+  checkoutLabel?: string;
+  checkoutLoadingLabel?: string;
+  saveDraftLabel?: string;
+  printInvoiceLabel?: string;
 };
 
 export function PaymentSummaryCard(props: Props) {
+  const checkoutLabel =
+    props.checkoutLabel ?? (props.editMode ? "Lưu hóa đơn" : "Thanh toán");
+
+  const checkoutLoadingLabel =
+    props.checkoutLoadingLabel ??
+    (props.editMode ? "Đang lưu hóa đơn..." : "Đang thanh toán...");
+
+  const saveDraftLabel =
+    props.saveDraftLabel ?? (props.editMode ? "Lưu bản nháp chỉnh sửa" : "Lưu nháp");
+
+
+  const printInvoiceLabel =
+    props.printInvoiceLabel ??
+    (props.editMode ? "In hóa đơn sau khi lưu" : "In hóa đơn khi thanh toán");
+
   return (
     <>
-      <div className="my-4 grid gap-4 border-t pt-2 md:grid-cols-2 ">
+      <div className="my-4 grid gap-4 border-t pt-2 md:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm font-medium">Phí vận chuyển</label>
           <Input
@@ -53,7 +80,6 @@ export function PaymentSummaryCard(props: Props) {
             onChange={(e) => props.onChangeTaxPercent(Number(e.target.value) || 0)}
           />
         </div>
-
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Tiền khách thanh toán</label>
@@ -84,7 +110,6 @@ export function PaymentSummaryCard(props: Props) {
           <span className="font-semibold">{formatCurrency(props.shippingFee)}</span>
         </div>
 
-
         <div className="mb-2 flex items-center justify-between">
           <span className="text-muted-foreground">
             Thuế GTGT ({props.taxPercent}%)
@@ -113,26 +138,28 @@ export function PaymentSummaryCard(props: Props) {
         </div>
       </div>
 
-      <label
-              htmlFor="allow-outside-stock"
-              className={`inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all `}
-            >
-              <Checkbox
-                id="allow-outside-stock"
-                checked={props.checkedPrintInvoice}
-                onCheckedChange={(checked) => props.onCheckedPrintInvoice(Boolean(checked))}
-              />
-              <span>In hóa đơn khi thanh toán</span>
-            </label>
+      <label className="inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all">
+        <Checkbox
+          checked={props.checkedPrintInvoice}
+          onCheckedChange={(checked) =>
+            props.onCheckedPrintInvoice(Boolean(checked))
+          }
+        />
+        <span>{printInvoiceLabel}</span>
+      </label>
 
-      <div className="flex gap-3 w-full items-center">
-        <div className="grid gap-3 md:grid-cols-2 w-full">
-          <Button variant="outline" className="w-full" onClick={props.onReset}>
-            Làm mới đơn
-          </Button>
+      <div className="flex w-full items-center gap-3">
+        <div className={`grid w-full gap-3 ${props.editMode ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
+          {
+            !props.editMode && (
+              <Button variant="outline" className="w-full" onClick={props.onReset}>
+                Làm mới đơn
+              </Button>
+            )
+          }
 
           <Button onClick={props.onCheckout} disabled={props.checkoutDisabled}>
-            {props.checkoutLoading ? "Đang thanh toán..." : "Thanh toán"}
+            {props.checkoutLoading ? checkoutLoadingLabel : checkoutLabel}
           </Button>
         </div>
 
@@ -144,9 +171,18 @@ export function PaymentSummaryCard(props: Props) {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={props.onDownloadQuote} disabled={props.checkoutDisabled}>Tải bảng báo giá</DropdownMenuItem>
-              {/* <DropdownMenuItem disabled={props.checkoutDisabled}>In bảng báo giá</DropdownMenuItem> */}
-              <DropdownMenuItem onClick={props.onSaveDraft} disabled={props.checkoutDisabled}>Lưu nháp</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={props.onDownloadQuote}
+                disabled={props.checkoutDisabled}
+              >
+                Tải bảng báo giá
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={props.onSaveDraft}
+                disabled={props.checkoutDisabled}
+              >
+                {saveDraftLabel}
+              </DropdownMenuItem>
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
