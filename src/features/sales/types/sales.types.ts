@@ -62,14 +62,9 @@ export type CartLineItem = {
   inventoryId?: number | null;
 };
 
-export type DisplayInventoryGroup = {
+export type DisplayInventoryGroup = CartLineItem & {
   groupKey: string;
   displayType: "INVENTORY";
-  name: string;
-  unit?: string;
-  price: number;
-  productId?: number | null;
-  variantId?: number | null;
   sizeLines: Array<{
     rowId: string;
     length: number;
@@ -80,14 +75,9 @@ export type DisplayInventoryGroup = {
   totalAmount: number;
 };
 
-export type DisplayNonInventoryGroup = {
+export type DisplayNonInventoryGroup = CartLineItem & {
   groupKey: string;
   displayType: "NON_INVENTORY";
-  name: string;
-  unit?: string;
-  price: number;
-  productId?: number | null;
-  variantId?: number | null;
   sizeLines: Array<{
     rowId: string;
     length: number;

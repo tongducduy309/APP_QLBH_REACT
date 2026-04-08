@@ -81,7 +81,6 @@ export function parseDateTimeVN(value?: string | null) {
 
 export function toISOStringFromVNDate(value?: string | null): string {
   if (!value) return new Date().toISOString();
-  console.log(value);
   const [day, month, year] = value.split("-").map(Number);
 
   const now = new Date();

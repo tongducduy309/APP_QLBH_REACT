@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/card";
 import { getOrders } from "@/services/order-api";
 import { formatCurrency } from "@/lib/utils";
-import { formatDateTime } from "@/utils/date";
 import { removeVietnameseTones } from "@/utils/string";
 import { OrderRes, OrderStatus } from "@/types/order";
 import { useNavigate } from "react-router-dom";

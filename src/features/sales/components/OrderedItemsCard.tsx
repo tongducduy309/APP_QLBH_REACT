@@ -121,14 +121,19 @@ export function OrderedItemsCard({
                 </div>
 
                 <div className="space-y-1 text-sm">
-                  <p>
+                  <div className="flex items-center gap-2">
                     Kích thước đã chọn:{" "}
-                    <strong>
-                      {line.sizeLines
-                        .map((item) => `${item.length}m x ${item.quantity}`)
-                        .join(", ")}
-                    </strong>
-                  </p>
+                    <div className="mb-1 flex flex-wrap items-center gap-1">
+                      {line.sizeLines.map((item, idx) => (
+                        <span
+                          key={`${line.groupKey}-${idx}`}
+                          className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700"
+                        >
+                          {item.length ? (`${item.length} mét x `) : ""} {item.quantity} {item.length?"":line.unit}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
                     <p>

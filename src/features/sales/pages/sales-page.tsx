@@ -470,11 +470,15 @@ export function SalesPage({
             <OrderedItemsCard
               items={sales.orderedDisplayItems}
               onEditProduct={(group) => {
-                const matchedProduct = products.find(
+                const matchedProduct =group.inventoryId? products.find(
                   (p) =>
-                    p.id === group.productId &&
-                    (p.variantId ?? null) === (group.variantId ?? null)
-                );
+                    // p.id === group.productId &&
+                    // (p.variantId ?? null) === (group.variantId ?? null)
+                    (p.inventoryId ?? null) === (group.inventoryId ?? null)
+
+                ):undefined;
+
+                // console.log(matchedProduct,group.inventoryId);
 
                 sales.setSelectedProduct({
                   id: matchedProduct?.id ?? group.productId ?? null,

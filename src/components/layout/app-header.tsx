@@ -26,6 +26,14 @@ export function AppHeader() {
     return found?.label ?? "APP_QLBH React";
   }, [location.pathname]);
 
+  const subtitle = useMemo(() => {
+    const found = navigationItems.find((item) =>
+      location.pathname.startsWith(item.path)
+    );
+
+    return found?.subtitle ?? "";
+  }, [location.pathname]);
+
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(false);
@@ -96,6 +104,9 @@ export function AppHeader() {
             Xin chào, {user?.fullName}
           </p>
           <h1 className="text-2xl font-semibold">{title}</h1>
+          <p className="text-sm text-muted-foreground">
+            {subtitle}
+          </p>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 lg:max-w-2xl lg:flex-row lg:items-center lg:justify-end">

@@ -1,8 +1,15 @@
-import { BarChart3, Boxes, FileSpreadsheet, FileText, LayoutDashboard, Receipt, Settings, ShoppingCart, Users } from "lucide-react";
+import { BarChart3, Boxes, FileSpreadsheet, FileText, LayoutDashboard, LucideIcon, Receipt, Settings, ShoppingCart, Users } from "lucide-react";
 import { paths } from "@/routes/paths";
 
-export const navigationItems = [
-  { label: "Tổng quan", path: paths.dashboard, icon: LayoutDashboard},
+interface NavigationItem {
+  label: string;
+  path: string;
+  icon: LucideIcon;
+  subtitle?: string;
+}
+
+export const navigationItems: NavigationItem[] = [
+  { label: "Tổng quan", path: paths.dashboard, icon: LayoutDashboard, subtitle: "Tổng quan trong 24h và giao dịch gần đây"},
   { label: "Bán hàng", path: paths.sales, icon: ShoppingCart},
   { label: "Hàng hóa", path: paths.inventory, icon: Boxes},
   { label: "Khách hàng", path: paths.customers, icon: Users},
