@@ -116,11 +116,11 @@ export function TransactionsPage() {
     //   render: (_, record) => record.details?.length ?? 0,
     // },
     {
-      title: "Thời gian",
+      title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      render: (value: string) => formatDateTime(value) || "-",
+      render: (value: string) => value || "-",
     },
     {
       title: "Đã thanh toán",

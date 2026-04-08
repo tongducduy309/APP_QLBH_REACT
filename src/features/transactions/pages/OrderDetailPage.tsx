@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
-import { formatDateTime } from "@/utils/date";
+import { formatDateTime, formatDateToDDMMYYYY } from "@/utils/date";
 import { OrderStatus, type OrderDetailRes, type OrderRes } from "@/types/order";
 import { cancelOrder, getOrderById } from "@/services/order-api";
 import {
@@ -46,7 +46,7 @@ export function OrderDetailPage() {
 
         try {
             setLoading(true);
-            const res = await getOrderById(id);
+            const res = await getOrderById(Number(id));
             setOrder(res);
         } catch (error) {
             console.error("Lỗi lấy chi tiết hóa đơn", error);
@@ -290,7 +290,7 @@ export function OrderDetailPage() {
                                 {order.code || "-"}
                             </Descriptions.Item>
                             <Descriptions.Item label="Ngày tạo">
-                                {formatDateTime(order.createdAt) || "-"}
+                                {order.createdAt || "-"}
                             </Descriptions.Item>
                             <Descriptions.Item label="Khách hàng">
                                 {order.customer?.name || "Khách lẻ"}

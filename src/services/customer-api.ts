@@ -3,7 +3,7 @@ import { apiClient } from "@/lib/api-client";
 
 
 export async function getCustomers(): Promise<CustomerRes[]> {
-  const { data } = await apiClient.get('customers');
+  const { data } = await apiClient.get('customers/with-debt');
   return data.data as CustomerRes[];
 }
 

@@ -1,4 +1,4 @@
-// src/modules/sales/types/sales.types.ts
+// src/features/sales/types/sales.types.ts
 
 import { OrderStatus } from "@/types/order";
 import type { OrderedProduct } from "../types/order-product.types";
@@ -17,6 +17,7 @@ export type Product = {
   baseUnit?: string;
   variantId?: number | null;
   variantCode?: string;
+  inventoryId?: number | null;
 };
 
 export type CustomerOrderInfo = {
@@ -48,6 +49,7 @@ export const LINE_KIND_LABEL: Record<LineKind, string> = {
 
 export type CartLineItem = {
   rowId: string;
+  detailId?: number | null;
   kind: LineKind;
   name: string;
   unit?: string;
@@ -125,26 +127,26 @@ export type SalesSummary = {
 export type HandleOrderSubmit = (orders: OrderedProduct[]) => void;
 
 export interface OrderDetailCreateReq {
-  productVariantId?: number | null;  
-  name?: string;  
-  length?: number;     
-  quantity?: number;   
+  productVariantId?: number | null;
+  name?: string;
+  length?: number;
+  quantity?: number;
   price?: number;
-  baseUnit?:string;
+  baseUnit?: string;
   inventoryId?: number | null;
   kind: LineKind;
 }
+
 export interface OrderCreateReq {
-  customerId?: number|null; 
+  customerId?: number | null;
   nameCustomer?: string;
   phoneCustomer?: string;
   addressCustomer?: string;
-  tax?: number|null;      
-  note?: string;                
-  paidAmount: number;         
-  shippingFee: number;         
-  orderDetailCreateReqs: OrderDetailCreateReq[]; 
-  createdAt:string;
+  tax?: number | null;
+  note?: string;
+  paidAmount: number;
+  shippingFee: number;
+  orderDetailCreateReqs: OrderDetailCreateReq[];
+  createdAt: string;
   status: OrderStatus;
 }
-

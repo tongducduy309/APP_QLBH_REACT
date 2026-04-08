@@ -9,21 +9,21 @@ export enum OrderStatus {
 
 export interface OrderDetailRes {
   id: number;       
-  length: number;     
-  quantity: number;   
+  length: number | null;     
+  quantity: number | null;   
   price:number;
-  totalQuantity:number;
+  totalQuantity:number | null;
   inventoryId: number | null;
   sku: string;
   name: string;
   kind:LineKind;
-  productVariantId: number; 
+  productVariantId: number | null;
   baseUnit: string;
   index:number|null;
 }
 
 export interface OrderRes {
-  id: string;                 
+  id: number;                 
   code: string;                 
   customer?: CustomerRes | null; 
   note?: string;

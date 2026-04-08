@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Form, Input, Modal, Select, Space, Table, Tag, Tooltip } from "antd";
+import {
+  DatePicker,
+  Form,
+  Input,
+  Modal,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+} from "antd";
 import type { ColumnsType } from "antd/es/table";
+import type { Dayjs } from "dayjs";
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
@@ -32,6 +45,9 @@ import type {
   PurchaseReceiptRes,
 } from "../types/purchase-receipt.types";
 
+dayjs.extend(isBetween);
+const { RangePicker } = DatePicker;
+
 type PurchaseReceiptTableRow = PurchaseReceiptRes & {
   key: string;
 };
@@ -53,19 +69,19 @@ const purchaseReceiptMethodOptions: {
   value: PurchaseReceiptMethod;
   description: string;
 }[] = [
-    {
-      label: "Cộng dồn tồn kho",
-      value: "ADDITIVE",
-      description:
-        "Dùng cho sắt, thép, vật tư có thể nhập thêm và cộng vào tồn hiện có.",
-    },
-    {
-      label: "Tạo tồn kho riêng",
-      value: "SEPARATE",
-      description:
-        "Dùng cho tôn cuộn hoặc hàng cần theo dõi riêng từng lần nhập.",
-    },
-  ];
+  {
+    label: "Cộng dồn tồn kho",
+    value: "ADDITIVE",
+    description:
+      "Dùng cho sắt, thép, vật tư có thể nhập thêm và cộng vào tồn hiện có.",
+  },
+  {
+    label: "Tạo tồn kho riêng",
+    value: "SEPARATE",
+    description:
+      "Dùng cho tôn cuộn hoặc hàng cần theo dõi riêng từng lần nhập.",
+  },
+];
 
 const initialFormValues: PurchaseReceiptCreateReq = {
   productVariantId: undefined,
@@ -138,6 +154,7 @@ export function PurchaseReceiptsPage() {
   const [inventoryLoading, setInventoryLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
 
   const variantOptions = useMemo(() => buildVariantOptions(inventory), [inventory]);
   const selectedVariantId = Form.useWatch("productVariantId", form);
@@ -236,6 +253,20 @@ export function PurchaseReceiptsPage() {
     return receipts.reduce((sum, item) => sum + (item.totalQuantity || 0), 0);
   }, [receipts]);
 
+  const filteredReceipts = useMemo(() => {
+    return receipts.filter((item) => {
+      if (!dateRange || !dateRange[0] || !dateRange[1]) return true;
+      if (!item.createdAt) return false;
+
+      return dayjs(item.createdAt).isBetween(
+        dateRange[0].startOf("day"),
+        dateRange[1].endOf("day"),
+        null,
+        "[]"
+      );
+    });
+  }, [receipts, dateRange]);
+
   const columns: ColumnsType<PurchaseReceiptTableRow> = [
     {
       title: "ID",
@@ -249,7 +280,9 @@ export function PurchaseReceiptsPage() {
       key: "name",
       render: (value: string, record) => (
         <div>
-          <div className="font-medium">{value || "-"}  {record.productVariantCode ? `(${record.productVariantCode})` : ""}</div>
+          <div className="font-medium">
+            {value || "-"} {record.productVariantCode ? `(${record.productVariantCode})` : ""}
+          </div>
           <div className="text-xs text-muted-foreground">
             SKU: {record.productVariantSKU || "-"}
           </div>
@@ -314,11 +347,11 @@ export function PurchaseReceiptsPage() {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (value?: string) => formatDateTime(value),
+      render: (value?: string) => value,
     },
   ];
 
-  const dataSource: PurchaseReceiptTableRow[] = receipts.map((item, index) => ({
+  const dataSource: PurchaseReceiptTableRow[] = filteredReceipts.map((item, index) => ({
     ...item,
     key: String(item.id ?? index),
   }));
@@ -378,11 +411,32 @@ export function PurchaseReceiptsPage() {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Danh sách phiếu nhập</CardTitle>
-            <CardDescription>
-              Theo dõi lịch sử nhập kho và kiểu xử lý tồn kho của từng phiếu nhập.
-            </CardDescription>
+          <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle>Danh sách phiếu nhập</CardTitle>
+              <CardDescription>
+                Theo dõi lịch sử nhập kho và kiểu xử lý tồn kho của từng phiếu nhập.
+              </CardDescription>
+            </div>
+
+            <Space wrap>
+              <RangePicker
+                format="DD/MM/YYYY"
+                value={dateRange}
+                onChange={(dates) =>
+                  setDateRange(dates ? [dates[0] ?? null, dates[1] ?? null] : null)
+                }
+                placeholder={["Từ ngày", "Đến ngày"]}
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setDateRange(null)}
+              >
+                Xóa lọc ngày
+              </Button>
+            </Space>
           </CardHeader>
 
           <CardContent>

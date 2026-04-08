@@ -34,11 +34,11 @@ export async function getRecentOrders(amount: number): Promise<OrderRecentRes[]>
   return (data.data ?? []) as OrderRecentRes[];
 }
 
-export async function getOrderById(id: string): Promise<OrderRes> {
+export async function getOrderById(id: number): Promise<OrderRes> {
   const { data } = await apiClient.get(`/orders/${id}`);
   return data.data as OrderRes;
 }
 
-export async function cancelOrder(id: string): Promise<void> {
+export async function cancelOrder(id: number): Promise<void> {
   await apiClient.delete(`/orders/${id}`);
 }

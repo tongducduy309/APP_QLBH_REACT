@@ -10,36 +10,23 @@ import { TransactionsPage } from "@/features/transactions/pages/transactions-pag
 import { TaxReportPage } from "@/features/reports/pages/tax-report-page";
 import { QuoteReportPage } from "@/features/reports/pages/quote-report-page";
 import { StatisticsPage } from "@/features/statistics/pages/statistics-page";
-// import { BarcodePage } from "@/features/barcode/pages/barcode-page";
+import { BarcodePage } from "@/features/barcode/pages/barcode-page";
 import { PurchaseReceiptsPage } from "@/features/purchase-receipts/pages/purchase-receipts-page";
 import { SettingsPage } from "@/features/settings/pages/settings-page";
 import { ForbiddenPage } from "@/features/errors/pages/forbidden-page";
 import { NotFoundPage } from "@/features/errors/pages/not-found-page";
 import { OrderDetailPage } from "@/features/transactions/pages/OrderDetailPage";
+import { OrderEditPage } from "@/features/transactions/pages/EditOrderPage";
 import { ProductDetailPage } from "@/features/inventory/pages/product-detail-page";
-import EditOrderPage from "@/features/transactions/pages/EditOrderPage";
+
 export const router = createBrowserRouter([
   {
-  path: "/",
-  element: <ProtectedRoute />,
-  children: [
-    {
-      element: <MainLayout />,
-      children: [
-    { index: true, element: <Navigate to="/sales" replace /> },
-    { path: "sales", element: <SalesPage /> },
-  ],
-    }
-  ]
-},
+    path: "/",
+    element: <Navigate to="/dashboard" replace />,
+  },
   {
     element: <GuestRoute />,
-    children: [
-      {
-        path: "/login",
-        element: <LoginPage />,
-      },
-    ],
+    children: [{ path: "/login", element: <LoginPage /> }],
   },
   {
     element: <ProtectedRoute />,
@@ -48,17 +35,17 @@ export const router = createBrowserRouter([
         element: <MainLayout />,
         children: [
           { path: "/dashboard", element: <DashboardPage /> },
-          // { path: "/sales", element: <SalesPage /> },
+          { path: "/sales", element: <SalesPage /> },
           { path: "/inventory", element: <InventoryPage /> },
           { path: "/inventory/:id", element: <ProductDetailPage /> },
           { path: "/customers", element: <CustomersPage /> },
           { path: "/transactions", element: <TransactionsPage /> },
           { path: "/transactions/:id", element: <OrderDetailPage /> },
-          { path: "/transactions/edit/:id", element: <EditOrderPage /> },
+          { path: "/transactions/edit/:id", element: <OrderEditPage /> },
           { path: "/reports/tax", element: <TaxReportPage /> },
           { path: "/reports/quotes", element: <QuoteReportPage /> },
           { path: "/statistics", element: <StatisticsPage /> },
-          // { path: "/barcode", element: <BarcodePage /> },
+          { path: "/barcode", element: <BarcodePage /> },
           { path: "/purchase-receipts", element: <PurchaseReceiptsPage /> },
           { path: "/settings", element: <SettingsPage /> },
         ],

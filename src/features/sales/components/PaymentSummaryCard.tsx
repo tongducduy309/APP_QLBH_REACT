@@ -40,6 +40,7 @@ type Props = {
   checkoutLoadingLabel?: string;
   saveDraftLabel?: string;
   printInvoiceLabel?: string;
+  
 };
 
 export function PaymentSummaryCard(props: Props) {

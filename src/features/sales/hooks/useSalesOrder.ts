@@ -1,4 +1,4 @@
-// src/modules/sales/hooks/useSalesOrders.ts
+// src/features/sales/hooks/useSalesOrder.ts
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { OrderedProduct } from "../types/order-product.types";
@@ -26,7 +26,7 @@ import {
 } from "../utils/sales-mappers";
 import { getNextOrderCode } from "@/services/order-api";
 
-const SALES_MULTI_ORDER_STORAGE_KEY = "sales-multi-order-draft-v2";
+const DEFAULT_STORAGE_KEY = "sales-multi-order-draft-v2";
 
 const nowIso = () => new Date().toISOString();
 
@@ -40,10 +40,7 @@ export const createOrderCodeFallback = () => {
 };
 
 const createDraftId = () => {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-  return `draft-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  return new Date().getTime();
 };
 
 const createDefaultCustomerOrderInfo = (): CustomerOrderInfo => ({
@@ -66,7 +63,7 @@ const createDefaultOtherExpenseDraft = (): OtherExpenseDraft => ({
 });
 
 export type SalesOrderDraft = {
-  id: string;
+  id: number;
   cartItems: CartLineItem[];
   shippingFee: number;
   taxPercent: number;
@@ -83,6 +80,7 @@ type ReplaceActiveOrderDraftInput = {
   cartItems?: CartLineItem[];
   shippingFee?: number;
   taxPercent?: number;
+  discount?: number;
   paidAmount?: number;
   customerOrderInfo?: Partial<CustomerOrderInfo>;
   otherExpenseDraft?: Partial<OtherExpenseDraft>;
@@ -91,8 +89,12 @@ type ReplaceActiveOrderDraftInput = {
 };
 
 type PersistedState = {
-  activeOrderId: string | null;
+  activeOrderId: number | null;
   orders: SalesOrderDraft[];
+};
+
+type UseSalesOrdersOptions = {
+  storageKey?: string;
 };
 
 const createEmptyDraft = (): SalesOrderDraft => ({
@@ -109,11 +111,11 @@ const createEmptyDraft = (): SalesOrderDraft => ({
   createdAt: nowIso(),
 });
 
-const readStorage = (): PersistedState | null => {
+const readStorage = (storageKey: string): PersistedState | null => {
   if (typeof window === "undefined") return null;
 
   try {
-    const raw = window.localStorage.getItem(SALES_MULTI_ORDER_STORAGE_KEY);
+    const raw = window.localStorage.getItem(storageKey);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
@@ -186,15 +188,17 @@ const getDraftLabel = (draft: SalesOrderDraft, index: number) => {
   return `Hóa đơn ${index + 1}`;
 };
 
-export function useSalesOrders() {
-  const storageRef = useRef<PersistedState | null>(readStorage());
+export function useSalesOrders(options?: UseSalesOrdersOptions) {
+  const storageKey = options?.storageKey ?? DEFAULT_STORAGE_KEY;
+
+  const storageRef = useRef<PersistedState | null>(readStorage(storageKey));
 
   const [orders, setOrders] = useState<SalesOrderDraft[]>(() => {
     const savedOrders = storageRef.current?.orders ?? [];
     return savedOrders.length > 0 ? savedOrders : [createEmptyDraft()];
   });
 
-  const [activeOrderId, setActiveOrderId] = useState<string | null>(() => {
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
     const savedActiveId = storageRef.current?.activeOrderId;
     const savedOrders = storageRef.current?.orders ?? [];
 
@@ -210,7 +214,7 @@ export function useSalesOrders() {
   }, [orders, activeOrderId]);
 
   const updateOrder = useCallback(
-    (orderId: string, updater: (draft: SalesOrderDraft) => SalesOrderDraft) => {
+    (orderId: number, updater: (draft: SalesOrderDraft) => SalesOrderDraft) => {
       setOrders((prev) =>
         prev.map((order) => (order.id === orderId ? updater(order) : order))
       );
@@ -226,32 +230,43 @@ export function useSalesOrders() {
     [activeOrderId, updateOrder]
   );
 
-  const createNewOrder = useCallback(async () => {
+  const assignOrderCodeForDraft = useCallback(async (draftId: number) => {
     let orderCode = createOrderCodeFallback();
 
     try {
       orderCode = (await getNextOrderCode()) || orderCode;
-    } catch {}
+    } catch {
+      // fallback
+    }
 
-    const newDraft: SalesOrderDraft = {
-      ...createEmptyDraft(),
+    updateOrder(draftId, (draft) => ({
+      ...draft,
       customerOrderInfo: {
-        ...createDefaultCustomerOrderInfo(),
+        ...draft.customerOrderInfo,
         orderCode,
       },
+    }));
+  }, [updateOrder]);
+
+  const createNewOrder = useCallback(async () => {
+    const newDraft: SalesOrderDraft = {
+      ...createEmptyDraft(),
     };
 
     setOrders((prev) => [...prev, newDraft]);
     setActiveOrderId(newDraft.id);
-  }, []);
 
-    const replaceActiveOrderDraft = useCallback(
+    await assignOrderCodeForDraft(newDraft.id);
+  }, [assignOrderCodeForDraft]);
+
+  const replaceActiveOrderDraft = useCallback(
     (payload: ReplaceActiveOrderDraftInput) => {
       updateActiveOrder((draft) => ({
         ...draft,
         cartItems: payload.cartItems ?? [],
         shippingFee: Number(payload.shippingFee ?? 0),
         taxPercent: Number(payload.taxPercent ?? 0),
+        discount: Number(payload.discount ?? draft.discount ?? 0),
         paidAmount: Number(payload.paidAmount ?? 0),
         customerOrderInfo: {
           ...createDefaultCustomerOrderInfo(),
@@ -262,8 +277,10 @@ export function useSalesOrders() {
           ...createDefaultOtherExpenseDraft(),
           ...(payload.otherExpenseDraft ?? {}),
         },
-        selectedProduct: payload.selectedProduct ?? null,
-        editingGroupKey: payload.editingGroupKey ?? null,
+        selectedProduct:
+          payload.selectedProduct === undefined ? draft.selectedProduct : payload.selectedProduct,
+        editingGroupKey:
+          payload.editingGroupKey === undefined ? draft.editingGroupKey : payload.editingGroupKey,
       }));
     },
     [updateActiveOrder]
@@ -298,7 +315,7 @@ export function useSalesOrders() {
   );
 
   const removeOrder = useCallback(
-    (orderId: string) => {
+    (orderId: number) => {
       const target = orders.find((item) => item.id === orderId);
       if (!target) return { removed: false, needConfirm: false };
 
@@ -328,7 +345,7 @@ export function useSalesOrders() {
   );
 
   const forceRemoveOrder = useCallback(
-    (orderId: string) => {
+    (orderId: number) => {
       setOrders((prev) => {
         const next = prev.filter((item) => item.id !== orderId);
 
@@ -348,7 +365,7 @@ export function useSalesOrders() {
     [activeOrderId]
   );
 
-  const reorderOrders = useCallback((fromId: string, toId: string) => {
+  const reorderOrders = useCallback((fromId: number, toId: number) => {
     if (fromId === toId) return;
 
     setOrders((prev) => {
@@ -363,21 +380,14 @@ export function useSalesOrders() {
   const clearActiveOrder = useCallback(async () => {
     if (!activeOrderId) return;
 
-    let orderCode = createOrderCodeFallback();
-    try {
-      orderCode = (await getNextOrderCode()) || orderCode;
-    } catch {}
-
     updateOrder(activeOrderId, (draft) => ({
       ...createEmptyDraft(),
       id: draft.id,
       createdAt: draft.createdAt,
-      customerOrderInfo: {
-        ...createDefaultCustomerOrderInfo(),
-        orderCode,
-      },
     }));
-  }, [activeOrderId, updateOrder]);
+
+    await assignOrderCodeForDraft(activeOrderId);
+  }, [activeOrderId, assignOrderCodeForDraft, updateOrder]);
 
   const setCartItems = useCallback(
     (value: CartLineItem[] | ((prev: CartLineItem[]) => CartLineItem[])) => {
@@ -409,16 +419,6 @@ export function useSalesOrders() {
     },
     [updateActiveOrder]
   );
-
-  // const setDiscount = useCallback(
-  //   (value: number | ((prev: number) => number)) => {
-  //     updateActiveOrder((draft) => ({
-  //       ...draft,
-  //       discount: typeof value === "function" ? value(draft.discount) : value,
-  //     }));
-  //   },
-  //   [updateActiveOrder]
-  // );
 
   const setPaidAmount = useCallback(
     (value: number | ((prev: number) => number)) => {
@@ -705,15 +705,17 @@ export function useSalesOrders() {
     if (typeof window === "undefined") return;
 
     window.localStorage.setItem(
-      SALES_MULTI_ORDER_STORAGE_KEY,
+      storageKey,
       JSON.stringify({
         activeOrderId,
         orders,
       })
     );
-  }, [activeOrderId, orders]);
+  }, [storageKey, activeOrderId, orders]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const handler = (event: BeforeUnloadEvent) => {
       const hasDirtyOrder = orders.some(isDraftMeaningful);
       if (!hasDirtyOrder) return;
@@ -733,21 +735,10 @@ export function useSalesOrders() {
 
     if (missingCodeOrders.length === 0) return;
 
-    missingCodeOrders.forEach(async (order) => {
-      let orderCode = createOrderCodeFallback();
-      try {
-        orderCode = (await getNextOrderCode()) || orderCode;
-      } catch {}
-
-      updateOrder(order.id, (draft) => ({
-        ...draft,
-        customerOrderInfo: {
-          ...draft.customerOrderInfo,
-          orderCode,
-        },
-      }));
+    missingCodeOrders.forEach((order) => {
+      void assignOrderCodeForDraft(order.id);
     });
-  }, [orders, updateOrder]);
+  }, [orders, assignOrderCodeForDraft]);
 
   const orderTabs = useMemo(() => {
     return orders.map((item, index) => ({

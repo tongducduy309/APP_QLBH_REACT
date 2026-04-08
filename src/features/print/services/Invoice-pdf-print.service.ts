@@ -191,7 +191,7 @@ function toDataPdf(data: OrderRes): DataPdf {
   });
 
   return {
-    id: data.id,
+    id: data.id+"",
     code: data.code,
     createdAt: data.createdAt,
     customer: data.customer
@@ -697,7 +697,7 @@ function buildInvoiceDocDefinition(
       subject: "Biên nhận giao hàng",
       keywords: "hoa don, bien nhan, giao hang, ton thep",
       creator: "QLBH",
-      producer: "QLBH Electron App",
+      producer: "QLBH App",
       creationDate: new Date(data.createdAt ?? Date.now()),
       trapped: "False" as any,
     },

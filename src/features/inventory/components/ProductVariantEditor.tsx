@@ -87,13 +87,13 @@ export function ProductVariantEditor({
           />
         </div>
 
-        <div className="space-y-2 md:col-span-3">
+        {/* <div className="space-y-2 md:col-span-3" hidden={isEditMode}>
           <Label>Tồn kho</Label>
           <NumberInput
             value={variant.remainingQty}
             onValueChange={(value) => onChange({ ...variant, remainingQty: value })}
           />
-        </div>
+        </div> */}
 
         
 

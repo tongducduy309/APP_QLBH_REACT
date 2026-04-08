@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageShell } from "@/components/layout/page-shell";
-import { createOrder } from "@/services/order-api";
+import {
+  createOrder,
+  getOrderById,
+  updateOrder as updateOrderApi,
+} from "@/services/order-api";
 import { OrderProductDialog } from "../components/order-product-dialog";
 import {
   CustomerPickerDialog,
@@ -27,20 +32,46 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { GripVertical, X } from "lucide-react";
+import { ArrowLeft, GripVertical, X } from "lucide-react";
 import { useSalesOrders } from "../hooks/useSalesOrder";
 import { mapSalesDraftToOrderRes } from "@/features/print/utils/order-print-mapper";
 import { printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
 import { downloadQuotation } from "@/features/print/services/Quotation-pdf-print.service";
-import { OrderStatus } from "@/types/order";
+import { OrderStatus, type OrderUpdateReq } from "@/types/order";
+import {
+  mapOrderDetailsToCartItems,
+  mapOrderToCustomerOrderInfo,
+} from "@/features/transactions/utils/order-edit-mapper";
+import { Button as AntdButton } from "antd";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
   { description: "Công nhấn máng", unit: "mét" },
 ];
 
-export function SalesPage() {
-  const sales = useSalesOrders();
+type SalesPageProps = {
+  mode?: "create" | "edit";
+  orderId?: string;
+  storageKey?: string;
+};
+
+export function SalesPage({
+  mode = "create",
+  orderId,
+  storageKey,
+}: SalesPageProps) {
+  const isEditMode = mode === "edit" && Boolean(orderId);
+  const navigate = useNavigate();
+
+  const sales = useSalesOrders({
+    storageKey:
+      storageKey ??
+      (isEditMode && orderId
+        ? `sales-edit-order-draft-${orderId}`
+        : undefined),
+  });
+
+  const hydratedRef = useRef(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customerOrderDialogOpen, setCustomerOrderDialogOpen] = useState(false);
@@ -49,14 +80,14 @@ export function SalesPage() {
     useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
-  // const [productsLoading, setProductsLoading] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkedPrintInvoice, setCheckedPrintInvoice] = useState(false);
   const [selectedCustomerFromPicker, setSelectedCustomerFromPicker] =
     useState<CustomerItem | null>(null);
 
-  const [closingOrderId, setClosingOrderId] = useState<string | null>(null);
-  const [draggingOrderId, setDraggingOrderId] = useState<string | null>(null);
+  const [closingOrderId, setClosingOrderId] = useState<number | null>(null);
+  const [draggingOrderId, setDraggingOrderId] = useState<number | null>(null);
+  const [loadingEditOrder, setLoadingEditOrder] = useState(false);
 
   const printableOrder = useMemo(() => {
     if (!sales.activeOrder) return null;
@@ -77,7 +108,6 @@ export function SalesPage() {
     sales.grandTotal,
   ]);
 
-
   const isCartEmpty = useMemo(() => {
     return sales.orderedDisplayItems.length === 0;
   }, [sales.orderedDisplayItems]);
@@ -93,20 +123,61 @@ export function SalesPage() {
 
   const fetchProducts = useCallback(async () => {
     try {
-      // setProductsLoading(true);
       const inventoryProducts = await getAllInventory();
       setProducts(mapInventoryProductsToSalesProducts(inventoryProducts));
     } catch (error) {
       console.error("Lỗi lấy danh sách sản phẩm bán hàng", error);
       setProducts([]);
-    } finally {
-      // setProductsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (!isEditMode || !orderId || hydratedRef.current) return;
+
+    const fetchEditOrder = async () => {
+      try {
+        setLoadingEditOrder(true);
+
+        const order = await getOrderById(Number(orderId));
+
+        sales.setWholeOrderForEdit({
+          cartItems: mapOrderDetailsToCartItems(order),
+          shippingFee: Number(order.shippingFee ?? 0),
+          taxPercent: Number(order.tax ?? 0),
+          paidAmount: Number(order.paidAmount ?? 0),
+          customerOrderInfo: mapOrderToCustomerOrderInfo(order),
+        });
+
+        setSelectedCustomerFromPicker(
+          order.customer
+            ? {
+              id: order.customer.id ?? 0,
+              name: order.customer.name ?? "",
+              phone: order.customer.phone ?? "",
+              address: order.customer.address ?? "",
+            }
+            : null
+        );
+
+        hydratedRef.current = true;
+      } catch (error) {
+        console.error("Lỗi tải hóa đơn để chỉnh sửa", error);
+        toast.error("Không thể tải dữ liệu hóa đơn.");
+      } finally {
+        setLoadingEditOrder(false);
+      }
+    };
+
+    fetchEditOrder();
+  }, [isEditMode, orderId]);
+
+  useEffect(() => {
+    hydratedRef.current = false;
+  }, [orderId]);
 
   const openOrderDialog = (product: Product) => {
     sales.setEditingGroupKey(null);
@@ -116,23 +187,14 @@ export function SalesPage() {
 
   const handleChooseCustomer = (customer: CustomerItem) => {
     setSelectedCustomerFromPicker(customer);
-
-    sales.setCustomerOrderInfo((prev: any) => ({
-      ...prev,
-      customerId: customer.id,
-      customerName: customer.name ?? "",
-      customerPhone: customer.phone ?? "",
-      customerAddress: customer.address ?? "",
-    }));
-
     setCustomerPickerOpen(false);
   };
 
-  const requestCloseOrder = (orderId: string) => {
-    const result = sales.removeOrder(orderId);
+  const requestCloseOrder = (orderIdValue: number) => {
+    const result = sales.removeOrder(orderIdValue);
 
     if (result.needConfirm) {
-      setClosingOrderId(orderId);
+      setClosingOrderId(orderIdValue);
     }
   };
 
@@ -142,7 +204,7 @@ export function SalesPage() {
     setClosingOrderId(null);
   };
 
-  const buildOrderPayload = (status: OrderStatus): OrderCreateReq => {
+  const buildCreatePayload = (status: OrderStatus): OrderCreateReq => {
     const orderDetailCreateReqs: OrderDetailCreateReq[] = sales.cartItems.map(
       (item) => ({
         productVariantId: item.variantId ?? null,
@@ -162,15 +224,73 @@ export function SalesPage() {
       phoneCustomer: sales.customerOrderInfo.customerPhone?.trim() || undefined,
       addressCustomer:
         sales.customerOrderInfo.customerAddress?.trim() || undefined,
-      tax: sales.taxAmount ?? 0,
+      tax: sales.taxPercent ?? 0,
       note: sales.customerOrderInfo.note?.trim() || undefined,
       paidAmount: sales.paidAmount ?? 0,
       shippingFee: sales.shippingFee ?? 0,
       orderDetailCreateReqs,
       createdAt:
         sales.customerOrderInfo.createdDate || new Date().toISOString(),
-      status: status,
+      status,
     };
+  };
+
+  const buildUpdatePayload = (status: OrderStatus): OrderUpdateReq => {
+    return {
+      customerId: sales.customerOrderInfo.customerId ?? null,
+      nameCustomer: sales.customerOrderInfo.customerName?.trim() || undefined,
+      phoneCustomer: sales.customerOrderInfo.customerPhone?.trim() || undefined,
+      addressCustomer:
+        sales.customerOrderInfo.customerAddress?.trim() || undefined,
+      tax: sales.taxPercent ?? 0,
+      note: sales.customerOrderInfo.note?.trim() || undefined,
+      paidAmount: sales.paidAmount ?? 0,
+      shippingFee: sales.shippingFee ?? 0,
+      createdAt:
+        sales.customerOrderInfo.createdDate ?? new Date().toISOString(),
+      status,
+      orderDetailUpdateReqs: sales.cartItems.map((item) => ({
+        id: item.detailId ?? null,
+        productVariantId: item.variantId ?? null,
+        name: item.name,
+        length: item.length ?? 0,
+        quantity: item.quantity ?? 0,
+        price: item.price ?? 0,
+        baseUnit: item.unit ?? "",
+        inventoryId: item.inventoryId ?? null,
+        kind: item.kind,
+      })),
+    };
+  };
+
+  const afterSubmitSuccess = async (messageText: string, finalOrderId?: string) => {
+    if (checkedPrintInvoice && printableOrder) {
+      printInvoice(printableOrder, {
+        paperSize: "A4",
+        pageOrientation: "portrait",
+      });
+    }
+
+    toast.success(messageText);
+
+    await fetchProducts();
+
+    setMissingCustomerDialogOpen(false);
+    setCustomerOrderDialogOpen(false);
+    setCustomerPickerOpen(false);
+    setDialogOpen(false);
+
+    if (isEditMode && finalOrderId) {
+      navigate(`/transactions/${finalOrderId}`);
+      return;
+    }
+
+    const completedId = sales.activeOrderId;
+    if (completedId) {
+      sales.forceRemoveOrder(completedId);
+    }
+
+    setSelectedCustomerFromPicker(null);
   };
 
   const submitCheckout = async () => {
@@ -181,31 +301,20 @@ export function SalesPage() {
 
     try {
       setCheckoutLoading(true);
-      const payload = buildOrderPayload(OrderStatus.CONFIRMED);
-      await createOrder(payload);
-      if (checkedPrintInvoice) {
-        printInvoice(printableOrder!, {
-          paperSize: "A4",
-          pageOrientation: "portrait",
-        });
+
+      if (isEditMode && orderId) {
+        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.CONFIRMED));
+        await afterSubmitSuccess("Cập nhật hóa đơn thành công.", orderId);
+      } else {
+        const payload = buildCreatePayload(OrderStatus.CONFIRMED);
+        const created = await createOrder(payload);
+        await afterSubmitSuccess("Tạo đơn hàng thành công.", created.id.toString());
       }
-      toast.success("Tạo đơn hàng thành công.");
-
-      const completedId = sales.activeOrderId;
-      if (completedId) {
-        sales.forceRemoveOrder(completedId);
-      }
-
-      await fetchProducts();
-
-      setMissingCustomerDialogOpen(false);
-      setCustomerOrderDialogOpen(false);
-      setCustomerPickerOpen(false);
-      setDialogOpen(false);
-      setSelectedCustomerFromPicker(null);
     } catch (error) {
-      console.error("Lỗi tạo đơn hàng", error);
-      toast.error("Không thể tạo đơn hàng.");
+      console.error("Lỗi lưu hóa đơn", error);
+      toast.error(
+        isEditMode ? "Không thể cập nhật hóa đơn." : "Không thể tạo đơn hàng."
+      );
     } finally {
       setCheckoutLoading(false);
     }
@@ -219,29 +328,24 @@ export function SalesPage() {
 
     try {
       setCheckoutLoading(true);
-      const payload = buildOrderPayload(OrderStatus.DRAFT);
-      await createOrder(payload);
-      toast.success("Lưu đơn hàng thành công.");
 
-      const completedId = sales.activeOrderId;
-      if (completedId) {
-        sales.forceRemoveOrder(completedId);
+      if (isEditMode && orderId) {
+        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.DRAFT));
+        await afterSubmitSuccess("Cập nhật bản nháp thành công.", orderId);
+      } else {
+        const payload = buildCreatePayload(OrderStatus.DRAFT);
+        const created = await createOrder(payload);
+        await afterSubmitSuccess("Lưu đơn hàng thành công.", created.id.toString());
       }
-
-      // await fetchProducts();
-
-      setMissingCustomerDialogOpen(false);
-      setCustomerOrderDialogOpen(false);
-      setCustomerPickerOpen(false);
-      setDialogOpen(false);
-      setSelectedCustomerFromPicker(null);
     } catch (error) {
-      console.error("Lỗi lưu đơn hàng", error);
-      toast.error("Không thể lưu đơn hàng.");
+      console.error("Lỗi lưu nháp hóa đơn", error);
+      toast.error(
+        isEditMode ? "Không thể cập nhật bản nháp." : "Không thể lưu đơn hàng."
+      );
     } finally {
       setCheckoutLoading(false);
     }
-  }, [isCartEmpty]);
+  }, [isCartEmpty, isEditMode, orderId, sales.cartItems, sales.customerOrderInfo]);
 
   const handleCheckoutClick = async () => {
     if (isCartEmpty) {
@@ -263,21 +367,39 @@ export function SalesPage() {
       paperSize: "A4",
       pageOrientation: "portrait",
     });
-
   }, [printableOrder]);
+
+  if (loadingEditOrder) {
+    return (
+      <PageShell>
+        <div className="rounded-xl border bg-white p-8 text-center text-sm text-muted-foreground">
+          Đang tải dữ liệu hóa đơn...
+        </div>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
       <div className="space-y-4 bg-white p-4">
+        {isEditMode && (
+          <AntdButton
+            icon={<ArrowLeft className="h-4 w-4" />}
+            onClick={() => navigate(-1)}
+          >
+            Quay lại
+          </AntdButton>
+        )}
+
         <div className="flex flex-wrap items-center gap-2 border-b pb-3">
           {sales.orderTabs.map((order: any) => (
             <div
               key={order.id}
-              draggable
-              onDragStart={() => setDraggingOrderId(order.id)}
-              onDragOver={(e) => e.preventDefault()}
+              draggable={!isEditMode}
+              onDragStart={() => !isEditMode && setDraggingOrderId(order.id)}
+              onDragOver={(e) => !isEditMode && e.preventDefault()}
               onDrop={() => {
-                if (!draggingOrderId) return;
+                if (isEditMode || !draggingOrderId) return;
                 sales.reorderOrders(draggingOrderId, order.id);
                 setDraggingOrderId(null);
               }}
@@ -291,6 +413,7 @@ export function SalesPage() {
                 type="button"
                 className="cursor-grab px-2 text-muted-foreground"
                 title="Kéo để sắp xếp"
+                disabled={isEditMode}
               >
                 <GripVertical className="h-4 w-4" />
               </button>
@@ -308,7 +431,7 @@ export function SalesPage() {
                 <span className="mr-1 h-2 w-2 rounded-full bg-orange-500" />
               )}
 
-              {sales.orders.length > 1 && (
+              {!isEditMode && sales.orders.length > 1 && (
                 <button
                   type="button"
                   onClick={() => requestCloseOrder(order.id)}
@@ -321,9 +444,11 @@ export function SalesPage() {
             </div>
           ))}
 
-          <Button type="button" variant="outline" onClick={sales.createNewOrder}>
-            + Hóa đơn mới
-          </Button>
+          {!isEditMode && (
+            <Button type="button" variant="outline" onClick={sales.createNewOrder}>
+              + Hóa đơn mới
+            </Button>
+          )}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -331,7 +456,6 @@ export function SalesPage() {
             <ProductSelectorCard
               products={products}
               onOrderProduct={openOrderDialog}
-            // loading={productsLoading}
             />
 
             <OtherExpenseCard
@@ -397,9 +521,16 @@ export function SalesPage() {
               checkedPrintInvoice={checkedPrintInvoice}
               onCheckedPrintInvoice={setCheckedPrintInvoice}
               onSaveDraft={handleSaveDraft}
+              editMode={isEditMode}
             />
           </div>
         </div>
+        {isEditMode && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 w-full">
+              Bạn đang ở chế độ <b>chỉnh sửa hóa đơn</b>. Khi lưu, hệ thống sẽ cập nhật
+              hóa đơn hiện tại thay vì tạo hóa đơn mới.
+            </div>
+        )}
       </div>
 
       <OrderProductDialog
@@ -419,7 +550,9 @@ export function SalesPage() {
         open={customerOrderDialogOpen}
         onClose={() => {
           setCustomerOrderDialogOpen(false);
-          setSelectedCustomerFromPicker(null);
+          if (!isEditMode) {
+            setSelectedCustomerFromPicker(null);
+          }
         }}
         value={sales.customerOrderInfo}
         onChange={sales.setCustomerOrderInfo}
@@ -445,7 +578,7 @@ export function SalesPage() {
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Bạn chưa điền thông tin khách hàng. Bạn vẫn muốn tiếp tục thanh toán
-              và tạo đơn hàng chứ?
+              và lưu hóa đơn chứ?
             </p>
 
             <div className="flex justify-end gap-2">
@@ -457,13 +590,18 @@ export function SalesPage() {
                 Quay lại
               </Button>
               <Button onClick={submitCheckout} disabled={checkoutLoading}>
-                {checkoutLoading ? "Đang thanh toán..." : "Vẫn tiếp tục"}
+                {checkoutLoading
+                  ? isEditMode
+                    ? "Đang cập nhật..."
+                    : "Đang thanh toán..."
+                  : isEditMode
+                    ? "Vẫn cập nhật"
+                    : "Vẫn tiếp tục"}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
-
 
       <Dialog
         open={Boolean(closingOrderId)}
@@ -483,10 +621,7 @@ export function SalesPage() {
             </p>
 
             <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setClosingOrderId(null)}
-              >
+              <Button variant="outline" onClick={() => setClosingOrderId(null)}>
                 Hủy
               </Button>
               <Button variant="destructive" onClick={confirmCloseOrder}>
@@ -496,6 +631,7 @@ export function SalesPage() {
           </div>
         </DialogContent>
       </Dialog>
+      
     </PageShell>
   );
 }

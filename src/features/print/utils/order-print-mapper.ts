@@ -1,7 +1,5 @@
-
 import { SalesOrderDraft } from "@/features/sales/hooks/useSalesOrder";
 import { OrderDetailRes, OrderRes, OrderStatus } from "@/types/order";
-
 
 export const mapSalesDraftToOrderRes = (
   draft: SalesOrderDraft,
@@ -14,38 +12,43 @@ export const mapSalesDraftToOrderRes = (
   }
 ): OrderRes => {
   const details: OrderDetailRes[] = draft.cartItems.map((item: any, index: number) => ({
-    id: index + 1,
-    length: item.length,
-    quantity: item.quantity,
-    price: item.price,
-    totalQuantity: item.length > 0 ? item.length * item.quantity : item.quantity,
+    id: item.detailId ?? index + 1,
+    length: Number(item.length ?? 0),
+    quantity: Number(item.quantity ?? 0),
+    price: Number(item.price ?? 0),
+    totalQuantity:
+      Number(item.totalQuantity ?? 0) ||
+      (Number(item.length ?? 0) > 0
+        ? Number(item.length ?? 0) * Number(item.quantity ?? 0)
+        : Number(item.quantity ?? 0)),
     inventoryId: item.inventoryId ?? null,
-    sku: "",
-    name: item.name,
-    productVariant: {} as any,
+    sku: item.sku ?? "",
+    kind: item.kind,
+    name: item.name ?? "",
+    productVariantId: item.variantId ?? null,
     baseUnit: item.unit ?? "",
     index,
   }));
 
   return {
     id: draft.id,
-    code: draft.customerOrderInfo.orderCode || draft.id,
+    code: draft.customerOrderInfo.orderCode || draft.id.toString(),
     customer: {
       id: draft.customerOrderInfo.customerId ?? 0,
-      name: draft.customerOrderInfo.customerName,
-      phone: draft.customerOrderInfo.customerPhone,
-      address: draft.customerOrderInfo.customerAddress,
+      name: draft.customerOrderInfo.customerName ?? "",
+      phone: draft.customerOrderInfo.customerPhone ?? "",
+      address: draft.customerOrderInfo.customerAddress ?? "",
     } as any,
-    note: draft.customerOrderInfo.note,
-    tax: draft.taxPercent,
-    taxAmount: computed.taxAmount,
-    paidAmount: draft.paidAmount,
-    remainingAmount: computed.remainingAmount,
-    shippingFee: draft.shippingFee,
-    subtotal: computed.subtotal,
+    note: draft.customerOrderInfo.note ?? "",
+    tax: Number(draft.taxPercent ?? 0),
+    taxAmount: Number(computed.taxAmount ?? 0),
+    paidAmount: Number(draft.paidAmount ?? 0),
+    remainingAmount: Number(computed.remainingAmount ?? 0),
+    shippingFee: Number(draft.shippingFee ?? 0),
+    subtotal: Number(computed.subtotal ?? 0),
     paidDept: 0,
-    changeAmount: computed.changeAmount,
-    total: computed.total,
+    changeAmount: Number(computed.changeAmount ?? 0),
+    total: Number(computed.total ?? 0),
     details,
     status: OrderStatus.CONFIRMED,
     createdAt: draft.customerOrderInfo.createdDate || draft.createdAt,

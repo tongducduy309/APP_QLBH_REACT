@@ -9,7 +9,7 @@ export function formatDateToDDMMYYYY(date?: string | null): string {
   const d = dayjs(date);
   if (!d.isValid()) return "";
 
-  return d.format("DD/MM/YYYY");
+  return d.format("DD-MM-YYYY");
 }
 
 /**
@@ -21,7 +21,7 @@ export function formatDateTime(date?: string | null): string {
   const d = dayjs(date);
   if (!d.isValid()) return "";
 
-  return d.format("DD/MM/YYYY HH:mm");
+  return d.format("DD/MM/YYYY HH:mm:ss");
 }
 
 /**
@@ -67,4 +67,35 @@ export function getTodayISO(): string {
 export function isSameDate(a?: string, b?: string): boolean {
   if (!a || !b) return false;
   return dayjs(a).isSame(dayjs(b), "day");
+}
+
+export function parseDateTimeVN(value?: string | null) {
+  if (!value) return new Date().toISOString();
+
+  const [datePart, timePart = "00:00:00"] = value.split(" ");
+  const [day, month, year] = datePart.split("/").map(Number);
+  const [hour = 0, minute = 0, second = 0] = timePart.split(":").map(Number);
+
+  return new Date(year, month - 1, day, hour, minute, second).toISOString();
+}
+
+export function toISOStringFromVNDate(value?: string | null): string {
+  if (!value) return new Date().toISOString();
+  console.log(value);
+  const [day, month, year] = value.split("-").map(Number);
+
+  const now = new Date();
+
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    now.getHours(),
+    now.getMinutes(),
+    now.getSeconds()
+  );
+
+  
+
+  return date.toISOString();
 }

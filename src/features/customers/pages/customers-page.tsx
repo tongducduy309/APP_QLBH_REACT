@@ -284,12 +284,12 @@ export function CustomersPage() {
     },
     {
       title: "Công nợ",
-      key: "debt",
+      key: "totalDebt",
       render: (_, record) => {
         if (record.rowType === "group") {
           return { props: { colSpan: 0 } };
         }
-        return formatCurrency(record.customer.debt ?? 0);
+        return formatCurrency(record.customer.totalDebt ?? 0);
       },
     },
     {

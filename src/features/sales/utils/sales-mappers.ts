@@ -1,4 +1,4 @@
-// src/modules/sales/utils/sales-mappers.ts
+// src/features/sales/utils/sales-mappers.ts
 
 import { ProductInventoryRes } from "@/features/inventory/types/inventory.types";
 import type { OrderedProduct } from "../types/order-product.types";
@@ -16,6 +16,7 @@ export const mapOrderedProductsToCartLines = (
 
     return {
       rowId: `${Date.now()}-${Math.random()}`,
+      detailId: null,
       kind: order.kind,
       name: order.name,
       unit: order.unit || fallbackUnit,
@@ -44,7 +45,8 @@ export const mapExpenseToCartLine = ({
   unit: string;
 }): CartLineItem => ({
   rowId: `${Date.now()}-${Math.random()}`,
-  kind: "expense",
+  detailId: null,
+  kind: "EXPENSE",
   name: description,
   unit: unit || "-",
   quantity,

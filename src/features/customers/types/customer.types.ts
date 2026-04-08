@@ -7,7 +7,7 @@ export interface CustomerRes {
   taxCode?: string;
   email?: string;
   point?: number;
-  debt?: number;
+  totalDebt?: number;
   createdAt?: string;
 }
 
