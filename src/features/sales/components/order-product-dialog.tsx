@@ -16,6 +16,7 @@ import { Plus, TriangleAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OrderedProduct } from "../types/order-product.types";
+import { LineKind } from "../types/sales.types";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -136,7 +137,11 @@ export function OrderProductDialog({
   const [isOverStockDialogOpen, setIsOverStockDialogOpen] = useState(false);
   const [allowOutsideStock, setAllowOutsideStock] = useState(false);
 
+  const [checkStock, setCheckStock] = useState<boolean>(true);
+
   const lengthRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  
 
   useEffect(() => {
     if (!open) return;
@@ -159,6 +164,8 @@ export function OrderProductDialog({
       setIsProductNameManuallyEdited(true);
       setAllowOutsideStock(false);
       setIsOverStockDialogOpen(false);
+      setCheckStock(product?.inventoryId !== null&&product?.inventoryId !== undefined&&product?.inventoryId !== 0);
+      console.log(checkStock);
 
       setTimeout(() => {
         const first = editValue.sizeLines[0];
@@ -179,7 +186,7 @@ export function OrderProductDialog({
     setIsProductNameManuallyEdited(false);
     setAllowOutsideStock(false);
     setIsOverStockDialogOpen(false);
-
+    
     setTimeout(() => {
       lengthRefs.current[firstLine.id]?.focus();
     }, 0);
@@ -473,7 +480,7 @@ export function OrderProductDialog({
   const handleSubmit = () => {
     if (!validateForm()) return;
 
-    if (isOverStock && !allowOutsideStock) {
+    if (checkStock&&isOverStock && !allowOutsideStock) {
       setIsOverStockDialogOpen(true);
       return;
     }
@@ -515,7 +522,7 @@ export function OrderProductDialog({
                       setIsProductNameManuallyEdited(true);
                     }}
                   />
-                  {!editValue && (
+            
                     <Button
                       type="button"
                       variant="outline"
@@ -526,11 +533,11 @@ export function OrderProductDialog({
                     >
                       Tự động
                     </Button>
-                  )}
+                
                 </div>
               </div>
 
-              {!editValue && (
+           
                 <>
                   <div className="space-y-3">
                     <Label>Loại sản phẩm</Label>
@@ -665,7 +672,7 @@ export function OrderProductDialog({
                     </RadioGroup>
                   </div>
                 </>
-              )}
+          
 
               <div className="grid gap-4 md:grid-cols-[1fr_140px]">
                 <div className="space-y-2">
@@ -780,15 +787,19 @@ export function OrderProductDialog({
                 <span className="text-right font-medium">{productName || "-"}</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4">
-                <span className="text-muted-foreground">Tồn kho hiện tại</span>
-                <span className="font-medium">{availableStock}</span>
-              </div>
+              {
+                checkStock && (
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted-foreground">Tồn kho hiện tại</span>
+                    <span className="font-medium">{availableStock}</span>
+                  </div>
+                )
+              }
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Tổng số lượng</span>
-                <span className={isOverStock ? "font-medium text-red-600" : "font-medium"}>
-                  {totalQuantity} {isOverStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
+                <span className={isOverStock&&checkStock ? "font-medium text-red-600" : "font-medium"}>
+                  {totalQuantity} {isOverStock&&checkStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
                 </span>
               </div>
 
