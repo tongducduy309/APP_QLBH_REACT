@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Package2 } from "lucide-react";
 import { navigationItems } from "@/routes/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 type Props = {
   collapsed: boolean;
@@ -10,6 +11,11 @@ type Props = {
 };
 
 export function AppSidebar({ collapsed, onToggle }: Props) {
+  const settings = useSettingsStore((state) => state.settings);
+
+  const appName = settings?.appName?.trim() || "Quản lý bán hàng";
+  const appIcon = settings?.appIcon || null;
+
   return (
     <aside
       className={cn(
@@ -19,8 +25,16 @@ export function AppSidebar({ collapsed, onToggle }: Props) {
       )}
     >
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="rounded-2xl bg-primary p-3 text-primary-foreground shrink-0">
-          <Package2 className="h-5 w-5" />
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-primary/10 text-primary">
+          {appIcon ? (
+            <img
+              src={appIcon}
+              alt={appName}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Package2 className="h-5 w-5" />
+          )}
         </div>
 
         <div
@@ -30,8 +44,10 @@ export function AppSidebar({ collapsed, onToggle }: Props) {
           )}
         >
           <div className="min-w-0 whitespace-nowrap">
-            <p className="font-semibold">TÂM ĐỨC CƯỜNG</p>
-            <p className="text-sm text-muted-foreground">Quản lý bán hàng</p>
+            <p className="truncate font-semibold">{appName}</p>
+            <p className="truncate text-sm text-muted-foreground">
+              Quản lý bán hàng
+            </p>
           </div>
         </div>
       </div>

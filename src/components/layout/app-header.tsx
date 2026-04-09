@@ -5,6 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
+import { useSettingsStore } from "@/features/settings/store/settings-store";
 import { navigationItems } from "@/routes/navigation";
 import { resolveSearchItemRoute } from "@/features/search/utils/search-route";
 import { GlobalSearchDropdown } from "@/features/search/components/global-search-dropdown";
@@ -14,17 +15,20 @@ import { searchGlobal } from "@/services/search-api";
 export function AppHeader() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
-  console.log(user)
+  const settings = useSettingsStore((state) => state.settings);
+
   const navigate = useNavigate();
   const location = useLocation();
+
+  const appName = settings?.appName?.trim() || "Quản lý bán hàng";
 
   const title = useMemo(() => {
     const found = navigationItems.find((item) =>
       location.pathname.startsWith(item.path)
     );
 
-    return found?.label ?? "APP_QLBH React";
-  }, [location.pathname]);
+    return found?.label ?? appName;
+  }, [location.pathname, appName]);
 
   const subtitle = useMemo(() => {
     const found = navigationItems.find((item) =>
@@ -47,13 +51,13 @@ export function AppHeader() {
     if (!trimmedKeyword) {
       setResults([]);
       setLoading(false);
+      setOpenDropdown(false);
       return;
     }
 
     const timer = window.setTimeout(async () => {
       try {
         setLoading(true);
-
         const data = await searchGlobal(trimmedKeyword, 8);
         setResults(data);
         setOpenDropdown(true);
@@ -97,24 +101,26 @@ export function AppHeader() {
   }
 
   return (
-    <header className="border-b bg-white/70 px-4 py-4 backdrop-blur">
+    <header className="relative z-30 border-b bg-white/70 px-4 py-4 backdrop-blur">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Xin chào, {user?.fullName}
-          </p>
-          <h1 className="text-2xl font-semibold">{title}</h1>
-          <p className="text-sm text-muted-foreground">
-            {subtitle}
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="min-w-0">
+            <p className="truncate text-sm text-muted-foreground">
+              Xin chào, {user?.fullName || user?.username || "người dùng"}
+            </p>
+            <h1 className="truncate text-2xl font-semibold">{title}</h1>
+            <p className="truncate text-sm text-muted-foreground">
+              {subtitle}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-1 flex-col gap-3 lg:max-w-2xl lg:flex-row lg:items-center lg:justify-end">
           <div
             ref={searchContainerRef}
-            className="relative w-full lg:max-w-md"
+            className="relative z-40 w-full lg:max-w-md"
           >
-            <Search className="absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 
             <Input
               value={keyword}
@@ -131,16 +137,18 @@ export function AppHeader() {
               placeholder="Tìm kiếm hóa đơn, sản phẩm, khách hàng..."
             />
 
-            <GlobalSearchDropdown
-              keyword={keyword}
-              loading={loading}
-              open={openDropdown}
-              results={results}
-              onSelect={handleSelectSuggestion}
-            />
+            <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50">
+              <GlobalSearchDropdown
+                keyword={keyword}
+                loading={loading}
+                open={openDropdown}
+                results={results}
+                onSelect={handleSelectSuggestion}
+              />
+            </div>
           </div>
 
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="gap-2">
             <Bell className="h-4 w-4" />
             Thông báo
           </Button>
@@ -148,6 +156,7 @@ export function AppHeader() {
           <Button
             variant="ghost"
             size="sm"
+            className="gap-2"
             onClick={() => {
               logout();
               navigate("/login");

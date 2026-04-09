@@ -115,9 +115,9 @@ export function SalesPage({
   const hasCustomerInfo = useMemo(() => {
     return Boolean(
       sales.customerOrderInfo.customerName?.trim() ||
-      sales.customerOrderInfo.customerPhone?.trim() ||
-      sales.customerOrderInfo.customerAddress?.trim() ||
-      sales.customerOrderInfo.customerId
+        sales.customerOrderInfo.customerPhone?.trim() ||
+        sales.customerOrderInfo.customerAddress?.trim() ||
+        sales.customerOrderInfo.customerId
     );
   }, [sales.customerOrderInfo]);
 
@@ -155,11 +155,11 @@ export function SalesPage({
         setSelectedCustomerFromPicker(
           order.customer
             ? {
-              id: order.customer.id ?? 0,
-              name: order.customer.name ?? "",
-              phone: order.customer.phone ?? "",
-              address: order.customer.address ?? "",
-            }
+                id: order.customer.id ?? 0,
+                name: order.customer.name ?? "",
+                phone: order.customer.phone ?? "",
+                address: order.customer.address ?? "",
+              }
             : null
         );
 
@@ -179,9 +179,21 @@ export function SalesPage({
     hydratedRef.current = false;
   }, [orderId]);
 
+  const productsWithAvailableStock = useMemo(() => {
+    return products.map((product) => ({
+      ...product,
+      realStock: product.stock ?? 0,
+      stock: sales.getAvailableStock(product),
+    })) as Product[];
+  }, [products, sales]);
+
   const openOrderDialog = (product: Product) => {
     sales.setEditingGroupKey(null);
-    sales.setSelectedProduct(product);
+    sales.setSelectedProduct({
+      ...product,
+      realStock: (product as any).realStock ?? product.stock ?? 0,
+      stock: sales.getAvailableStock(product),
+    } as Product);
     setDialogOpen(true);
   };
 
@@ -263,7 +275,10 @@ export function SalesPage({
     };
   };
 
-  const afterSubmitSuccess = async (messageText: string, finalOrderId?: string) => {
+  const afterSubmitSuccess = async (
+    messageText: string,
+    finalOrderId?: string
+  ) => {
     if (checkedPrintInvoice && printableOrder) {
       printInvoice(printableOrder, {
         paperSize: "A4",
@@ -308,7 +323,10 @@ export function SalesPage({
       } else {
         const payload = buildCreatePayload(OrderStatus.CONFIRMED);
         const created = await createOrder(payload);
-        await afterSubmitSuccess("Tạo đơn hàng thành công.", created.id.toString());
+        await afterSubmitSuccess(
+          "Tạo đơn hàng thành công.",
+          created.id.toString()
+        );
       }
     } catch (error) {
       console.error("Lỗi lưu hóa đơn", error);
@@ -335,7 +353,10 @@ export function SalesPage({
       } else {
         const payload = buildCreatePayload(OrderStatus.DRAFT);
         const created = await createOrder(payload);
-        await afterSubmitSuccess("Lưu đơn hàng thành công.", created.id.toString());
+        await afterSubmitSuccess(
+          "Lưu đơn hàng thành công.",
+          created.id.toString()
+        );
       }
     } catch (error) {
       console.error("Lỗi lưu nháp hóa đơn", error);
@@ -404,10 +425,11 @@ export function SalesPage({
                 setDraggingOrderId(null);
               }}
               onDragEnd={() => setDraggingOrderId(null)}
-              className={`flex items-center rounded-lg border ${order.isActive
+              className={`flex items-center rounded-lg border ${
+                order.isActive
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-background hover:bg-muted/50"
-                } ${draggingOrderId === order.id ? "opacity-50" : ""}`}
+              } ${draggingOrderId === order.id ? "opacity-50" : ""}`}
             >
               <button
                 type="button"
@@ -454,7 +476,7 @@ export function SalesPage({
         <div className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="space-y-6">
             <ProductSelectorCard
-              products={products}
+              products={productsWithAvailableStock}
               onOrderProduct={openOrderDialog}
             />
 
@@ -470,18 +492,22 @@ export function SalesPage({
             <OrderedItemsCard
               items={sales.orderedDisplayItems}
               onEditProduct={(group) => {
-                const matchedProduct =group.inventoryId? products.find(
-                  (p) =>
-                    // p.id === group.productId &&
-                    // (p.variantId ?? null) === (group.variantId ?? null)
-                    (p.inventoryId ?? null) === (group.inventoryId ?? null)
+                const matchedProduct = group.inventoryId
+                  ? products.find(
+                      (p) =>
+                        (p as any).inventoryId != null &&
+                        ((p as any).inventoryId ?? null) === (group.inventoryId ?? null)
+                    )
+                  : products.find(
+                      (p) =>
+                        (p.variantId ?? null) === (group.variantId ?? null) ||
+                        (p.id ?? null) === (group.productId ?? null)
+                    );
 
-                ):undefined;
-
-                // console.log(matchedProduct,group.inventoryId);
-
-                sales.setSelectedProduct({
+                const baseProduct = {
                   id: matchedProduct?.id ?? group.productId ?? null,
+                  inventoryId:
+                    (matchedProduct as any)?.inventoryId ?? group.inventoryId ?? null,
                   name: matchedProduct?.name ?? group.name,
                   retailPrice: matchedProduct?.retailPrice ?? group.price,
                   storePrice: matchedProduct?.storePrice ?? group.price,
@@ -490,6 +516,14 @@ export function SalesPage({
                   stock: matchedProduct?.stock ?? 0,
                   variantId: matchedProduct?.variantId ?? group.variantId ?? null,
                   variantCode: matchedProduct?.variantCode ?? "",
+                } as Product;
+
+                sales.setSelectedProduct({
+                  ...baseProduct,
+                  realStock: matchedProduct?.stock ?? 0,
+                  stock: sales.getAvailableStock(baseProduct, {
+                    editingGroupKey: group.groupKey,
+                  }),
                 } as Product);
 
                 sales.setEditingGroupKey(group.groupKey);
@@ -529,11 +563,12 @@ export function SalesPage({
             />
           </div>
         </div>
+
         {isEditMode && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 w-full">
-              Bạn đang ở chế độ <b>chỉnh sửa hóa đơn</b>. Khi lưu, hệ thống sẽ cập nhật
-              hóa đơn hiện tại thay vì tạo hóa đơn mới.
-            </div>
+          <div className="w-full rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Bạn đang ở chế độ <b>chỉnh sửa hóa đơn</b>. Khi lưu, hệ thống sẽ cập nhật
+            hóa đơn hiện tại thay vì tạo hóa đơn mới.
+          </div>
         )}
       </div>
 
@@ -599,8 +634,8 @@ export function SalesPage({
                     ? "Đang cập nhật..."
                     : "Đang thanh toán..."
                   : isEditMode
-                    ? "Vẫn cập nhật"
-                    : "Vẫn tiếp tục"}
+                  ? "Vẫn cập nhật"
+                  : "Vẫn tiếp tục"}
               </Button>
             </div>
           </div>
@@ -635,7 +670,6 @@ export function SalesPage({
           </div>
         </DialogContent>
       </Dialog>
-      
     </PageShell>
   );
 }

@@ -1,6 +1,5 @@
-// src/features/sales/hooks/useSalesOrder.ts
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import type { OrderedProduct } from "../types/order-product.types";
 import type {
   CartLineItem,
@@ -13,6 +12,7 @@ import {
   calculateChangeAmount,
   calculateRemainingAmount,
   calculateTaxAmount,
+  getEffectiveQuantity,
   toNumber,
 } from "../utils/sales-calculations";
 import {
@@ -40,7 +40,7 @@ export const createOrderCodeFallback = () => {
 };
 
 const createDraftId = () => {
-  return new Date().getTime();
+  return new Date().getTime() + Math.floor(Math.random() * 1000);
 };
 
 const createDefaultCustomerOrderInfo = (): CustomerOrderInfo => ({
@@ -188,6 +188,31 @@ const getDraftLabel = (draft: SalesOrderDraft, index: number) => {
   return `Hóa đơn ${index + 1}`;
 };
 
+function isProductCartItem(item: CartLineItem) {
+  return item.kind === "INVENTORY" || item.kind === "NON_INVENTORY";
+}
+
+function buildStockKey(input: {
+  inventoryId?: number | null;
+  variantId?: number | null;
+  productId?: number | null;
+}) {
+  if (input.inventoryId != null) return `inventory:${input.inventoryId}`;
+  if (input.variantId != null) return `variant:${input.variantId}`;
+  return `product:${input.productId ?? 0}`;
+}
+
+function getProductDisplayName(product?: {
+  name?: string | null;
+  variantCode?: string | null;
+}) {
+  const name = product?.name?.trim();
+  const variantCode = product?.variantCode?.trim();
+
+  if (name && variantCode) return `${name} - ${variantCode}`;
+  return name || variantCode || "Sản phẩm";
+}
+
 export function useSalesOrders(options?: UseSalesOrdersOptions) {
   const storageKey = options?.storageKey ?? DEFAULT_STORAGE_KEY;
 
@@ -230,23 +255,26 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     [activeOrderId, updateOrder]
   );
 
-  const assignOrderCodeForDraft = useCallback(async (draftId: number) => {
-    let orderCode = createOrderCodeFallback();
+  const assignOrderCodeForDraft = useCallback(
+    async (draftId: number) => {
+      let orderCode = createOrderCodeFallback();
 
-    try {
-      orderCode = (await getNextOrderCode()) || orderCode;
-    } catch {
-      // fallback
-    }
+      try {
+        orderCode = (await getNextOrderCode()) || orderCode;
+      } catch {
+        // fallback
+      }
 
-    updateOrder(draftId, (draft) => ({
-      ...draft,
-      customerOrderInfo: {
-        ...draft.customerOrderInfo,
-        orderCode,
-      },
-    }));
-  }, [updateOrder]);
+      updateOrder(draftId, (draft) => ({
+        ...draft,
+        customerOrderInfo: {
+          ...draft.customerOrderInfo,
+          orderCode,
+        },
+      }));
+    },
+    [updateOrder]
+  );
 
   const createNewOrder = useCallback(async () => {
     const newDraft: SalesOrderDraft = {
@@ -278,9 +306,13 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
           ...(payload.otherExpenseDraft ?? {}),
         },
         selectedProduct:
-          payload.selectedProduct === undefined ? draft.selectedProduct : payload.selectedProduct,
+          payload.selectedProduct === undefined
+            ? draft.selectedProduct
+            : payload.selectedProduct,
         editingGroupKey:
-          payload.editingGroupKey === undefined ? draft.editingGroupKey : payload.editingGroupKey,
+          payload.editingGroupKey === undefined
+            ? draft.editingGroupKey
+            : payload.editingGroupKey,
       }));
     },
     [updateActiveOrder]
@@ -414,7 +446,8 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     (value: number | ((prev: number) => number)) => {
       updateActiveOrder((draft) => ({
         ...draft,
-        taxPercent: typeof value === "function" ? value(draft.taxPercent) : value,
+        taxPercent:
+          typeof value === "function" ? value(draft.taxPercent) : value,
       }));
     },
     [updateActiveOrder]
@@ -424,7 +457,8 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     (value: number | ((prev: number) => number)) => {
       updateActiveOrder((draft) => ({
         ...draft,
-        paidAmount: typeof value === "function" ? value(draft.paidAmount) : value,
+        paidAmount:
+          typeof value === "function" ? value(draft.paidAmount) : value,
       }));
     },
     [updateActiveOrder]
@@ -497,9 +531,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
   const editingGroupKey = activeOrder?.editingGroupKey ?? null;
 
   const inventoryItems = useMemo(() => {
-    return cartItems.filter(
-      (item) => item.kind === "INVENTORY" || item.kind === "NON_INVENTORY"
-    );
+    return cartItems.filter(isProductCartItem);
   }, [cartItems]);
 
   const expenseItems = useMemo(() => {
@@ -528,6 +560,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
       price: editingGroup.price,
       productId: editingGroup.productId ?? null,
       variantId: editingGroup.variantId ?? null,
+      inventoryId: editingGroup.inventoryId ?? null,
       sizeLines: editingGroup.sizeLines.map((line) => ({
         length: line.length,
         quantity: line.quantity,
@@ -536,7 +569,10 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
   }, [editingGroup]);
 
   const productSubtotal = useMemo(() => {
-    return inventoryItems.reduce((sum, item) => sum + item.lineTotal, 0);
+    return inventoryItems.reduce(
+      (sum, item) => sum + getEffectiveQuantity(item) * Number(item.price ?? 0),
+      0
+    );
   }, [inventoryItems]);
 
   const otherExpenseSubtotal = useMemo(() => {
@@ -563,9 +599,123 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     return calculateChangeAmount(grandTotal, paidAmount);
   }, [grandTotal, paidAmount]);
 
+  const reservedStockMap = useMemo(() => {
+    const map = new Map<string, number>();
+
+    orders.forEach((order) => {
+      order.cartItems.forEach((item) => {
+        if (!isProductCartItem(item)) return;
+
+        const key = buildStockKey({
+          inventoryId: item.inventoryId ?? null,
+          variantId: item.variantId ?? null,
+          productId: item.productId ?? null,
+        });
+
+        map.set(key, (map.get(key) ?? 0) + getEffectiveQuantity(item));
+      });
+    });
+
+    return map;
+  }, [orders]);
+
+  const getReservedQuantity = useCallback(
+    (input: {
+      inventoryId?: number | null;
+      variantId?: number | null;
+      productId?: number | null;
+    }) => {
+      const key = buildStockKey(input);
+      return reservedStockMap.get(key) ?? 0;
+    },
+    [reservedStockMap]
+  );
+
+  const getAvailableStock = useCallback(
+    (
+      productLike: {
+        inventoryId?: number | null;
+        variantId?: number | null;
+        id?: number | null;
+        productId?: number | null;
+        stock?: number | null;
+        realStock?: number | null;
+      },
+      options?: {
+        editingGroupKey?: string | null;
+      }
+    ) => {
+      const key = buildStockKey({
+        inventoryId: productLike.inventoryId ?? null,
+        variantId: productLike.variantId ?? null,
+        productId: productLike.productId ?? productLike.id ?? null,
+      });
+
+      const realStock = Number(productLike.realStock ?? productLike.stock ?? 0);
+      const reservedAll = reservedStockMap.get(key) ?? 0;
+
+      let editingOldQty = 0;
+
+      if (options?.editingGroupKey && activeOrder) {
+        activeOrder.cartItems.forEach((item) => {
+          if (!isProductCartItem(item)) return;
+          if (buildProductGroupKey(item) !== options.editingGroupKey) return;
+
+          const editingKey = buildStockKey({
+            inventoryId: item.inventoryId ?? null,
+            variantId: item.variantId ?? null,
+            productId: item.productId ?? null,
+          });
+
+          if (editingKey === key) {
+            editingOldQty += getEffectiveQuantity(item);
+          }
+        });
+      }
+
+      return Math.max(realStock - reservedAll + editingOldQty, 0);
+    },
+    [activeOrder, reservedStockMap]
+  );
+
+  const validateOrderedProductsAgainstStock = useCallback(
+    (orderedProducts: OrderedProduct[]) => {
+      const product = selectedProduct;
+      if (!product) {
+        toast.error("Chưa chọn sản phẩm.");
+        return false;
+      }
+
+      const totalQty = orderedProducts.reduce(
+        (sum, line) => sum + getEffectiveQuantity(line),
+        0
+      );
+
+      const availableStock = Number(product.stock ?? 0);
+
+      if (totalQty > availableStock) {
+        toast.error(
+          `${getProductDisplayName(product)} chỉ còn ${availableStock} trong tồn khả dụng.`
+        );
+        return false;
+      }
+
+      return true;
+    },
+    [selectedProduct]
+  );
+
   const handleAddOrder = useCallback(
     (orderedProducts: OrderedProduct[]) => {
-      const fallbackUnit = selectedProduct?.baseUnit || "mét";
+      if (!selectedProduct) {
+        toast.error("Chưa chọn sản phẩm.");
+        return;
+      }
+
+      const isValid = validateOrderedProductsAgainstStock(orderedProducts);
+      if (!isValid) return;
+
+      const fallbackUnit = selectedProduct.baseUnit || "mét";
       const newLines = mapOrderedProductsToCartLines(orderedProducts, fallbackUnit);
 
       updateActiveOrder((draft) => ({
@@ -573,12 +723,19 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
         cartItems: [...draft.cartItems, ...newLines],
       }));
     },
-    [selectedProduct, updateActiveOrder]
+    [selectedProduct, updateActiveOrder, validateOrderedProductsAgainstStock]
   );
 
   const handleUpdateOrder = useCallback(
     (orderedProducts: OrderedProduct[]) => {
       if (!editingGroup) return;
+      if (!selectedProduct) {
+        toast.error("Chưa chọn sản phẩm.");
+        return;
+      }
+
+      const isValid = validateOrderedProductsAgainstStock(orderedProducts);
+      if (!isValid) return;
 
       const fallbackUnit = editingGroup.unit || "mét";
       const updatedLines = mapOrderedProductsToCartLines(
@@ -589,7 +746,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
       updateActiveOrder((draft) => {
         const remain = draft.cartItems.filter(
           (item) =>
-            (item.kind !== "INVENTORY" && item.kind !== "NON_INVENTORY") ||
+            !isProductCartItem(item) ||
             buildProductGroupKey(item) !== editingGroup.groupKey
         );
 
@@ -600,7 +757,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
         };
       });
     },
-    [editingGroup, updateActiveOrder]
+    [editingGroup, selectedProduct, updateActiveOrder, validateOrderedProductsAgainstStock]
   );
 
   const addOtherExpense = useCallback(() => {
@@ -644,8 +801,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
         ...draft,
         cartItems: draft.cartItems.filter(
           (item) =>
-            (item.kind !== "INVENTORY" && item.kind !== "NON_INVENTORY") ||
-            buildProductGroupKey(item) !== groupKey
+            !isProductCartItem(item) || buildProductGroupKey(item) !== groupKey
         ),
       }));
     },
@@ -798,6 +954,10 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     grandTotal,
     remainingAmount,
     changeAmount,
+
+    reservedStockMap,
+    getReservedQuantity,
+    getAvailableStock,
 
     handleAddOrder,
     handleUpdateOrder,

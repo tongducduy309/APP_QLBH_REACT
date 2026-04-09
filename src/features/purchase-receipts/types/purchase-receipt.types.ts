@@ -15,6 +15,7 @@ export interface PurchaseReceiptRes {
   id?: number;
   productVariantCode?: string;
   productVariantSKU?: string;
+  productId?: number;
   name?: string;
   purchaseReceiptMethod?: PurchaseReceiptMethod;
   totalQuantity?: number;

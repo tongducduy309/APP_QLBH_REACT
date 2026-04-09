@@ -25,6 +25,7 @@ import type {
 } from "../types/customer.types";
 import { CustomerDialog } from "../components/CustomerDialog";
 import { removeVietnameseTones } from "@/utils/string";
+import { useNavigate } from "react-router-dom";
 
 const initialCreateForm: CustomerCreateReq = {
   name: "",
@@ -62,6 +63,8 @@ export function CustomersPage() {
   const [dialogLoading, setDialogLoading] = useState(false);
   const [form, setForm] = useState<CustomerCreateReq>(initialCreateForm);
   const [editingCustomer, setEditingCustomer] = useState<CustomerRes | null>(null);
+
+  const navigate = useNavigate();
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -119,7 +122,7 @@ export function CustomersPage() {
       };
 
       if (editingCustomer?.id) {
-        const updatedCustomer = await updateCustomer(editingCustomer.id, payload);
+        const updatedCustomer = await updateCustomer(editingCustomer?.id, payload);
 
         setCustomers((prev) =>
           prev.map((item) =>
@@ -223,25 +226,31 @@ export function CustomersPage() {
 
   const columns: ColumnsType<CustomerTableRow> = [
     {
-      title: "Tên khách hàng",
-      key: "name",
-      render: (_, record) => {
-        if (record.rowType === "group") {
-          return {
-            children: (
-              <div className="font-semibold text-foreground">
-                Nhóm {record.groupLabel}
-              </div>
-            ),
-            props: {
-              colSpan: 7,
-            },
-          };
-        }
+  title: "Tên khách hàng",
+  key: "name",
+  render: (_, record) => {
+    if (record.rowType === "group") {
+      return {
+        children: <span>Nhóm {record.groupLabel}</span>,
+        props: {
+          colSpan: 7,
+        },
+      };
+    }
 
-        return record.customer.name || "-";
-      },
-    },
+    const customer = record.customer;
+
+    return (
+      <button
+        type="button"
+        onClick={() => customer.id && navigate(`/customers/${customer.id}`)}
+        className="font-medium text-left text-primary hover:underline"
+      >
+        {customer.name || "-"}
+      </button>
+    );
+  },
+},
     {
       title: "Mã số thuế",
       key: "taxCode",

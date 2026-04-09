@@ -14,7 +14,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Hàng hóa", path: paths.inventory, icon: Boxes},
   { label: "Khách hàng", path: paths.customers, icon: Users},
   { label: "Giao dịch", path: paths.transactions, icon: Receipt},
-  { label: "Báo cáo thuế", path: paths.taxReport, icon: FileText},
+  // { label: "Báo cáo thuế", path: paths.taxReport, icon: FileText},
   { label: "Bảng báo giá", path: paths.quoteReport, icon: FileSpreadsheet},
   { label: "Thống kê", path: paths.statistics, icon: BarChart3},
   // { label: "Quét mã vạch", path: paths.barcode, icon: ScanBarcode },

@@ -39,3 +39,13 @@ export const calculateChangeAmount = (
   grandTotal: number,
   paidAmount: number
 ) => Math.max(paidAmount - grandTotal, 0);
+
+export function getEffectiveQuantity(input: {
+  quantity?: number | null;
+  length?: number | null;
+}) {
+  const quantity = Number(input.quantity ?? 0);
+  const length = Number(input.length ?? 0);
+
+  return length > 0 ? quantity * length : quantity;
+}

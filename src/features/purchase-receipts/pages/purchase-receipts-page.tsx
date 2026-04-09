@@ -44,6 +44,7 @@ import type {
   PurchaseReceiptMethod,
   PurchaseReceiptRes,
 } from "../types/purchase-receipt.types";
+import { useNavigate } from "react-router-dom";
 
 dayjs.extend(isBetween);
 const { RangePicker } = DatePicker;
@@ -155,6 +156,7 @@ export function PurchaseReceiptsPage() {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+  const navigate = useNavigate();
 
   const variantOptions = useMemo(() => buildVariantOptions(inventory), [inventory]);
   const selectedVariantId = Form.useWatch("productVariantId", form);
@@ -280,7 +282,7 @@ export function PurchaseReceiptsPage() {
       key: "name",
       render: (value: string, record) => (
         <div>
-          <div className="font-medium">
+          <div className="font-medium hover:underline cursor-pointer" onClick={() => navigate(`/inventory/${record.productId}`)}>
             {value || "-"} {record.productVariantCode ? `(${record.productVariantCode})` : ""}
           </div>
           <div className="text-xs text-muted-foreground">

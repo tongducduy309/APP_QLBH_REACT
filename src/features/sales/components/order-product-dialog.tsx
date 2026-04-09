@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { OrderedProduct } from "../types/order-product.types";
 import { LineKind } from "../types/sales.types";
+import { getEffectiveQuantity } from "../utils/sales-calculations";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -251,19 +252,28 @@ export function OrderProductDialog({
   }, [computedUnitPrice, product?.cost]);
 
   const subtotal = useMemo(() => {
-    return sizeLines.reduce((sum, line) => {
-      const lineTotal =
-        Number(line.length || 0) *
-        Number(line.quantity || 0) *
-        Number(computedUnitPrice || 0);
+  return sizeLines.reduce((sum, line) => {
+    const lineTotal =
+      getEffectiveQuantity({
+        quantity: line.quantity,
+        length: line.length,
+      }) * Number(computedUnitPrice || 0);
 
-      return sum + lineTotal;
-    }, 0);
-  }, [sizeLines, computedUnitPrice]);
+    return sum + lineTotal;
+  }, 0);
+}, [sizeLines, computedUnitPrice]);
 
   const totalQuantity = useMemo(() => {
-    return sizeLines.reduce((sum, line) => sum + (Number(line.quantity || 0))*(line.length?Number(line.length||0):1),0);
-  }, [sizeLines]);
+  return sizeLines.reduce(
+    (sum, line) =>
+      sum +
+      getEffectiveQuantity({
+        quantity: line.quantity,
+        length: line.length,
+      }),
+    0
+  );
+}, [sizeLines]);
 
   const exceededQuantity = useMemo(() => {
     return Math.max(0, totalQuantity - availableStock);

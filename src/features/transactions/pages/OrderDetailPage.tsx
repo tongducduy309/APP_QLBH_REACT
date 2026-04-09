@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button, Descriptions, Empty, Spin, Table, Tag, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { ArrowLeft, Eye, FileDown, Pencil, Printer, Trash2 } from "lucide-react";
+import { ArrowLeft, CircleUserRound, Eye, FileDown, Pencil, Printer, Trash2 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import {
@@ -292,8 +292,22 @@ export function OrderDetailPage() {
                             <Descriptions.Item label="Ngày tạo">
                                 {order.createdAt || "-"}
                             </Descriptions.Item>
+
                             <Descriptions.Item label="Khách hàng">
-                                {order.customer?.name || "Khách lẻ"}
+                                {
+                                    order.customer?.id ? (
+                                        <Link className="font-semibold hover:underline" to={`/customers/${order.customer?.id}`}>
+                                            {order.customer?.name || "Khách lẻ"}
+                                        </Link>
+                                    ) : (
+                                        order.customer?.name || "Khách lẻ"
+                                    )
+                                }
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Tài khoản">
+                                <Tag color={order.customer?.id ? "blue" : "orange"}>
+                                    {order.customer?.id ? "Thành viên" : "Chưa xác định"}
+                                </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="Số điện thoại">
                                 {order.customer?.phone || "-"}

@@ -18,6 +18,7 @@ import { NotFoundPage } from "@/features/errors/pages/not-found-page";
 import { OrderDetailPage } from "@/features/transactions/pages/OrderDetailPage";
 import { OrderEditPage } from "@/features/transactions/pages/EditOrderPage";
 import { ProductDetailPage } from "@/features/inventory/pages/product-detail-page";
+import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-page";
 
 export const router = createBrowserRouter([
   {
@@ -39,10 +40,11 @@ export const router = createBrowserRouter([
           { path: "/inventory", element: <InventoryPage /> },
           { path: "/inventory/:id", element: <ProductDetailPage /> },
           { path: "/customers", element: <CustomersPage /> },
+          { path: "/customers/:id", element: <CustomerDetailPage /> },
           { path: "/transactions", element: <TransactionsPage /> },
           { path: "/transactions/:id", element: <OrderDetailPage /> },
           { path: "/transactions/edit/:id", element: <OrderEditPage /> },
-          { path: "/reports/tax", element: <TaxReportPage /> },
+          // { path: "/reports/tax", element: <TaxReportPage /> },
           { path: "/reports/quotes", element: <QuoteReportPage /> },
           { path: "/statistics", element: <StatisticsPage /> },
           { path: "/barcode", element: <BarcodePage /> },

@@ -200,6 +200,13 @@ export function ProductDetailPage() {
                 render: (value?: string) => value,
             },
             {
+                title: "Tên sản phẩm",
+                dataIndex: "name",
+                key: "name",
+                width: 220,
+                render: (value?: string) => value || "-",
+            },
+            {
                 title: "Biến thể",
                 dataIndex: "productVariantCode",
                 key: "productVariantCode",
@@ -213,13 +220,7 @@ export function ProductDetailPage() {
                 width: 160,
                 render: (value?: string) => value || "-",
             },
-            {
-                title: "Tên sản phẩm",
-                dataIndex: "name",
-                key: "name",
-                width: 220,
-                render: (value?: string) => value || "-",
-            },
+            
             {
                 title: "Phương thức nhập",
                 dataIndex: "purchaseReceiptMethod",
