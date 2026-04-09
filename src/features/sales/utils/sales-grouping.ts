@@ -40,7 +40,7 @@ export const groupProductItems = (
         sizeLines: [],
         totalQuantity: 0,
         totalAmount: 0,
-      } as DisplayInventoryGroup | DisplayNonInventoryGroup);
+      } as unknown as DisplayInventoryGroup | DisplayNonInventoryGroup);
     }
 
     const current = groups.get(groupKey)!;

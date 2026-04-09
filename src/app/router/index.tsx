@@ -7,7 +7,6 @@ import { SalesPage } from "@/features/sales/pages/sales-page";
 import { InventoryPage } from "@/features/inventory/pages/inventory-page";
 import { CustomersPage } from "@/features/customers/pages/customers-page";
 import { TransactionsPage } from "@/features/transactions/pages/transactions-page";
-import { TaxReportPage } from "@/features/reports/pages/tax-report-page";
 import { QuoteReportPage } from "@/features/reports/pages/quote-report-page";
 import { StatisticsPage } from "@/features/statistics/pages/statistics-page";
 import { BarcodePage } from "@/features/barcode/pages/barcode-page";
@@ -19,6 +18,7 @@ import { OrderDetailPage } from "@/features/transactions/pages/OrderDetailPage";
 import { OrderEditPage } from "@/features/transactions/pages/EditOrderPage";
 import { ProductDetailPage } from "@/features/inventory/pages/product-detail-page";
 import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-page";
+import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/purchase-receipt-detail-page";
 
 export const router = createBrowserRouter([
   {
@@ -49,6 +49,7 @@ export const router = createBrowserRouter([
           { path: "/statistics", element: <StatisticsPage /> },
           { path: "/barcode", element: <BarcodePage /> },
           { path: "/purchase-receipts", element: <PurchaseReceiptsPage /> },
+          { path: "/purchase-receipts/:id", element: <PurchaseReceiptDetailPage /> },
           { path: "/settings", element: <SettingsPage /> },
         ],
       },

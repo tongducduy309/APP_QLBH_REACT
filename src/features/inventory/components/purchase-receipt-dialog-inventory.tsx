@@ -1,9 +1,8 @@
-import { Input, Modal, Select } from "antd";
+import { Input, Modal } from "antd";
 import { NumberInput } from "@/components/ui/number-input";
 import type {
   PurchaseReceiptForm,
-  PurchaseReceiptMethod,
-} from "../types/purchase-receipt.types";
+} from "../../purchase-receipts/types/purchase-receipt.types";
 
 type Props = {
   open: boolean;
@@ -17,29 +16,22 @@ type Props = {
 
 const MAX_NOTE_LENGTH = 250;
 
-const purchaseMethodOptions: {
-  label: string;
-  value: PurchaseReceiptMethod;
-}[] = [
-  {
-    label: "Cộng dồn tồn kho",
-    value: "ADDITIVE",
-  },
-  {
-    label: "Tạo tồn kho riêng",
-    value: "SEPARATE",
-  },
-];
-
 export function PurchaseReceiptDialog({
   open,
   variantLabel,
   value,
   onClose,
-  onChange,
   onSubmit,
+  onChange,
   loading = false,
 }: Props) {
+  const safeQuantity = Number(value.totalQuantity ?? 0);
+  const safeCost = Number(value.cost ?? 0);
+  const safeTotalCost = Number(value.totalCost ?? 0);
+
+  const suggestedUnitCost =
+    safeQuantity > 0 ? safeTotalCost / safeQuantity : 0;
+
   return (
     <Modal
       title={`Nhập hàng${variantLabel ? ` - ${variantLabel}` : ""}`}
@@ -50,56 +42,80 @@ export function PurchaseReceiptDialog({
       cancelText="Hủy"
       confirmLoading={loading}
       destroyOnHidden
+      width={620}
+      styles={{
+        body: {
+          maxHeight: "70vh",
+          overflowY: "auto",
+          paddingRight: 8,
+          paddingLeft: 8,
+        },
+      }}
     >
       <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-sm font-medium">Kiểu nhập hàng</label>
-          <Select
-            className="w-full"
-            value={value.purchaseReceiptMethod}
-            options={purchaseMethodOptions}
-            onChange={(next) =>
-              onChange({
-                ...value,
-                purchaseReceiptMethod: next,
-              })
-            }
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Sắt, thép thường chọn cộng dồn. Tôn cuộn thường chọn tạo tồn kho riêng.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium">Số lượng nhập</label>
             <NumberInput
               className="w-full"
-              value={Number(value.totalQuantity ?? 0)}
-              onValueChange={(next) =>
+              value={safeQuantity}
+              onValueChange={(next) => {
+                const qty = next < 0 ? 0 : next;
+
                 onChange({
                   ...value,
-                  totalQuantity: next < 0 ? 0 : next,
-                })
-              }
+                  totalQuantity: qty,
+                });
+              }}
               placeholder="Nhập số lượng"
             />
           </div>
-
           <div>
-            <label className="mb-1 block text-sm font-medium">Giá nhập</label>
+            <label className="mb-1 block text-sm font-medium">Tổng giá trị lô nhập</label>
             <NumberInput
               className="w-full"
-              value={Number(value.cost ?? 0)}
-              onValueChange={(next) =>
+              value={safeTotalCost}
+              onValueChange={(next) => {
+                const total = next < 0 ? 0 : next;
+
                 onChange({
                   ...value,
-                  cost: next < 0 ? 0 : next,
-                })
-              }
-              placeholder="Nhập giá nhập"
+                  totalCost: total,
+                });
+              }}
+              placeholder="Nhập tổng giá trị"
             />
           </div>
+
+        </div>
+
+
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Giá nhập</label>
+          <NumberInput
+            className="w-full"
+            value={safeCost}
+            onValueChange={(next) => {
+              const cost = next < 0 ? 0 : next;
+
+              onChange({
+                ...value,
+                cost
+              });
+            }}
+            placeholder={
+              suggestedUnitCost > 0
+                ? `Gợi ý: ${Math.round(suggestedUnitCost).toLocaleString("vi-VN")}`
+                : "Nhập đơn giá"
+            }
+          />
+          <p className="mt-1 text-xs text-muted-foreground">
+            Đơn giá trên 1 đơn vị.
+            {safeQuantity > 0 && safeTotalCost > 0
+              ? ` Gợi ý: ${Math.round(suggestedUnitCost).toLocaleString("vi-VN")} = Tổng giá nhập / Số lượng nhập`
+              : ""}
+          </p>
         </div>
 
         <div>
@@ -138,6 +154,9 @@ export function PurchaseReceiptDialog({
           />
         </div>
       </div>
+      <div className="border-b pb-2 mt-3">
+          <span className="text-sm text-muted-foreground">Phiếu nhập này sẽ cộng trực tiếp vào tồn kho hiện có.</span>
+        </div>
     </Modal>
   );
 }

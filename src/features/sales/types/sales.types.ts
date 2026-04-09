@@ -1,7 +1,6 @@
 // src/features/sales/types/sales.types.ts
 
 import { OrderStatus } from "@/types/order";
-import type { OrderedProduct } from "../types/order-product.types";
 
 export type Product = {
   id: number;
@@ -114,7 +113,17 @@ export type SalesSummary = {
   changeAmount: number;
 };
 
-export type HandleOrderSubmit = (orders: OrderedProduct[]) => void;
+export type OrderedProduct = {
+  kind: LineKind;
+  name: string;
+  unit: string;
+  price: number;
+  length: number | null;
+  quantity: number;
+  productId: number | null;
+  variantId?: number | null;
+  inventoryId?: number | null;
+};
 
 export interface OrderDetailCreateReq {
   productVariantId?: number | null;

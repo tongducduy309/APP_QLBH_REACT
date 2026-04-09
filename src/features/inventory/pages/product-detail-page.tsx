@@ -4,12 +4,8 @@ import { Button, Descriptions, Empty, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
     ArrowLeft,
-    Boxes,
-    CircleDollarSign,
-    Package2,
     Pencil,
     ReceiptText,
-    ScanBarcode,
 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
@@ -27,43 +23,6 @@ import { useInventoryPage } from "../hooks/useInventoryPage";
 import { ProductDialog } from "../components/ProductDialog";
 import { PurchaseReceiptRes } from "@/features/purchase-receipts/types/purchase-receipt.types";
 
-function getStatusColor(status: string) {
-    switch (status) {
-        case "Còn hàng":
-            return "green";
-        case "Sắp hết":
-            return "orange";
-        case "Hết hàng":
-            return "red";
-        default:
-            return "default";
-    }
-}
-
-function getPriceRange(
-    variants: ProductVariantInventoryRes[],
-    key: "retailPrice" | "storePrice"
-) {
-    if (!variants.length) return "-";
-    const prices = variants.map((item) => Number(item[key] ?? 0));
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
-    return min === max
-        ? formatCurrency(min)
-        : `${formatCurrency(min)} - ${formatCurrency(max)}`;
-}
-
-function formatDateTime(value?: string) {
-    if (!value) return "-";
-
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-
-    return new Intl.DateTimeFormat("vi-VN", {
-        dateStyle: "short",
-        timeStyle: "short",
-    }).format(date);
-}
 
 export function ProductDetailPage() {
     const navigate = useNavigate();
@@ -143,7 +102,7 @@ export function ProductDetailPage() {
                 render: (value: string) => value || "-",
             },
             {
-                title: "Khối lượng",
+                title: "Trọng lượng",
                 dataIndex: "weight",
                 key: "weight",
                 render: (value: number) => (value ? `${value}` : "-"),

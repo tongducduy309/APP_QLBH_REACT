@@ -65,9 +65,10 @@ export function ProductVariantEditor({
 
         <div className="space-y-2 md:col-span-3">
           <Label>Trọng lượng</Label>
-          <NumberInput
+          <Input
             value={variant.weight}
-            onValueChange={(value) => onChange({ ...variant, weight: value })}
+            placeholder="Ví dụ: Nặng, Nhẹ, 4.2kg,..."
+            onChange={(e) => onChange({ ...variant, weight: e.target.value })}
           />
         </div>
 

@@ -11,7 +11,7 @@ export const createInitialVariant = (): ProductVariantInventoryRes => ({
   outOfStock: false,
   variantId: null,
   variantCode: "",
-  weight: 0,
+  weight: "",
   retailPrice: 0,
   storePrice: 0,
   remainingQty: 0,

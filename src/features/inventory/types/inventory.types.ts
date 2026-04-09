@@ -1,12 +1,13 @@
 export interface ProductVariantInventoryRes {
   inventoryId: number | null;
+  productName?: string;
   sku: string;
   lotCode: string;
   originalQty: number;
   outOfStock: boolean;
   variantId: number | null;
   variantCode: string;
-  weight: number;
+  weight: string;
   retailPrice: number;
   storePrice: number;
   remainingQty: number;
@@ -35,7 +36,7 @@ export interface ProductInventoryRes {
 //   outOfStock: boolean;
 //   variantId: number | null;
 //   variantCode: string;
-//   weight: number;
+//   weight: string;
 //   retailPrice: number;
 //   storePrice: number;
 //   remainingQty: number;
@@ -73,7 +74,7 @@ export interface ProductCreateReq{
 export interface ProductVariantCreateReq {
   variantCode?: string;
   sku?: string;
-  weight?: number|null;
+  weight?: string|null;
   retailPrice?: number|null;
   storePrice?: number|null;
   
@@ -94,7 +95,7 @@ export interface ProductVariantUpdateReq {
   id?:number|null;
   variantCode?: string;
   sku?: string;
-  weight?: number|null;
+  weight?: string|null;
   retailPrice?: number|null;
   storePrice?: number|null;
   active?: boolean;

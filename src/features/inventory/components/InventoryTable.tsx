@@ -30,7 +30,8 @@ type Props = {
   ) => void;
   onImportStock: (
     parentProductId: number,
-    variant: ProductVariantInventoryRes
+    variant: ProductVariantInventoryRes,
+    productName: string
   ) => void;
 };
 
@@ -250,6 +251,21 @@ export function InventoryTable({
               : "Chưa có dữ liệu hàng hóa.",
           }}
           scroll={{ x: 1100 }}
+          onRow={(record) => ({
+            onClick: () => {
+              const key = record.id;
+
+              if (normalizedKeyword) return;
+
+              setManualExpandedKeys((prev) => {
+                const exists = prev.includes(key);
+                if (exists) {
+                  return prev.filter((k) => k !== key);
+                }
+                return [...prev, key];
+              });
+            },
+          })}
           expandable={{
             expandedRowKeys,
             onExpandedRowsChange: (keys: any) => {
@@ -316,13 +332,6 @@ export function InventoryTable({
                     formatCurrency(Number(value ?? 0)),
                 },
                 {
-                  title: "Mã kho",
-                  dataIndex: "inventoryId",
-                  key: "inventoryId",
-                  width: 100,
-                  render: (value: string) => value || "-",
-                },
-                {
                   title: "Tồn kho",
                   dataIndex: "remainingQty",
                   key: "remainingQty",
@@ -354,7 +363,7 @@ export function InventoryTable({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => onImportStock(record.id ?? 0, variant)}
+                        onClick={() => onImportStock(record.id ?? 0, variant, record.name)}
                       >
                         <Truck className="mr-2 h-4 w-4" />
                         Nhập hàng

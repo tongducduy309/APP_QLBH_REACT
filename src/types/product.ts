@@ -9,3 +9,15 @@ export interface ProductVariant {
   status?: boolean;
   inventories?:InventoryRes[];
 }
+
+export interface ProductVariantRes {
+  id?: number;
+  variantCode?: string;
+  sku?: string;
+  weight?: string|null;
+  retailPrice?: number|null;
+  storePrice?: number|null;
+  status?: boolean;
+  inventories?:InventoryRes[];
+  productName?: string;
+}

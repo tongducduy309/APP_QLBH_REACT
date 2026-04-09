@@ -4,7 +4,7 @@ import { InventoryStats } from "../components/InventoryStats";
 import { InventoryTable } from "../components/InventoryTable";
 import { ProductDialog } from "../components/ProductDialog";
 import { useInventoryPage } from "../hooks/useInventoryPage";
-import { PurchaseReceiptDialog } from "@/features/purchase-receipts/components/PurchaseReceiptDialog";
+import { PurchaseReceiptDialog } from "@/features/inventory/components/purchase-receipt-dialog-inventory";
 
 export function InventoryPage() {
   const inventory = useInventoryPage();

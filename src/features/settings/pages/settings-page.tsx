@@ -1,5 +1,5 @@
 import { Button, Input, Switch, Upload, message } from "antd";
-import type { UploadFile, UploadProps } from "antd";
+import type { UploadProps } from "antd";
 import { Image as ImageIcon, Save, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";

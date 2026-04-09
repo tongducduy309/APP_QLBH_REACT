@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, FileSpreadsheet, FileText, LayoutDashboard, LucideIcon, Receipt, Settings, ShoppingCart, Users } from "lucide-react";
+import { BarChart3, Boxes, FileSpreadsheet, LayoutDashboard, LucideIcon, Receipt, Settings, ShoppingCart, Users } from "lucide-react";
 import { paths } from "@/routes/paths";
 
 interface NavigationItem {

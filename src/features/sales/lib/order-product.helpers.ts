@@ -132,11 +132,11 @@ export function validateOrderForm(params: {
       return "Khổ phải nằm trong khoảng 1 - 120 cm.";
     }
 
-    if (form.flatSheet.panelSizes.some((size) => size <= 0)) {
+    if (form.flatSheet.panelSizes.some((size: number) => size <= 0)) {
       return "Kích thước tấm phải lớn hơn 0.";
     }
 
-    const totalPanelSize = form.flatSheet.panelSizes.reduce((sum, size) => sum + size, 0);
+    const totalPanelSize = form.flatSheet.panelSizes.reduce((sum: number, size: number) => sum + size, 0);
     if (Math.abs(totalPanelSize - form.flatSheet.width) > 0.01) {
       return "Tổng kích thước các tấm phải bằng khổ đã chọn.";
     }

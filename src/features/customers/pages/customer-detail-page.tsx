@@ -6,7 +6,6 @@ import {
   Mail,
   MapPin,
   Phone,
-  ReceiptText,
   ShieldCheck,
   User2,
   Wallet,
@@ -14,7 +13,6 @@ import {
 import { toast } from "sonner";
 
 import { PageShell } from "@/components/layout/page-shell";
-import { Button } from "@/components/ui/button";
 import { Button as AntdButton } from "antd";
 import {
   Card,

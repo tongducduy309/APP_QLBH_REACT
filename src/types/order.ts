@@ -1,5 +1,4 @@
 import { CustomerRes } from "@/features/customers/types/customer.types";
-import { ProductVariant } from "./product";
 import { LineKind } from "@/features/sales/types/sales.types";
 
 export enum OrderStatus {

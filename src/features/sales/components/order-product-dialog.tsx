@@ -15,9 +15,8 @@ import { NumberInput } from "@/components/ui/number-input";
 import { Plus, TriangleAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { OrderedProduct } from "../types/order-product.types";
-import { LineKind } from "../types/sales.types";
 import { getEffectiveQuantity } from "../utils/sales-calculations";
+import { OrderedProduct } from "../types/sales.types";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";

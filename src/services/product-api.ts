@@ -5,6 +5,7 @@ import type {
   ProductUpdateReq,
 } from "@/features/inventory/types/inventory.types";
 import { PurchaseReceiptRes } from "@/features/purchase-receipts/types/purchase-receipt.types";
+import { ProductVariantRes } from "@/types/product";
 
 
 
@@ -36,4 +37,9 @@ export async function getProductImportHistory(
 ): Promise<PurchaseReceiptRes[]> {
   const { data } = await apiClient.get(`/purchase-receipts/product/${productId}`);
   return (data?.data ?? []) as PurchaseReceiptRes[];
+}
+
+export async function getAllProductVariants(): Promise<ProductVariantRes[]> {
+  const { data } = await apiClient.get(`/product-variants`);
+  return (data?.data ?? []) as ProductVariantRes[];
 }

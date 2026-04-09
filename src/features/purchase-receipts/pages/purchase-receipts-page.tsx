@@ -1,25 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  DatePicker,
-  Form,
-  Input,
-  Modal,
-  Select,
-  Space,
-  Table,
-  Tag,
-  Tooltip,
-} from "antd";
+import { DatePicker, Form, Space, Table, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import { Plus, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
-import { NumberInput } from "@/components/ui/number-input";
 import {
   Card,
   CardContent,
@@ -29,38 +19,23 @@ import {
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 
-import { getAllInventory } from "@/services/product-api";
 import {
   createPurchaseReceipt,
   getPurchaseReceipts,
 } from "@/services/purchase-receipt-api";
 
 import type {
-  ProductInventoryRes,
-  ProductVariantInventoryRes,
-} from "@/features/inventory/types/inventory.types";
-import type {
   PurchaseReceiptCreateReq,
   PurchaseReceiptMethod,
   PurchaseReceiptRes,
 } from "../types/purchase-receipt.types";
-import { useNavigate } from "react-router-dom";
+import { PurchaseReceiptDialog } from "../components/purchase-receipt-dialog";
 
 dayjs.extend(isBetween);
 const { RangePicker } = DatePicker;
 
 type PurchaseReceiptTableRow = PurchaseReceiptRes & {
   key: string;
-};
-
-type VariantOption = {
-  label: string;
-  value: number;
-  productName: string;
-  variantCode: string;
-  sku?: string;
-  remainingQty?: number;
-  costPrice?: number;
 };
 
 const MAX_NOTE_LENGTH = 250;
@@ -71,12 +46,6 @@ const purchaseReceiptMethodOptions: {
   description: string;
 }[] = [
   {
-    label: "Cộng dồn tồn kho",
-    value: "ADDITIVE",
-    description:
-      "Dùng cho sắt, thép, vật tư có thể nhập thêm và cộng vào tồn hiện có.",
-  },
-  {
     label: "Tạo tồn kho riêng",
     value: "SEPARATE",
     description:
@@ -86,93 +55,30 @@ const purchaseReceiptMethodOptions: {
 
 const initialFormValues: PurchaseReceiptCreateReq = {
   productVariantId: undefined,
-  purchaseReceiptMethod: undefined,
+  purchaseReceiptMethod: "SEPARATE",
   totalQuantity: undefined,
   cost: undefined,
+  totalCost: undefined,
+  lotCode: "",
   supplier: "",
   note: "",
 };
-
-function buildVariantOptions(products: ProductInventoryRes[]): VariantOption[] {
-  const result: VariantOption[] = [];
-
-  products.forEach((product) => {
-    (product.variants || []).forEach((variant: ProductVariantInventoryRes) => {
-      if (!variant.variantId) return;
-
-      result.push({
-        value: variant.variantId,
-        label: `${product.name} - ${variant.variantCode || variant.sku || "Biến thể"}`,
-        productName: product.name,
-        variantCode: variant.variantCode || "",
-        sku: variant.sku,
-        remainingQty: variant.remainingQty,
-        costPrice: variant.costPrice,
-      });
-    });
-  });
-
-  return result;
-}
-
-function formatDateTime(value?: string) {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleString("vi-VN");
-}
-
-function getMethodLabel(method?: PurchaseReceiptMethod) {
-  switch (method) {
-    case "ADDITIVE":
-      return "Cộng dồn tồn kho";
-    case "SEPARATE":
-      return "Tạo tồn kho riêng";
-    default:
-      return "-";
-  }
-}
-
-function getMethodColor(method?: PurchaseReceiptMethod) {
-  switch (method) {
-    case "ADDITIVE":
-      return "blue";
-    case "SEPARATE":
-      return "purple";
-    default:
-      return "default";
-  }
-}
 
 export function PurchaseReceiptsPage() {
   const [form] = Form.useForm<PurchaseReceiptCreateReq>();
 
   const [receipts, setReceipts] = useState<PurchaseReceiptRes[]>([]);
-  const [inventory, setInventory] = useState<ProductInventoryRes[]>([]);
   const [loading, setLoading] = useState(false);
-  const [inventoryLoading, setInventoryLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
+
   const navigate = useNavigate();
 
-  const variantOptions = useMemo(() => buildVariantOptions(inventory), [inventory]);
-  const selectedVariantId = Form.useWatch("productVariantId", form);
-  const selectedMethod = Form.useWatch("purchaseReceiptMethod", form);
   const watchedTotalQuantity = Form.useWatch("totalQuantity", form);
   const watchedCost = Form.useWatch("cost", form);
+  const watchedTotalCost = Form.useWatch("totalCost", form);
   const watchedNote = Form.useWatch("note", form);
-
-  const selectedVariant = useMemo(() => {
-    if (!selectedVariantId) return null;
-    return variantOptions.find((item) => item.value === selectedVariantId) || null;
-  }, [selectedVariantId, variantOptions]);
-
-  const selectedMethodMeta = useMemo(() => {
-    return purchaseReceiptMethodOptions.find((item) => item.value === selectedMethod);
-  }, [selectedMethod]);
 
   const fetchReceipts = async () => {
     try {
@@ -188,23 +94,8 @@ export function PurchaseReceiptsPage() {
     }
   };
 
-  const fetchInventory = async () => {
-    try {
-      setInventoryLoading(true);
-      const data = await getAllInventory();
-      setInventory(data || []);
-    } catch (error) {
-      console.error("Lỗi tải tồn kho", error);
-      toast.error("Không thể tải danh sách biến thể sản phẩm.");
-      setInventory([]);
-    } finally {
-      setInventoryLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchReceipts();
-    fetchInventory();
   }, []);
 
   const openCreateModal = () => {
@@ -223,9 +114,11 @@ export function PurchaseReceiptsPage() {
 
       const payload: PurchaseReceiptCreateReq = {
         productVariantId: values.productVariantId,
-        purchaseReceiptMethod: values.purchaseReceiptMethod,
+        purchaseReceiptMethod: "SEPARATE",
         totalQuantity: values.totalQuantity,
         cost: values.cost,
+        totalCost: values.totalCost,
+        lotCode: values.lotCode?.trim() || undefined,
         supplier: values.supplier?.trim() || undefined,
         note: values.note?.trim() || undefined,
       };
@@ -236,7 +129,6 @@ export function PurchaseReceiptsPage() {
       toast.success("Tạo phiếu nhập kho thành công.");
       closeCreateModal();
       await fetchReceipts();
-      await fetchInventory();
     } catch (error) {
       if ((error as { errorFields?: unknown[] })?.errorFields) return;
 
@@ -247,14 +139,6 @@ export function PurchaseReceiptsPage() {
     }
   };
 
-  const totalReceiptValue = useMemo(() => {
-    return receipts.reduce((sum, item) => sum + (item.cost || 0), 0);
-  }, [receipts]);
-
-  const totalReceiptQuantity = useMemo(() => {
-    return receipts.reduce((sum, item) => sum + (item.totalQuantity || 0), 0);
-  }, [receipts]);
-
   const filteredReceipts = useMemo(() => {
     return receipts.filter((item) => {
       if (!dateRange || !dateRange[0] || !dateRange[1]) return true;
@@ -264,10 +148,20 @@ export function PurchaseReceiptsPage() {
         dateRange[0].startOf("day"),
         dateRange[1].endOf("day"),
         null,
-        "[]"
+        "[]",
       );
     });
   }, [receipts, dateRange]);
+
+  const totalReceiptValue = useMemo(() => {
+    return filteredReceipts.reduce((sum, item) => sum + (item.totalCost || 0), 0);
+  }, [filteredReceipts]);
+
+  const totalReceiptQuantity = useMemo(() => {
+    return filteredReceipts.reduce((sum, item) => sum + (item.totalQuantity || 0), 0);
+  }, [filteredReceipts]);
+
+  
 
   const columns: ColumnsType<PurchaseReceiptTableRow> = [
     {
@@ -275,6 +169,15 @@ export function PurchaseReceiptsPage() {
       dataIndex: "id",
       key: "id",
       width: 80,
+      render: (value: number) => (
+        <button
+          type="button"
+          className="font-medium text-primary hover:underline"
+          onClick={() => navigate(`/purchase-receipts/${value}`)}
+        >
+          #{value}
+        </button>
+      ),
     },
     {
       title: "Sản phẩm",
@@ -282,7 +185,10 @@ export function PurchaseReceiptsPage() {
       key: "name",
       render: (value: string, record) => (
         <div>
-          <div className="font-medium hover:underline cursor-pointer" onClick={() => navigate(`/inventory/${record.productId}`)}>
+          <div
+            className="cursor-pointer font-medium hover:underline"
+            onClick={() => navigate(`/inventory/${record.productId}`)}
+          >
             {value || "-"} {record.productVariantCode ? `(${record.productVariantCode})` : ""}
           </div>
           <div className="text-xs text-muted-foreground">
@@ -292,23 +198,21 @@ export function PurchaseReceiptsPage() {
       ),
     },
     {
-      title: "Phương thức nhập",
-      dataIndex: "purchaseReceiptMethod",
-      key: "purchaseReceiptMethod",
-      render: (value?: PurchaseReceiptMethod) => (
-        <Tag color={getMethodColor(value)}>{getMethodLabel(value)}</Tag>
-      ),
-    },
-    {
       title: "Số lượng",
       dataIndex: "totalQuantity",
       key: "totalQuantity",
       render: (value?: number) => value ?? 0,
     },
     {
-      title: "Giá nhập",
+      title: "Giá vốn",
       dataIndex: "cost",
       key: "cost",
+      render: (value?: number) => formatCurrency(value ?? 0),
+    },
+    {
+      title: "Tổng tiền",
+      dataIndex: "totalCost",
+      key: "totalCost",
       render: (value?: number) => formatCurrency(value ?? 0),
     },
     {
@@ -349,7 +253,7 @@ export function PurchaseReceiptsPage() {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
-      render: (value?: string) => value,
+      render: (value?: string) => value || "-",
     },
   ];
 
@@ -366,19 +270,12 @@ export function PurchaseReceiptsPage() {
             <div>
               <CardTitle>Phiếu nhập kho</CardTitle>
               <CardDescription>
-                Tạo phiếu nhập kho theo kiểu cộng dồn hoặc tạo tồn riêng.
+                Tạo phiếu nhập kho theo kiểu tạo tồn riêng cho từng lô hàng.
               </CardDescription>
             </div>
 
             <Space wrap>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  fetchReceipts();
-                  fetchInventory();
-                }}
-              >
+              <Button type="button" variant="outline" onClick={fetchReceipts}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Tải lại
               </Button>
@@ -394,7 +291,7 @@ export function PurchaseReceiptsPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-lg border p-4">
                 <div className="text-sm text-muted-foreground">Tổng phiếu nhập</div>
-                <div className="mt-2 text-2xl font-semibold">{receipts.length}</div>
+                <div className="mt-2 text-2xl font-semibold">{filteredReceipts.length}</div>
               </div>
 
               <div className="rounded-lg border p-4">
@@ -417,7 +314,7 @@ export function PurchaseReceiptsPage() {
             <div>
               <CardTitle>Danh sách phiếu nhập</CardTitle>
               <CardDescription>
-                Theo dõi lịch sử nhập kho và kiểu xử lý tồn kho của từng phiếu nhập.
+                Theo dõi lịch sử nhập kho của từng lô hàng riêng biệt.
               </CardDescription>
             </div>
 
@@ -431,11 +328,7 @@ export function PurchaseReceiptsPage() {
                 placeholder={["Từ ngày", "Đến ngày"]}
               />
 
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDateRange(null)}
-              >
+              <Button type="button" variant="outline" onClick={() => setDateRange(null)}>
                 Xóa lọc ngày
               </Button>
             </Space>
@@ -455,163 +348,19 @@ export function PurchaseReceiptsPage() {
         </Card>
       </div>
 
-      <Modal
-        title="Tạo phiếu nhập kho"
+      <PurchaseReceiptDialog
         open={createOpen}
-        onCancel={closeCreateModal}
-        onOk={handleSubmit}
-        okText="Lưu phiếu nhập"
-        cancelText="Hủy"
-        confirmLoading={submitLoading}
-        destroyOnHidden
-      >
-        <Form<PurchaseReceiptCreateReq>
-          form={form}
-          layout="vertical"
-          initialValues={initialFormValues}
-        >
-          <Form.Item
-            label="Biến thể sản phẩm"
-            name="productVariantId"
-            rules={[{ required: true, message: "Vui lòng chọn biến thể sản phẩm." }]}
-          >
-            <Select
-              showSearch
-              loading={inventoryLoading}
-              placeholder="Chọn biến thể"
-              optionFilterProp="label"
-              options={variantOptions}
-            />
-          </Form.Item>
-
-          {selectedVariant && (
-            <div className="mb-4 rounded-lg border bg-muted/30 p-3 text-sm">
-              <div>
-                <span className="font-medium">Sản phẩm:</span> {selectedVariant.productName}
-              </div>
-              <div>
-                <span className="font-medium">Biến thể:</span> {selectedVariant.variantCode || "-"}
-              </div>
-              <div>
-                <span className="font-medium">SKU:</span> {selectedVariant.sku || "-"}
-              </div>
-              <div>
-                <span className="font-medium">Tồn hiện tại:</span> {selectedVariant.remainingQty ?? 0}
-              </div>
-              <div>
-                <span className="font-medium">Giá vốn hiện tại:</span>{" "}
-                {formatCurrency(selectedVariant.costPrice ?? 0)}
-              </div>
-            </div>
-          )}
-
-          <Form.Item
-            label="Kiểu xử lý tồn kho"
-            name="purchaseReceiptMethod"
-            rules={[{ required: true, message: "Vui lòng chọn kiểu nhập kho." }]}
-          >
-            <Select
-              placeholder="Chọn kiểu xử lý tồn kho"
-              options={purchaseReceiptMethodOptions.map((item) => ({
-                label: item.label,
-                value: item.value,
-              }))}
-            />
-          </Form.Item>
-
-          {selectedMethodMeta && (
-            <div className="mb-4 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
-              {selectedMethodMeta.description}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Form.Item
-              label="Số lượng nhập"
-              name="totalQuantity"
-              rules={[
-                { required: true, message: "Vui lòng nhập số lượng." },
-                {
-                  validator: async (_, value) => {
-                    if (value == null || Number(value) <= 0) {
-                      throw new Error("Số lượng phải lớn hơn 0.");
-                    }
-                  },
-                },
-              ]}
-            >
-              <NumberInput
-                className="w-full"
-                value={Number(watchedTotalQuantity ?? 0)}
-                onValueChange={(next) => {
-                  form.setFieldValue("totalQuantity", next < 0 ? 0 : next);
-                }}
-                placeholder="Nhập số lượng"
-              />
-            </Form.Item>
-
-            <Form.Item
-              label="Giá nhập"
-              name="cost"
-              rules={[
-                { required: true, message: "Vui lòng nhập giá nhập." },
-                {
-                  validator: async (_, value) => {
-                    if (value == null || Number(value) < 0) {
-                      throw new Error("Giá nhập không hợp lệ.");
-                    }
-                  },
-                },
-              ]}
-            >
-              <NumberInput
-                className="w-full"
-                value={Number(watchedCost ?? 0)}
-                onValueChange={(next) => {
-                  form.setFieldValue("cost", next < 0 ? 0 : next);
-                }}
-                placeholder="Nhập giá nhập"
-              />
-            </Form.Item>
-          </div>
-
-          <Form.Item label="Nhà cung cấp" name="supplier">
-            <Input placeholder="Nhập tên nhà cung cấp" />
-          </Form.Item>
-
-          <div className="space-y-1">
-            <div className="flex items-start justify-between">
-              <label className="text-sm font-medium">Ghi chú</label>
-              <span className="text-xs text-muted-foreground">
-                {(watchedNote?.length ?? 0)}/{MAX_NOTE_LENGTH}
-              </span>
-            </div>
-
-            <Form.Item
-              name="note"
-              className="mb-0"
-              rules={[
-                {
-                  validator: async (_, value) => {
-                    if ((value?.length ?? 0) > MAX_NOTE_LENGTH) {
-                      throw new Error(`Ghi chú không được vượt quá ${MAX_NOTE_LENGTH} ký tự.`);
-                    }
-                  },
-                },
-              ]}
-            >
-              <Input.TextArea
-                rows={4}
-                maxLength={MAX_NOTE_LENGTH}
-                placeholder="Ví dụ: tôn cuộn nhập riêng từng cuộn, hoặc sắt nhập cộng dồn"
-                onChange={(e) => {
-                  form.setFieldValue("note", e.target.value.slice(0, MAX_NOTE_LENGTH));
-                }}
-              />
-            </Form.Item>
-          </div>
-        </Form>
-      </Modal>
+        form={form}
+        loading={submitLoading}
+        inventoryLoading={false}
+        watchedTotalQuantity={watchedTotalQuantity}
+        watchedCost={watchedCost}
+        watchedTotalCost={watchedTotalCost}
+        watchedNote={watchedNote}
+        maxNoteLength={MAX_NOTE_LENGTH}
+        onClose={closeCreateModal}
+        onSubmit={handleSubmit}
+      />
     </PageShell>
   );
 }

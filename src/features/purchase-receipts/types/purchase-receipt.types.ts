@@ -9,6 +9,8 @@ export interface PurchaseReceiptCreateReq {
   cost?: number;
   supplier?: string;
   note?: string;
+  totalCost?: number;
+  lotCode?:string;
 }
 
 export interface PurchaseReceiptRes {
@@ -23,13 +25,44 @@ export interface PurchaseReceiptRes {
   supplier?: string;
   note?: string;
   createdAt?: string;
+  totalCost?: number;
 }
 
 export interface PurchaseReceiptForm {
   productVariantId: number | null;
-  purchaseReceiptMethod: PurchaseReceiptMethod;
   totalQuantity: number;
   cost: number;
   supplier: string;
   note: string;
+  totalCost?: number;
+  lotCode?:string;
+}
+
+export interface PurchaseReceiptDetailRes {
+  id?: number;
+
+  productId?: number;
+  productName?: string;
+
+  productVariantId?: number;
+  productVariantCode?: string;
+  productVariantSKU?: string;
+  productVariantWeight?: string;
+
+  purchaseReceiptMethod?: PurchaseReceiptMethod;
+
+  totalQuantity?: number;
+  cost?: number;
+  totalCost?: number;
+  supplier?: string;
+  note?: string;
+  createdAt?: string;
+
+  inventoryLotId?: number;
+  inventoryLotCode?: string;
+  inventoryOriginalQty?: number;
+  inventoryRemainingQty?: number;
+  inventoryCostPrice?: number;
+  inventoryImportedAt?: string;
+  inventoryActive?: boolean;
 }

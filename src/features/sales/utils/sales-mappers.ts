@@ -1,8 +1,7 @@
 // src/features/sales/utils/sales-mappers.ts
 
 import { ProductInventoryRes } from "@/features/inventory/types/inventory.types";
-import type { OrderedProduct } from "../types/order-product.types";
-import type { CartLineItem, Product } from "../types/sales.types";
+import type { CartLineItem, OrderedProduct, Product } from "../types/sales.types";
 import { calculateLineTotal, toNumber } from "./sales-calculations";
 
 export const mapOrderedProductsToCartLines = (

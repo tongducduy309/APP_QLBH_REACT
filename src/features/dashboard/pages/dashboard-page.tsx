@@ -6,14 +6,6 @@ import { useDashboard } from "../hooks/useDashboard";
 import type { OrderRecentRes } from "@/types/order";
 import { useNavigate } from "react-router-dom";
 
-function formatDate(value?: string) {
-  if (!value) return "-";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString("vi-VN");
-}
 
 export function DashboardPage() {
   const dashboard = useDashboard();

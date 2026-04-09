@@ -32,7 +32,6 @@ import { PurchaseReceiptCreateReq, PurchaseReceiptForm } from "@/features/purcha
 function createInitialPurchaseReceiptForm(): PurchaseReceiptForm {
   return {
     productVariantId: null,
-    purchaseReceiptMethod: "ADDITIVE",
     totalQuantity: 0,
     cost: 0,
     supplier: "",
@@ -141,15 +140,19 @@ export function useInventoryPage() {
 
   const openPurchaseReceiptDialog = (
     _parentProductId: number,
-    variant: ProductVariantInventoryRes
+    variant: ProductVariantInventoryRes,
+    productName: string
   ) => {
     setPurchaseReceiptVariantLabel(
-      variant.variantCode || variant.sku || "Biến thể"
+      `${productName}${
+        variant.weight ? ` (${variant.weight})` : ""
+      } - ${variant.variantCode || "Biến thể"}${
+        variant.sku ? ` - ${variant.sku}` : ""
+      }`
     );
 
     setPurchaseReceiptForm({
       productVariantId: variant.variantId ?? null,
-      purchaseReceiptMethod: "ADDITIVE",
       totalQuantity: 0,
       cost: Number(variant.costPrice ?? 0),
       supplier: "",
@@ -272,7 +275,7 @@ export function useInventoryPage() {
 
     const payload: PurchaseReceiptCreateReq = {
       productVariantId: Number(purchaseReceiptForm.productVariantId),
-      purchaseReceiptMethod: purchaseReceiptForm.purchaseReceiptMethod,
+      purchaseReceiptMethod: "ADDITIVE",
       totalQuantity: Number(purchaseReceiptForm.totalQuantity),
       cost: Number(purchaseReceiptForm.cost),
       supplier: purchaseReceiptForm.supplier.trim() || undefined,

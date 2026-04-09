@@ -1,6 +1,6 @@
 // src/modules/inventory/utils/inventory.mappers.ts
 
-import type { Product } from "@/lib/mock-data";
+
 import type {
     ProductCreateReq,
   ProductForm,
@@ -14,45 +14,6 @@ import {
   getTotalProductStock,
 } from "./inventory.helpers";
 
-export function mapMockProductsToInventoryRows(
-  products: Product[]
-): ProductInventoryRes[] {
-  return products.map((product, index) => {
-    const defaultVariant: ProductVariantInventoryRes = {
-
-      inventoryId: null,
-      sku: "",
-      lotCode: "",
-      originalQty: 0,
-      outOfStock: false,
-      variantId: index + 1,
-      variantCode: "Mặc định",
-      weight: 0,
-      retailPrice: 0,
-      storePrice: 0,
-      remainingQty: Number(product.stock ?? 0),
-      costPrice: 0,
-      active: true,
-    };
-
-    return {
-      id: Number(product.id ?? Date.now() + index),
-      sku: product.sku ?? "",
-      name: product.name ?? "",
-      categoryName: product.categoryName ?? "",
-      active: true,
-      stock: Number(product.stock ?? 0),
-      status: getProductStatusFromVariants([defaultVariant]),
-      baseUnit: "mét",
-      description: "",
-      price: defaultVariant.retailPrice,
-      retailPrice: defaultVariant.retailPrice,
-      storePrice: defaultVariant.storePrice,
-      variantCode: defaultVariant.variantCode,
-      variants: [defaultVariant],
-    };
-  });
-}
 
 export function mapProductToForm(product: ProductInventoryRes): ProductForm {
   const variants: ProductVariantInventoryRes[] =
@@ -65,7 +26,7 @@ export function mapProductToForm(product: ProductInventoryRes): ProductForm {
           outOfStock: Boolean(variant.outOfStock),
           variantId: variant.variantId ?? null,
           variantCode: variant.variantCode ?? "",
-          weight: Number(variant.weight ?? 0),
+          weight: variant.weight ?? "",
           retailPrice: Number(variant.retailPrice ?? 0),
           storePrice: Number(variant.storePrice ?? 0),
           remainingQty: Number(variant.remainingQty ?? 0),
@@ -111,7 +72,7 @@ export function buildProductRowFromForm(
       costPrice: Number(variant.costPrice ?? 0),
       retailPrice: Number(variant.retailPrice ?? 0),
       storePrice: Number(variant.storePrice ?? 0),
-      weight: Number(variant.weight ?? 0),
+      weight: variant.weight ?? "",
       originalQty: Number(variant.originalQty ?? 0),
       outOfStock: Number(variant.remainingQty ?? 0) <= 0,
     })),
