@@ -246,6 +246,7 @@ export function CustomerOrderInfoDialog({
                     }))
                   }
                   placeholder="Nhập mã hóa đơn"
+                  disabled
                 />
               </div>
 

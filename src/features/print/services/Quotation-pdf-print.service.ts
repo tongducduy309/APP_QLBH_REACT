@@ -7,6 +7,8 @@ import type {
 } from "pdfmake/interfaces";
 import dayjs from "dayjs";
 import { OrderRes } from "@/types/order";
+import { buildMergedNameRowsFromAllProducts } from "../utils/print-helper";
+import { sortOrderResDetails } from "@/utils/order.helper";
 
 (pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
 
@@ -204,6 +206,7 @@ function toDataPdf(data: OrderRes): DataPdf {
   };
 }
 
+
 function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
   const createdAt = data.createdAt
     ? formatTimestampDMY(data.createdAt)
@@ -229,41 +232,7 @@ function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
     ],
   ];
 
-  const body: any[] = [];
-  let index = 1;
-
-  for (const item of data.products) {
-    body.push([
-      { text: index++, alignment: "center", style: "s12" },
-      { text: item.name || " ", style: "s12" },
-      { text: item.baseUnit || "-", alignment: "center", style: "s12" },
-      {
-        text: item.length ? formatQuantity(item.length) : "-",
-        alignment: "center",
-        style: "s12",
-      },
-      {
-        text: item.quantity ? formatQuantity(item.quantity) : "-",
-        alignment: "center",
-        style: "s12",
-      },
-      {
-        text: item.totalQuantity ? formatQuantity(item.totalQuantity) : "-",
-        alignment: "center",
-        style: "s12",
-      },
-      {
-        text: item.price ? formatMoney(item.price) : "-",
-        alignment: "right",
-        style: "s12",
-      },
-      {
-        text: item.subtotal ? formatMoney(item.subtotal) : "-",
-        alignment: "right",
-        style: "s12",
-      },
-    ]);
-  }
+  const body = buildMergedNameRowsFromAllProducts(data.products);
 
   const hasSubtotal = Number(data.subtotal || 0) > 0;
   const hasTax = Number(data.taxAmount || 0) > 0;
@@ -591,7 +560,7 @@ function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> 
 }
 
 export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildQuotationDocDefinition(data, opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
 
   if (window.qlbh?.printPdfSilent) {
     const buf = await getPdfBuffer(dd);
@@ -614,7 +583,7 @@ export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
 }
 
 export function previewQuotation(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildQuotationDocDefinition(data, opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
   pdfMake.createPdf(dd).open();
 }
 
@@ -622,7 +591,7 @@ export function downloadQuotation(data: OrderRes, opts: PrintOptions = {}) {
   const name = formatDateToDDMMYYYY(
     data.createdAt ?? new Date().toISOString()
   );
-  const dd = buildQuotationDocDefinition(data, opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
   pdfMake.createPdf(dd).download(
     name ? `BBG-${name}.pdf` : "bang-bao-gia.pdf"
   );

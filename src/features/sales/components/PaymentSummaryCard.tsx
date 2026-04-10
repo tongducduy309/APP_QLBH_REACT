@@ -40,6 +40,8 @@ type Props = {
   checkoutLoadingLabel?: string;
   saveDraftLabel?: string;
   printInvoiceLabel?: string;
+
+  onCopyInvoiceImage: () => void;
   
 };
 
@@ -177,6 +179,12 @@ export function PaymentSummaryCard(props: Props) {
                 disabled={props.checkoutDisabled}
               >
                 Tải bảng báo giá
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={props.onCopyInvoiceImage}
+                disabled={props.checkoutDisabled}
+              >
+                Sao chép hóa đơn
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={props.onSaveDraft}

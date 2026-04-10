@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, dialog, shell, Notification, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, dialog, shell, Notification, ipcMain, nativeImage, clipboard } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
@@ -49,6 +49,28 @@ ipcMain.handle('print:pdf:silent', async (event, payload) => {
     return { ok: false, error: String(err?.message || err) };
   }
 });
+
+ipcMain.handle(
+  "clipboard-write-image",
+  async (_event, payload) => {
+    try {
+      const buffer = Buffer.from(payload.bytes);
+      const image = nativeImage.createFromBuffer(buffer);
+
+      if (image.isEmpty()) {
+        return { ok: false, error: "Ảnh rỗng hoặc không hợp lệ" };
+      }
+
+      clipboard.writeImage(image);
+      return { ok: true };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error?.message || "Không thể ghi ảnh vào clipboard",
+      };
+    }
+  }
+);
 
 function firstExisting(paths) {
   return paths.find((p) => fs.existsSync(p));

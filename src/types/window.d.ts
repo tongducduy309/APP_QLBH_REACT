@@ -9,6 +9,15 @@ declare global {
         copies?: number;
         deviceName?: string;
       }) => Promise<{ ok: boolean; error?: string }>;
+      writeImageClipboard?: (payload: {
+        bytes: number[];
+        mimeType?: string;
+      }) => Promise<{ ok: boolean; error?: string }>;
+      writePdfClipboard?: (payload: {
+        bytes: number[];
+        format?: string;
+        fileName?: string;
+      }) => Promise<{ ok: boolean; error?: string }>;
     };
   }
 }

@@ -23,3 +23,9 @@ export async function createPurchaseReceipt(
   const { data } = await apiClient.post("/purchase-receipts", payload);
   return data.data as PurchaseReceiptRes;
 }
+
+export async function deletePurchaseReceipt(
+  id: number,
+): Promise<void> {
+  await apiClient.delete(`/purchase-receipts/${id}`);
+}

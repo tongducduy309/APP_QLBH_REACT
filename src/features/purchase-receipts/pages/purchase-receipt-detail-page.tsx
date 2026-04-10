@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Descriptions, Empty, Spin, Tag } from "antd";
-import { ArrowLeft, Package, ReceiptText, Warehouse } from "lucide-react";
+import { ArrowLeft, Package, ReceiptText, Trash, Warehouse } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -13,13 +13,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
-import { getPurchaseReceiptDetail } from "@/services/purchase-receipt-api";
+import {
+  deletePurchaseReceipt,
+  getPurchaseReceiptDetail,
+} from "@/services/purchase-receipt-api";
 import type {
   PurchaseReceiptDetailRes,
   PurchaseReceiptMethod,
 } from "../types/purchase-receipt.types";
-
+import { Button as AntButton } from "antd";
 
 function getMethodLabel(method?: PurchaseReceiptMethod) {
   switch (method) {
@@ -50,11 +60,38 @@ export function PurchaseReceiptDetailPage() {
   const [data, setData] = useState<PurchaseReceiptDetailRes | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteConfirmed, setDeleteConfirmed] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   const receiptId = useMemo(() => {
     if (!id) return null;
     const parsed = Number(id);
     return Number.isNaN(parsed) ? null : parsed;
   }, [id]);
+
+  const openDeleteDialog = () => {
+    setDeleteConfirmed(false);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!receiptId || !deleteConfirmed) return;
+
+    try {
+      setDeleteLoading(true);
+      await deletePurchaseReceipt(receiptId);
+      toast.success("Xóa phiếu nhập thành công.");
+      setDeleteDialogOpen(false);
+      setDeleteConfirmed(false);
+      navigate("/purchase-receipts");
+    } catch (error) {
+      console.error("Lỗi xóa phiếu nhập", error);
+      toast.error("Không thể xóa phiếu nhập kho.");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!receiptId) {
@@ -97,7 +134,7 @@ export function PurchaseReceiptDetailPage() {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => navigate("/purchase-receipts")}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-4 w-4" />
             Quay lại danh sách
@@ -145,6 +182,15 @@ export function PurchaseReceiptDetailPage() {
                 Xem sản phẩm
               </Button>
             ) : null}
+
+            <AntButton
+              danger
+              className="gap-2"
+              onClick={openDeleteDialog}
+            >
+              <Trash className="h-4 w-4" />
+              Xóa phiếu nhập
+            </AntButton>
           </div>
         </div>
 
@@ -328,7 +374,6 @@ export function PurchaseReceiptDetailPage() {
                   label: "Giá vốn",
                   children: formatCurrency(data.inventoryCostPrice ?? 0),
                 },
-                
                 {
                   key: "inventoryImportedAt",
                   label: "Ngày nhập lô",
@@ -348,6 +393,69 @@ export function PurchaseReceiptDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) {
+            setDeleteConfirmed(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xóa phiếu nhập</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Bạn có chắc chắn muốn xóa phiếu nhập{" "}
+              <span className="font-medium text-foreground">
+                #{data.id ?? receiptId}
+              </span>
+              ? Nếu đồng ý, vui lòng tick vào ô xác nhận bên dưới.
+            </p>
+
+            <div className="flex items-start gap-3 rounded-md border p-3">
+              <Checkbox
+                id="confirm-delete-purchase-receipt"
+                checked={deleteConfirmed}
+                onCheckedChange={(checked) =>
+                  setDeleteConfirmed(checked === true)
+                }
+              />
+              <label
+                htmlFor="confirm-delete-purchase-receipt"
+                className="text-sm leading-5"
+              >
+                Tôi xác nhận muốn xóa phiếu nhập này
+              </label>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDeleteDialogOpen(false);
+                  setDeleteConfirmed(false);
+                }}
+                disabled={deleteLoading}
+              >
+                Quay lại
+              </Button>
+
+              <Button
+                variant="destructive"
+                onClick={handleConfirmDelete}
+                disabled={!deleteConfirmed || deleteLoading}
+              >
+                {deleteLoading ? "Đang xóa..." : "Xác nhận xóa"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </PageShell>
   );
 }

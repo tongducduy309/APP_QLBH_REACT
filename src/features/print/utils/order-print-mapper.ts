@@ -54,3 +54,4 @@ export const mapSalesDraftToOrderRes = (
     createdAt: draft.customerOrderInfo.createdDate || draft.createdAt,
   };
 };
+

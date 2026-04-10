@@ -43,6 +43,8 @@ import {
   mapOrderToCustomerOrderInfo,
 } from "@/features/transactions/utils/order-edit-mapper";
 import { Button as AntdButton } from "antd";
+import { InvoiceCopyImageTemplate } from "@/features/print/components/invoice-copy-image-template";
+import { copyElementAsImage } from "@/features/print/utils/copy-invoice-image";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -88,6 +90,8 @@ export function SalesPage({
   const [closingOrderId, setClosingOrderId] = useState<number | null>(null);
   const [draggingOrderId, setDraggingOrderId] = useState<number | null>(null);
   const [loadingEditOrder, setLoadingEditOrder] = useState(false);
+
+  const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
 
   const printableOrder = useMemo(() => {
     if (!sales.activeOrder) return null;
@@ -400,6 +404,18 @@ export function SalesPage({
     );
   }
 
+  const handleCopyInvoiceImage = async () => {
+    if (!printableOrder || !invoiceCopyRef.current) return;
+
+    try {
+      await copyElementAsImage(invoiceCopyRef.current);
+      toast.success("Đã copy hóa đơn dưới dạng ảnh");
+    } catch (error) {
+      console.error("Lỗi copy hóa đơn", error);
+      toast.error("Copy hóa đơn thất bại");
+    }
+  };
+
   return (
     <PageShell>
       <div className="space-y-4 bg-white p-4">
@@ -560,6 +576,7 @@ export function SalesPage({
               onCheckedPrintInvoice={setCheckedPrintInvoice}
               onSaveDraft={handleSaveDraft}
               editMode={isEditMode}
+              onCopyInvoiceImage={handleCopyInvoiceImage}
             />
           </div>
         </div>
@@ -670,6 +687,21 @@ export function SalesPage({
           </div>
         </DialogContent>
       </Dialog>
+
+      <div
+        style={{
+          position: "fixed",
+          left: -99999,
+          top: 0,
+          zIndex: -1,
+          opacity: 0,
+          pointerEvents: "none",
+        }}
+      >
+        <div ref={invoiceCopyRef}>
+          <InvoiceCopyImageTemplate order={printableOrder} />
+        </div>
+      </div>
     </PageShell>
   );
 }
