@@ -1,6 +1,5 @@
-import { Button, Input, Switch, Upload, message } from "antd";
-import type { UploadProps } from "antd";
-import { Image as ImageIcon, Save, RotateCcw } from "lucide-react";
+import { Button, Input, InputNumber, Select, Switch, message } from "antd";
+import { Save, RotateCcw, Printer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import {
@@ -10,59 +9,39 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useSettingsStore } from "../store/settings-store";
+import { defaultSettings, useSettingsStore } from "../store/settings-store";
 import type { UserSettings } from "../types/settings.types";
 
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = reject;
-  });
-}
+const paperSizeOptions = [
+  { label: "A4", value: "A4" },
+  { label: "A5", value: "A5" },
+  { label: "Letter", value: "LETTER" },
+];
+
+const pageOrientationOptions = [
+  { label: "Dọc", value: "portrait" },
+  { label: "Ngang", value: "landscape" },
+];
 
 export function SettingsPage() {
   const { settings, saveSettings, loading } = useSettingsStore();
-
   const [form, setForm] = useState<UserSettings>(settings);
-  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     setForm(settings);
   }, [settings]);
 
-  const previewTitle = useMemo(
-    () => form.appName?.trim() || "Quản lý bán hàng",
-    [form.appName]
-  );
-
-  const uploadProps: UploadProps = {
-    accept: "image/*",
-    showUploadList: false,
-    beforeUpload: async (file) => {
-      try {
-        setUploading(true);
-        const base64 = await fileToBase64(file);
-        setForm((prev) => ({
-          ...prev,
-          appIcon: base64,
-        }));
-      } catch {
-        message.error("Không thể đọc file ảnh");
-      } finally {
-        setUploading(false);
-      }
-
-      return false;
-    },
-  };
 
   async function handleSave() {
     try {
       await saveSettings({
         ...form,
-        appName: form.appName.trim() || "Quản lý bán hàng",
+        printOptions: {
+          paperSize: form.printOptions?.paperSize || "A4",
+          copies: form.printOptions?.copies || 1,
+          pageOrientation: form.printOptions?.pageOrientation || "portrait",
+          deviceName: form.printOptions?.deviceName?.trim() || "",
+        },
       });
 
       message.success("Lưu cài đặt thành công");
@@ -72,12 +51,7 @@ export function SettingsPage() {
   }
 
   function handleReset() {
-    setForm({
-      appName: "Quản lý bán hàng",
-      appIcon: null,
-      emailNotify: true,
-      desktopNotify: false,
-    });
+    setForm(defaultSettings);
   }
 
   return (
@@ -87,59 +61,110 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle>Cài đặt ứng dụng</CardTitle>
             <CardDescription>
-              Tùy chỉnh tên app, icon app và thông báo cho tài khoản hiện tại
+              Tùy chỉnh tên app, thông báo và thiết lập in PDF cho tài khoản hiện tại
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Tên ứng dụng</label>
-                <Input
-                  size="large"
-                  value={form.appName}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      appName: e.target.value,
-                    }))
-                  }
-                  placeholder="Nhập tên ứng dụng"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Tên này sẽ hiển thị ở header và sidebar.
-                </p>
+
+            <div className="rounded-2xl border p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <Printer className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">Cài đặt xuất / in PDF</p>
+                  <p className="text-sm text-muted-foreground">
+                    Áp dụng cho quotation và hóa đơn khi in hoặc export PDF
+                  </p>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Icon ứng dụng</label>
-
-                <div className="flex items-center gap-3">
-                  <Upload {...uploadProps}>
-                    <Button size="large" loading={uploading}>
-                      Chọn ảnh
-                    </Button>
-                  </Upload>
-
-                  {form.appIcon ? (
-                    <Button
-                      size="large"
-                      danger
-                      onClick={() =>
-                        setForm((prev) => ({
-                          ...prev,
-                          appIcon: null,
-                        }))
-                      }
-                    >
-                      Xóa icon
-                    </Button>
-                  ) : null}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Khổ giấy</label>
+                  <Select
+                    size="large"
+                    className="w-full"
+                    value={form.printOptions?.paperSize || "A4"}
+                    options={paperSizeOptions}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        printOptions: {
+                          ...prev.printOptions,
+                          paperSize: value,
+                        },
+                      }))
+                    }
+                  />
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  Nên dùng ảnh vuông PNG/JPG để hiển thị đẹp hơn.
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Hướng giấy</label>
+                  <Select
+                    size="large"
+                    className="w-full"
+                    value={form.printOptions?.pageOrientation || "portrait"}
+                    options={pageOrientationOptions}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        printOptions: {
+                          ...prev.printOptions,
+                          pageOrientation: value,
+                        },
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2 flex flex-col">
+                  <label className="text-sm font-medium">Số bản in</label>
+                  <InputNumber
+                    size="large"
+                    className="w-full"
+                    min={1}
+                    max={20}
+                    value={form.printOptions?.copies || 1}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        printOptions: {
+                          ...prev.printOptions,
+                          copies: Number(value || 1),
+                        },
+                      }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Tên máy in</label>
+                  <Input
+                    size="large"
+                    value={form.printOptions?.deviceName || ""}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        printOptions: {
+                          ...prev.printOptions,
+                          deviceName: e.target.value,
+                        },
+                      }))
+                    }
+                    placeholder="Ví dụ: Microsoft Print to PDF"
+                  />
+                </div>
+              </div>
+
+              <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Xem trước cấu hình</p>
+                <p>Khổ giấy: {form.printOptions?.paperSize || "A4"}</p>
+                <p>
+                  Hướng giấy:{" "}
+                  {form.printOptions?.pageOrientation === "landscape" ? "Ngang" : "Dọc"}
                 </p>
+                <p>Số bản in: {form.printOptions?.copies || 1}</p>
+                <p>Máy in: {form.printOptions?.deviceName?.trim() || "Chưa chọn"}</p>
               </div>
             </div>
 
@@ -162,23 +187,6 @@ export function SettingsPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border p-4">
-                <div>
-                  <p className="font-medium">Thông báo desktop</p>
-                  <p className="text-sm text-muted-foreground">
-                    Hiển thị thông báo nổi khi có giao dịch mới
-                  </p>
-                </div>
-                <Switch disabled
-                  checked={form.desktopNotify}
-                  onChange={(checked) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      desktopNotify: checked,
-                    }))
-                  }
-                />
-              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
@@ -199,40 +207,32 @@ export function SettingsPage() {
           <CardHeader>
             <CardTitle>Xem trước</CardTitle>
             <CardDescription>
-              Mô phỏng phần app name và app icon sẽ hiển thị trên giao diện
+              Mô phỏng phần tên ứng dụng và cấu hình in PDF hiện tại
             </CardDescription>
           </CardHeader>
 
-          <CardContent>
-            <div className="space-y-4 rounded-3xl border bg-muted/20 p-5">
-              <div className="flex items-center gap-4 rounded-2xl border bg-background p-4">
-                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border bg-muted">
-                  {form.appIcon ? (
-                    <img
-                      src={form.appIcon}
-                      alt={previewTitle}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                  )}
-                </div>
+          <CardContent className="space-y-4">
+            <div className="rounded-2xl border bg-background p-4">
+              <p className="mb-2 text-sm font-medium">Cấu hình PDF / Print</p>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>Khổ giấy: {form.printOptions?.paperSize || "A4"}</li>
+                <li>
+                  Hướng giấy:{" "}
+                  {form.printOptions?.pageOrientation === "landscape" ? "Ngang" : "Dọc"}
+                </li>
+                <li>Số bản in: {form.printOptions?.copies || 1}</li>
+                <li>Máy in: {form.printOptions?.deviceName?.trim() || "Chưa chọn"}</li>
+              </ul>
+            </div>
 
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">Header / Sidebar</p>
-                  <p className="truncate text-lg font-semibold">{previewTitle}</p>
-                  <p className="text-sm text-muted-foreground">Hệ thống quản lý</p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border bg-background p-4">
-                <p className="mb-2 text-sm font-medium">Gợi ý</p>
-                <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  <li>Tên app nên ngắn gọn để không bị tràn trên header.</li>
-                  <li>Icon vuông sẽ hiển thị đẹp hơn ở sidebar.</li>
-                  <li>Nếu backend lỗi, dữ liệu vẫn được giữ tạm ở localStorage.</li>
-                </ul>
-              </div>
+            <div className="rounded-2xl border bg-background p-4">
+              <p className="mb-2 text-sm font-medium">Gợi ý</p>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                <li>Nên dùng A4 cho hóa đơn và quotation.</li>
+                <li>Chọn dọc nếu mẫu PDF của bạn bố cục dạng chuẩn.</li>
+                <li>Chọn ngang nếu bảng sản phẩm có nhiều cột.</li>
+                <li>Thiết bị in có thể để trống nếu không cố định máy in.</li>
+              </ul>
             </div>
           </CardContent>
         </Card>

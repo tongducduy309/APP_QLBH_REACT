@@ -3,26 +3,19 @@ import pdfFonts from "pdfmake/build/vfs_fonts";
 import type {
   Alignment,
   Content,
-  PageOrientation,
   StyleDictionary,
   TDocumentDefinitions,
 } from "pdfmake/interfaces";
 import JsBarcode from "jsbarcode";
 import { OrderRes } from "@/types/order";
-import { DataPdf, DataPdfProduct } from "../types/print.type";
+import { DataPdf, DataPdfProduct, PaperSize, PrintOptions } from "../types/print.type";
 import { buildMergedNameRowsFromAllProducts, formatMoney } from "../utils/print-helper";
 import { sortOrderResDetails } from "@/utils/order.helper";
+import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 (pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
 
-export type PaperSize = "A4" | "A5" | "A6";
 
-export interface PrintOptions {
-  paperSize?: PaperSize;
-  copies?: number;
-  pageOrientation?: PageOrientation;
-  deviceName?: string;
-}
 
 
 
@@ -579,9 +572,10 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
 
 function buildInvoiceDocDefinition(
   order: OrderRes,
-  opts: PrintOptions = {}
 ): TDocumentDefinitions {
   const data = toDataPdf(order);
+  const settings = useSettingsStore.getState().settings;
+  const opts: PrintOptions = settings?.printOptions || {};
   const paperSize: PaperSize = opts.paperSize ?? "A4";
   const copies = Math.max(1, Math.min(50, opts.copies ?? 1));
 
@@ -661,9 +655,10 @@ function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> 
 
 
 
-export async function printInvoice(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), opts);
-
+export async function printInvoice(data: OrderRes) {
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
+  const settings = useSettingsStore.getState().settings;
+  const opts: PrintOptions = settings?.printOptions || {};
   if (window.qlbh?.printPdfSilent) {
     const buf = await getPdfBuffer(dd);
     const bytes = Array.from(buf);
@@ -684,12 +679,12 @@ export async function printInvoice(data: OrderRes, opts: PrintOptions = {}) {
   pdfMake.createPdf(dd).print();
 }
 
-export function previewInvoice(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), opts);
+export function previewInvoice(data: OrderRes) {
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
   pdfMake.createPdf(dd).open();
 }
 
-export function downloadInvoice(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), opts);
+export function downloadInvoice(data: OrderRes) {
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
   pdfMake.createPdf(dd).download(data.code ? `${data.code}.pdf` : "hoa-don.pdf");
 }

@@ -4,11 +4,14 @@ import { getMySettings, updateMySettings } from "@/services/settings-api";
 
 const SETTINGS_FALLBACK_KEY = "qlbh_user_settings";
 
-const defaultSettings: UserSettings = {
-  appName: "Quản lý bán hàng",
-  appIcon: null,
+export const defaultSettings: UserSettings = {
   emailNotify: true,
-  desktopNotify: false,
+  printOptions: {
+    paperSize: "A4",
+    copies: 1,
+    pageOrientation: "portrait",
+    deviceName: "",
+  },
 };
 
 type SettingsState = {

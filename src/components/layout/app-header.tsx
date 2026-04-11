@@ -15,20 +15,18 @@ import { searchGlobal } from "@/services/search-api";
 export function AppHeader() {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
-  const settings = useSettingsStore((state) => state.settings);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  const appName = settings?.appName?.trim() || "Quản lý bán hàng";
 
   const title = useMemo(() => {
     const found = navigationItems.find((item) =>
       location.pathname.startsWith(item.path)
     );
 
-    return found?.label ?? appName;
-  }, [location.pathname, appName]);
+    return found?.label ?? "Quản lý bán hàng";
+  }, [location.pathname]);
 
   const subtitle = useMemo(() => {
     const found = navigationItems.find((item) =>

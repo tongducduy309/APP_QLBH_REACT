@@ -29,6 +29,15 @@ import {
 import { createPurchaseReceipt } from "@/services/purchase-receipt-api";
 import { PurchaseReceiptCreateReq, PurchaseReceiptForm } from "@/features/purchase-receipts/types/purchase-receipt.types";
 
+import {
+  exportInventoryExcel,
+  importInventoryExcel,
+} from "@/services/product-api";
+import type {
+  InventoryExportColumnKey,
+  InventoryImportRes,
+} from "../types/inventory.types";
+import { DEFAULT_INVENTORY_EXPORT_COLUMNS } from "../constants/inventory-export-columns";
 function createInitialPurchaseReceiptForm(): PurchaseReceiptForm {
   return {
     productVariantId: null,
@@ -41,6 +50,15 @@ function createInitialPurchaseReceiptForm(): PurchaseReceiptForm {
 
 export function useInventoryPage() {
   const [inventoryItems, setInventoryItems] = useState<ProductInventoryRes[]>([]);
+
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+const [selectedExportColumns, setSelectedExportColumns] = useState<InventoryExportColumnKey[]>(
+  [...DEFAULT_INVENTORY_EXPORT_COLUMNS]
+);
+const [isExportingExcel, setIsExportingExcel] = useState(false);
+const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+const [isImportingExcel, setIsImportingExcel] = useState(false);
+const [importResult, setImportResult] = useState<InventoryImportRes | null>(null);
 
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -297,6 +315,63 @@ export function useInventoryPage() {
     }
   };
 
+  const openExportDialog = () => setIsExportDialogOpen(true);
+const openImportDialog = () => {
+  setImportResult(null);
+  setIsImportDialogOpen(true);
+};
+
+const handleExportExcel = async () => {
+  if (selectedExportColumns.length === 0) {
+    toast.error("Vui lòng chọn ít nhất 1 cột để xuất.");
+    return;
+  }
+
+  try {
+    setIsExportingExcel(true);
+    const blob = await exportInventoryExcel({
+      columns: selectedExportColumns,
+      onlyActive: true,
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `hang-hoa-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+
+    toast.success("Xuất file Excel thành công.");
+    setIsExportDialogOpen(false);
+  } catch (error) {
+    console.error(error);
+    toast.error("Xuất file Excel thất bại.");
+  } finally {
+    setIsExportingExcel(false);
+  }
+};
+
+const handleImportExcel = async (file: File) => {
+  try {
+    setIsImportingExcel(true);
+    const res = await importInventoryExcel(file);
+    setImportResult(res);
+
+    if ((res.errors?.length ?? 0) > 0) {
+      toast.warning("Import hoàn tất nhưng có lỗi ở một số dòng.");
+    } else {
+      toast.success("Import Excel thành công.");
+    }
+
+    await fetchInventory();
+  } catch (error) {
+    console.error(error);
+    toast.error("Import Excel thất bại.");
+  } finally {
+    setIsImportingExcel(false);
+  }
+};
+
   const fetchInventory = async () => {
     try {
       const data = await getAllInventory();
@@ -349,5 +424,19 @@ export function useInventoryPage() {
     handleSubmit,
     handleSaveInventory,
     handleCreatePurchaseReceipt,
+
+    isExportDialogOpen,
+setIsExportDialogOpen,
+selectedExportColumns,
+setSelectedExportColumns,
+isExportingExcel,
+openExportDialog,
+handleExportExcel,
+isImportDialogOpen,
+setIsImportDialogOpen,
+isImportingExcel,
+importResult,
+openImportDialog,
+handleImportExcel,
   };
 }

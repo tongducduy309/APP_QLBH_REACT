@@ -11,10 +11,8 @@ type Props = {
 };
 
 export function AppSidebar({ collapsed, onToggle }: Props) {
-  const settings = useSettingsStore((state) => state.settings);
+  const appName = "TÂM ĐỨC CƯỜNG";
 
-  const appName = settings?.appName?.trim() || "Quản lý bán hàng";
-  const appIcon = settings?.appIcon || null;
 
   return (
     <aside
@@ -26,15 +24,11 @@ export function AppSidebar({ collapsed, onToggle }: Props) {
     >
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-primary/10 text-primary">
-          {appIcon ? (
-            <img
-              src={appIcon}
+          <img
+              src="/logo.png"
               alt={appName}
               className="h-full w-full object-cover"
             />
-          ) : (
-            <Package2 className="h-5 w-5" />
-          )}
         </div>
 
         <div

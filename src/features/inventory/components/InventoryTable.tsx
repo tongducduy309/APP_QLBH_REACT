@@ -33,6 +33,8 @@ type Props = {
     variant: ProductVariantInventoryRes,
     productName: string
   ) => void;
+  onExportExcel: () => void;
+  onImportExcel: () => void;
 };
 
 export function InventoryTable({
@@ -41,6 +43,8 @@ export function InventoryTable({
   onEditProduct,
   onEditInventory,
   onImportStock,
+  onExportExcel,
+  onImportExcel,
 }: Props) {
   const [search, setSearch] = useState("");
   const [manualExpandedKeys, setManualExpandedKeys] = useState<React.Key[]>([]);
@@ -235,6 +239,12 @@ export function InventoryTable({
             onChange={(e) => setSearch(e.target.value)}
             className="md:w-[360px]"
           />
+          <Button variant="outline" onClick={onImportExcel}>
+  Import Excel
+</Button>
+<Button variant="outline" onClick={onExportExcel}>
+  Xuất Excel
+</Button>
           <Button onClick={onCreate}>Thêm sản phẩm</Button>
         </div>
       </CardHeader>

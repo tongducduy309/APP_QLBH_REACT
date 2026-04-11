@@ -2,24 +2,18 @@ import pdfMake from "pdfmake/build/pdfmake";
 import pdfFonts from "pdfmake/build/vfs_fonts";
 import type {
   Content,
-  PageOrientation,
   TDocumentDefinitions,
 } from "pdfmake/interfaces";
 import dayjs from "dayjs";
 import { OrderRes } from "@/types/order";
 import { buildMergedNameRowsFromAllProducts } from "../utils/print-helper";
 import { sortOrderResDetails } from "@/utils/order.helper";
+import { PaperSize, PrintOptions } from "../types/print.type";
+import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 (pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
 
-export type PaperSize = "A4" | "A5" | "A6";
 
-export interface PrintOptions {
-  paperSize?: PaperSize;
-  copies?: number;
-  pageOrientation?: PageOrientation;
-  deviceName?: string;
-}
 
 type DataPdfProduct = {
   name: string;
@@ -486,9 +480,10 @@ function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
 
 function buildQuotationDocDefinition(
   order: OrderRes,
-  opts: PrintOptions = {}
 ): TDocumentDefinitions {
   const data = toDataPdf(order);
+  const settings = useSettingsStore.getState().settings;
+  const opts: PrintOptions = settings?.printOptions || {};
   const paperSize: PaperSize = opts.paperSize ?? "A4";
   const copies = Math.max(1, Math.min(50, opts.copies ?? 1));
 
@@ -560,7 +555,7 @@ function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> 
 }
 
 export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data));
 
   if (window.qlbh?.printPdfSilent) {
     const buf = await getPdfBuffer(dd);
@@ -583,7 +578,7 @@ export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
 }
 
 export function previewQuotation(data: OrderRes, opts: PrintOptions = {}) {
-  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data));
   pdfMake.createPdf(dd).open();
 }
 
@@ -591,7 +586,7 @@ export function downloadQuotation(data: OrderRes, opts: PrintOptions = {}) {
   const name = formatDateToDDMMYYYY(
     data.createdAt ?? new Date().toISOString()
   );
-  const dd = buildQuotationDocDefinition(sortOrderResDetails(data), opts);
+  const dd = buildQuotationDocDefinition(sortOrderResDetails(data));
   pdfMake.createPdf(dd).download(
     name ? `BBG-${name}.pdf` : "bang-bao-gia.pdf"
   );

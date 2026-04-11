@@ -100,3 +100,43 @@ export interface ProductVariantUpdateReq {
   storePrice?: number|null;
   active?: boolean;
 }
+
+export type InventoryExportColumnKey =
+  | "productName"
+  | "categoryName"
+  | "baseUnit"
+  | "productActive"
+  | "description"
+  | "sku"
+  | "variantCode"
+  | "weight"
+  | "retailPrice"
+  | "storePrice"
+  | "variantActive"
+  | "lotCode"
+  | "originalQty"
+  | "remainingQty"
+  | "costPrice"
+  | "outOfStock";
+
+export type InventoryExportColumnOption = {
+  key: InventoryExportColumnKey;
+  label: string;
+};
+
+export type InventoryExportReq = {
+  columns: InventoryExportColumnKey[];
+  onlyActive?: boolean;
+};
+
+export type InventoryImportRes = {
+  totalRows: number;
+  createdProducts: number;
+  updatedProducts: number;
+  createdVariants: number;
+  updatedVariants: number;
+  createdLots: number;
+  updatedLots: number;
+  warnings: string[];
+  errors: string[];
+};

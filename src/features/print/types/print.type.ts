@@ -1,3 +1,13 @@
+import { PageOrientation } from "pdfmake/interfaces";
+
+export type PaperSize = "A4" | "A5" | "LETTER";
+
+export interface PrintOptions {
+  paperSize?: PaperSize;
+  copies?: number;
+  pageOrientation?: PageOrientation;
+  deviceName?: string;
+}
 export type DataPdfProduct = {
   name: string;
   baseUnit: string;

@@ -1,5 +1,7 @@
 import { apiClient } from "@/lib/api-client";
 import type {
+  InventoryExportReq,
+  InventoryImportRes,
   ProductCreateReq,
   ProductInventoryRes,
   ProductUpdateReq,
@@ -42,4 +44,24 @@ export async function getProductImportHistory(
 export async function getAllProductVariants(): Promise<ProductVariantRes[]> {
   const { data } = await apiClient.get(`/product-variants`);
   return (data?.data ?? []) as ProductVariantRes[];
+}
+
+export async function exportInventoryExcel(payload: InventoryExportReq): Promise<Blob> {
+  const { data } = await apiClient.post("/inventory/excel/export", payload, {
+    responseType: "blob",
+  });
+  return data as Blob;
+}
+
+export async function importInventoryExcel(file: File): Promise<InventoryImportRes> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await apiClient.post("/inventory/excel/import", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
+  return data.data as InventoryImportRes;
 }

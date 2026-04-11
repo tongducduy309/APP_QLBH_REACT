@@ -1,14 +1,12 @@
+import { PrintOptions } from "@/features/print/types/print.type";
+
 export type UserSettings = {
   id?: number;
-  appName: string;
-  appIcon?: string | null;
   emailNotify: boolean;
-  desktopNotify: boolean;
+  printOptions?: PrintOptions;
 };
 
 export type UpdateUserSettingsReq = {
-  appName: string;
-  appIcon?: string | null;
   emailNotify: boolean;
-  desktopNotify: boolean;
+  printOptions?: PrintOptions;
 };
