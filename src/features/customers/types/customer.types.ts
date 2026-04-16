@@ -1,5 +1,5 @@
 export interface CustomerRes {
-  id?: number;
+  id: number | null;
   name?: string;
   phone?: string;
   address?: string;

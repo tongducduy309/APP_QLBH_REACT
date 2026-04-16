@@ -123,9 +123,9 @@ export function SalesPage({
   const hasCustomerInfo = useMemo(() => {
     return Boolean(
       sales.customerOrderInfo.customerName?.trim() ||
-        sales.customerOrderInfo.customerPhone?.trim() ||
-        sales.customerOrderInfo.customerAddress?.trim() ||
-        sales.customerOrderInfo.customerId
+      sales.customerOrderInfo.customerPhone?.trim() ||
+      sales.customerOrderInfo.customerAddress?.trim() ||
+      sales.customerOrderInfo.customerId
     );
   }, [sales.customerOrderInfo]);
 
@@ -144,67 +144,67 @@ export function SalesPage({
   }, [fetchProducts]);
 
   useEffect(() => {
-  if (!isEditMode || !orderId || hydratedRef.current) return;
+    if (!isEditMode || !orderId || hydratedRef.current) return;
 
-  const fetchEditOrder = async () => {
-    try {
-      setLoadingEditOrder(true);
-      setLoadEditOrderFailed(false);
+    const fetchEditOrder = async () => {
+      try {
+        setLoadingEditOrder(true);
+        setLoadEditOrderFailed(false);
 
-      const order = await getOrderById(Number(orderId));
+        const order = await getOrderById(Number(orderId));
 
-      sales.setWholeOrderForEdit({
-        cartItems: mapOrderDetailsToCartItems(sortOrderResDetails(order)),
-        shippingFee: Number(order.shippingFee ?? 0),
-        taxPercent: Number(order.tax ?? 0),
-        paidAmount: Number(order.paidAmount ?? 0),
-        customerOrderInfo: mapOrderToCustomerOrderInfo(order),
-      });
+        sales.setWholeOrderForEdit({
+          cartItems: mapOrderDetailsToCartItems(sortOrderResDetails(order)),
+          shippingFee: Number(order.shippingFee ?? 0),
+          taxPercent: Number(order.tax ?? 0),
+          paidAmount: Number(order.paidAmount ?? 0),
+          customerOrderInfo: mapOrderToCustomerOrderInfo(order),
+        });
 
-      setSelectedCustomerFromPicker(
-        order.customer
-          ? {
-              id: order.customer.id ?? 0,
+        setSelectedCustomerFromPicker(
+          order.customer
+            ? {
+              id: order.customer.id ?? null,
               name: order.customer.name ?? "",
               phone: order.customer.phone ?? "",
               address: order.customer.address ?? "",
             }
-          : null
-      );
+            : null
+        );
 
-      hydratedRef.current = true;
-    } catch (error) {
-      console.error("Lỗi tải hóa đơn để chỉnh sửa", error);
+        hydratedRef.current = true;
+      } catch (error) {
+        console.error("Lỗi tải hóa đơn để chỉnh sửa", error);
 
-      hydratedRef.current = false;
-      setSelectedCustomerFromPicker(null);
-      setLoadEditOrderFailed(true);
+        hydratedRef.current = false;
+        setSelectedCustomerFromPicker(null);
+        setLoadEditOrderFailed(true);
 
-      if (orderId) {
-        sales.removePersistedOrderById(Number(orderId));
-      } else {
-        sales.clearPersistedState();
+        if (orderId) {
+          sales.removePersistedOrderById(Number(orderId));
+        } else {
+          sales.clearPersistedState();
+        }
+
+        toast.error("Không thể tải hóa đơn. Hệ thống đã xóa bản nháp lỗi khỏi bộ nhớ.");
+      } finally {
+        setLoadingEditOrder(false);
       }
+    };
 
-      toast.error("Không thể tải hóa đơn. Hệ thống đã xóa bản nháp lỗi khỏi bộ nhớ.");
-    } finally {
-      setLoadingEditOrder(false);
-    }
-  };
-
-  fetchEditOrder();
-}, [isEditMode, orderId]);
+    fetchEditOrder();
+  }, [isEditMode, orderId]);
 
   useEffect(() => {
     hydratedRef.current = false;
   }, [orderId]);
 
   const productsWithAvailableStock = useMemo(() => {
-  
+
     return products.map((product) => ({
       ...product,
       realStock: product.stock ?? 0,
-      
+
       stock: sales.getAvailableStock(product),
     })) as Product[];
   }, [products, sales]);
@@ -264,7 +264,7 @@ export function SalesPage({
       shippingFee: sales.shippingFee ?? 0,
       orderDetailCreateReqs,
       createdAt:
-        sales.customerOrderInfo.createdDate || new Date().toISOString(),
+        sales.customerOrderInfo.createdDate ? new Date(sales.customerOrderInfo.createdDate).toISOString() : new Date().toISOString(),
       status,
     };
   };
@@ -281,7 +281,7 @@ export function SalesPage({
       paidAmount: sales.paidAmount ?? 0,
       shippingFee: sales.shippingFee ?? 0,
       createdAt:
-        sales.customerOrderInfo.createdDate ?? new Date().toISOString(),
+        sales.customerOrderInfo.createdDate ? new Date(sales.customerOrderInfo.createdDate).toISOString() : new Date().toISOString(),
       status,
       orderDetailUpdateReqs: sales.cartItems.map((item) => ({
         id: item.detailId ?? null,
@@ -315,7 +315,7 @@ export function SalesPage({
     setDialogOpen(false);
 
     if (isEditMode && finalOrderId) {
-      navigate(`/transactions/${finalOrderId}`);
+      navigate(`/transactions/${finalOrderId}`, { replace: true });
       return;
     }
 
@@ -347,7 +347,7 @@ export function SalesPage({
           created.id.toString()
         );
       }
-      
+
     } catch (error) {
       console.error("Lỗi lưu hóa đơn", error);
       // toast.error(
@@ -432,7 +432,7 @@ export function SalesPage({
     }
   };
 
-  if (loadingEditOrder&& isEditMode) {
+  if (loadingEditOrder && isEditMode) {
     return (
       <PageShell>
         <div className="flex min-h-[300px] items-center justify-center">
@@ -442,7 +442,7 @@ export function SalesPage({
     );
   }
 
-  if (loadEditOrderFailed&&isEditMode) {
+  if (loadEditOrderFailed && isEditMode) {
     return (
       <PageShell>
         <Card>
@@ -465,7 +465,7 @@ export function SalesPage({
         {isEditMode && (
           <AntdButton
             icon={<ArrowLeft className="h-4 w-4" />}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(`/transactions/${orderId}`, { replace: true })}
           >
             Quay lại
           </AntdButton>
@@ -484,11 +484,10 @@ export function SalesPage({
                 setDraggingOrderId(null);
               }}
               onDragEnd={() => setDraggingOrderId(null)}
-              className={`flex items-center rounded-lg border ${
-                order.isActive
+              className={`flex items-center rounded-lg border ${order.isActive
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-background hover:bg-muted/50"
-              } ${draggingOrderId === order.id ? "opacity-50" : ""}`}
+                } ${draggingOrderId === order.id ? "opacity-50" : ""}`}
             >
               <button
                 type="button"
@@ -512,7 +511,7 @@ export function SalesPage({
                 <span className="mr-1 h-2 w-2 rounded-full bg-orange-500" />
               )}
 
-              {!isEditMode &&  (
+              {!isEditMode && (
                 <button
                   type="button"
                   onClick={() => requestCloseOrder(order.id)}
@@ -553,15 +552,15 @@ export function SalesPage({
               onEditProduct={(group) => {
                 const matchedProduct = group.inventoryId
                   ? products.find(
-                      (p) =>
-                        (p as any).inventoryId != null &&
-                        ((p as any).inventoryId ?? null) === (group.inventoryId ?? null)
-                    )
+                    (p) =>
+                      (p as any).inventoryId != null &&
+                      ((p as any).inventoryId ?? null) === (group.inventoryId ?? null)
+                  )
                   : products.find(
-                      (p) =>
-                        (p.variantId ?? null) === (group.variantId ?? null) ||
-                        (p.id ?? null) === (group.productId ?? null)
-                    );
+                    (p) =>
+                      (p.variantId ?? null) === (group.variantId ?? null) ||
+                      (p.id ?? null) === (group.productId ?? null)
+                  );
 
                 const baseProduct = {
                   id: matchedProduct?.id ?? group.productId ?? null,
@@ -694,8 +693,8 @@ export function SalesPage({
                     ? "Đang cập nhật..."
                     : "Đang thanh toán..."
                   : isEditMode
-                  ? "Vẫn cập nhật"
-                  : "Vẫn tiếp tục"}
+                    ? "Vẫn cập nhật"
+                    : "Vẫn tiếp tục"}
               </Button>
             </div>
           </div>

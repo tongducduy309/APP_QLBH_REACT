@@ -192,7 +192,7 @@ export function CustomersPage() {
     }
   };
 
-  const handleDeleteCustomer = async (id?: number) => {
+  const handleDeleteCustomer = async (id: number|null) => {
     if (!id) {
       toast.info("Không tìm thấy khách hàng để xóa.");
       return;
@@ -383,7 +383,7 @@ export function CustomersPage() {
                 danger: true,
                 loading: deletingId === customer.id,
               }}
-              onConfirm={() => handleDeleteCustomer(customer.id)}
+              onConfirm={() => handleDeleteCustomer(customer.id??null)}
             >
               <Button
                 variant="outline"

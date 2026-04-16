@@ -25,7 +25,7 @@ export interface OrderDetailRes {
 export interface OrderRes {
   id: number;                 
   code: string;                 
-  customer?: CustomerRes | null; 
+  customer: CustomerRes | null; 
   note?: string;
   tax?: number;    
   taxAmount?: number;

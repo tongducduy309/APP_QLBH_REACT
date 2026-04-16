@@ -11,7 +11,7 @@ import { getCustomers } from "@/services/customer-api";
 import { Tag } from "antd";
 
 export type CustomerItem = {
-  id: number;
+  id: number | null;
   name: string;
   phone: string;
   address: string;

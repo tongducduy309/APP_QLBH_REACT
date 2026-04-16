@@ -336,7 +336,7 @@ export function OrderDetailPage() {
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                onClick={() => navigate(`/transactions/edit/${order.id}`)}
+                onClick={() => navigate(`/transactions/edit/${order.id}`, { replace: true })}
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Chỉnh sửa

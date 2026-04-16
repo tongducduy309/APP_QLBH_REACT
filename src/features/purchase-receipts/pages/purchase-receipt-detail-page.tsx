@@ -134,7 +134,7 @@ export function PurchaseReceiptDetailPage() {
           <Button
             variant="outline"
             className="gap-2"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/purchase-receipts')}
           >
             <ArrowLeft className="h-4 w-4" />
             Quay lại danh sách
@@ -167,7 +167,7 @@ export function PurchaseReceiptDetailPage() {
             <Button
               variant="outline"
               className="gap-2"
-              onClick={() => navigate("/purchase-receipts")}
+              onClick={() => navigate(-1)}
             >
               <ArrowLeft className="h-4 w-4" />
               Quay lại

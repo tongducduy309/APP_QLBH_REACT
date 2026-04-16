@@ -75,7 +75,7 @@ export function CustomerDetailPage() {
                 className="inline-flex items-center gap-1 hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Quay lại
+                Quay lại danh sách khách hàng
               </AntdButton>
             </div>
 

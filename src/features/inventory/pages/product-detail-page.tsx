@@ -289,7 +289,7 @@ export function ProductDetailPage() {
             <PageShell>
                 <div className="space-y-4">
                     <Button icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>
-                        Quay lại
+                        Quay lại danh sách sản phẩm
                     </Button>
 
                     <Card>
