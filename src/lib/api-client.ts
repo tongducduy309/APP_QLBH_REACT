@@ -3,7 +3,7 @@ import axios, {
   AxiosRequestHeaders,
   InternalAxiosRequestConfig,
 } from "axios";
-import { notification } from "antd";
+import { toast } from "sonner";
 
 const BASE_URL = import.meta.env.VITE_BASE_URL;
 
@@ -11,19 +11,29 @@ if (!BASE_URL) {
   throw new Error("KHÔNG CẤU HÌNH ĐƯỜNG DẪN API");
 }
 
+type ApiErrorResponse = {
+  code?: number | string;
+  message?: string;
+  status?: number;
+  errors?: Record<string, string | string[]>;
+};
+
 type RefreshTokenResponse = {
-  data: {
-    accessToken: string;
+  data?: {
+    accessToken?: string;
     refreshToken?: string;
   };
+  accessToken?: string;
+  refreshToken?: string;
 };
 
 type RetryableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
+  _skipErrorToast?: boolean;
 };
 
-const getAccessToken = (): string | null => localStorage.getItem("access_token");
-const getRefreshToken = (): string | null => localStorage.getItem("refresh_token");
+const getAccessToken = () => localStorage.getItem("access_token");
+const getRefreshToken = () => localStorage.getItem("refresh_token");
 
 const setAccessToken = (token: string) => {
   localStorage.setItem("access_token", token);
@@ -36,25 +46,10 @@ const setRefreshToken = (token: string) => {
 const clearAuthStorage = () => {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
+  localStorage.removeItem("auth_user");
 };
 
-const showErrorNotification = (message?: string) => {
-  notification.error({
-    message: "Lỗi",
-    description: message || "Đã xảy ra lỗi. Vui lòng thử lại",
-    placement: "topRight",
-  });
-};
-
-const showSessionExpiredNotification = () => {
-  notification.error({
-    message: "Phiên đăng nhập hết hạn",
-    description: "Vui lòng đăng nhập lại",
-    placement: "topRight",
-  });
-};
-
-export const apiClient = axios.create({
+const apiClient = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
   headers: {
@@ -84,37 +79,56 @@ const processPendingRequests = (token: string) => {
   pendingRequests = [];
 };
 
-const rejectPendingRequests = () => {
+const clearPendingRequests = () => {
   pendingRequests = [];
+};
+
+const showErrorToast = (message: string, skip?: boolean) => {
+  if (skip) return;
+  toast.error(message);
+};
+
+const getErrorMessage = (error: AxiosError<ApiErrorResponse>) => {
+  if (error.code === "ECONNABORTED") {
+    return "Yêu cầu quá thời gian xử lý";
+  }
+
+  if (!error.response) {
+    return "Không thể kết nối đến máy chủ";
+  }
+
+  return error.response.data?.message || "Đã xảy ra lỗi. Vui lòng thử lại";
 };
 
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError) => {
+  async (error: AxiosError<ApiErrorResponse>) => {
     const originalRequest = error.config as RetryableRequestConfig | undefined;
     const status = error.response?.status;
-    const responseMessage =
-      (error.response?.data as { message?: string } | undefined)?.message ||
-      "Đã xảy ra lỗi. Vui lòng thử lại";
+    const skipErrorToast = originalRequest?._skipErrorToast;
 
     if (status === 401 && originalRequest && !originalRequest._retry) {
       const refreshToken = getRefreshToken();
 
       if (!refreshToken) {
         clearAuthStorage();
-        showSessionExpiredNotification();
+        showErrorToast("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại", skipErrorToast);
         return Promise.reject(error);
       }
 
       if (isRefreshing) {
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
           pendingRequests.push((newAccessToken: string) => {
-            if (!originalRequest.headers) {
-              originalRequest.headers = {} as AxiosRequestHeaders;
-            }
+            try {
+              if (!originalRequest.headers) {
+                originalRequest.headers = {} as AxiosRequestHeaders;
+              }
 
-            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-            resolve(apiClient(originalRequest));
+              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+              resolve(apiClient(originalRequest));
+            } catch (e) {
+              reject(e);
+            }
           });
         });
       }
@@ -133,13 +147,20 @@ apiClient.interceptors.response.use(
           },
         );
 
-        const newAccessToken = refreshResponse.data.data.accessToken;
+        const newAccessToken =
+          refreshResponse.data?.data?.accessToken ?? refreshResponse.data?.accessToken;
+
         const newRefreshToken =
-          refreshResponse.data.data.refreshToken ?? refreshToken;
+          refreshResponse.data?.data?.refreshToken ??
+          refreshResponse.data?.refreshToken ??
+          refreshToken;
+
+        if (!newAccessToken) {
+          throw new Error("Không nhận được access token mới");
+        }
 
         setAccessToken(newAccessToken);
         setRefreshToken(newRefreshToken);
-
         processPendingRequests(newAccessToken);
 
         if (!originalRequest.headers) {
@@ -147,19 +168,22 @@ apiClient.interceptors.response.use(
         }
 
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
         return apiClient(originalRequest);
       } catch (refreshError) {
         clearAuthStorage();
-        rejectPendingRequests();
-        showSessionExpiredNotification();
+        clearPendingRequests();
+        showErrorToast("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại", skipErrorToast);
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
     }
 
-    showErrorNotification(responseMessage);
+    const message = getErrorMessage(error);
+    showErrorToast(message, skipErrorToast);
+
     return Promise.reject(error);
   },
 );
+
+export default apiClient;

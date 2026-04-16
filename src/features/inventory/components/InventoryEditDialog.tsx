@@ -1,5 +1,3 @@
-// src/modules/inventory/components/InventoryEditDialog.tsx
-
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -11,12 +9,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
-import { Switch } from "@/components/ui/switch";
 import type { InventoryEditForm } from "../types/inventory.types";
+import { useRef } from "react";
 
 type Props = {
   open: boolean;
-  variantLabel: string;
+  productName: string;
   value: InventoryEditForm;
   onClose: () => void;
   onChange: (value: InventoryEditForm) => void;
@@ -25,23 +23,48 @@ type Props = {
 
 export function InventoryEditDialog({
   open,
-  variantLabel,
+  productName,
   value,
   onClose,
   onChange,
   onSubmit,
 }: Props) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleOpenChange = (next: boolean) => {
+    if (!next) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        className="sm:max-w-lg"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault();
+          requestAnimationFrame(() => {
+            inputRef.current?.focus();
+          });
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Chỉnh sửa tồn kho biến thể</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Biến thể</Label>
-            <Input value={variantLabel} readOnly />
+            <Label>Sản phẩm</Label>
+            <Input value={productName} readOnly />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Mã kho</Label>
+            <Input
+              ref={inputRef}
+              value={value.inventoryCode}
+              onChange={(e) => onChange({ ...value, inventoryCode: e.target.value })}
+            />
           </div>
 
           <div className="space-y-2">
@@ -58,21 +81,6 @@ export function InventoryEditDialog({
               value={value.costPrice}
               onValueChange={(next) => onChange({ ...value, costPrice: next })}
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Trạng thái</Label>
-            <div className="flex h-10 items-center rounded-md border px-3">
-              <Switch
-                checked={value.active}
-                onCheckedChange={(checked: boolean) =>
-                  onChange({ ...value, active: checked })
-                }
-              />
-              <span className="ml-3 text-sm text-muted-foreground">
-                {value.active ? "Hoạt động" : "Ngưng"}
-              </span>
-            </div>
           </div>
         </div>
 

@@ -180,7 +180,7 @@ export function useOrderProduct({
     });
 
     if (validationError) {
-      toast.error(validationError);
+      toast.info(validationError);
       return;
     }
 

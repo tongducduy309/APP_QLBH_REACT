@@ -21,7 +21,7 @@ export function mapProductToForm(product: ProductInventoryRes): ProductForm {
       ? product.variants.map((variant) => ({
           inventoryId: variant.inventoryId ?? null,
           sku: variant.sku ?? "",
-          lotCode: variant.lotCode ?? "",
+          inventoryCode: variant.inventoryCode ?? "",
           originalQty: Number(variant.originalQty ?? 0),
           outOfStock: Boolean(variant.outOfStock),
           variantId: variant.variantId ?? null,

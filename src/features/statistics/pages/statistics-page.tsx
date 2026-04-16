@@ -113,15 +113,7 @@ export function StatisticsPage() {
 
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Kiểu thống kê</p>
-                <Select
-                  className="w-full"
-                  value={mode}
-                  options={modeOptions}
-                  onChange={(value) => setMode(value)}
-                />
-              </div>
+              
 
               <div className="space-y-2 md:col-span-2">
                 <p className="text-sm font-medium">Khoảng thời gian</p>
@@ -232,10 +224,12 @@ export function StatisticsPage() {
                     <Tooltip
                       // formatter={(value: number) => formatCurrency(Number(value))}
                       labelFormatter={(label) => `Thời gian: ${label}`}
+                      
                     />
                     <Area
                       type="monotone"
                       dataKey="revenue"
+                      name="Doanh thu"
                       strokeWidth={2}
                       fillOpacity={0.2}
                     />

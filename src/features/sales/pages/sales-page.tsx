@@ -23,7 +23,7 @@ import type {
   Product,
 } from "../types/sales.types";
 import { mapInventoryProductsToSalesProducts } from "../utils/sales-mappers";
-import { getAllInventory } from "@/services/product-api";
+import { getSellableProductInventories } from "@/services/product-api";
 import {
   Dialog,
   DialogContent,
@@ -42,9 +42,11 @@ import {
   mapOrderDetailsToCartItems,
   mapOrderToCustomerOrderInfo,
 } from "@/features/transactions/utils/order-edit-mapper";
-import { Button as AntdButton } from "antd";
+import { Button as AntdButton, Empty, Spin } from "antd";
 import { InvoiceCopyImageTemplate } from "@/features/print/components/invoice-copy-image-template";
 import { copyElementAsImage } from "@/features/print/utils/copy-invoice-image";
+import { Card, CardContent } from "@/components/ui/card";
+import { sortOrderResDetails } from "@/utils/order.helper";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -91,6 +93,8 @@ export function SalesPage({
   const [draggingOrderId, setDraggingOrderId] = useState<number | null>(null);
   const [loadingEditOrder, setLoadingEditOrder] = useState(false);
 
+  const [loadEditOrderFailed, setLoadEditOrderFailed] = useState(false);
+
   const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
 
   const printableOrder = useMemo(() => {
@@ -127,7 +131,7 @@ export function SalesPage({
 
   const fetchProducts = useCallback(async () => {
     try {
-      const inventoryProducts = await getAllInventory();
+      const inventoryProducts = await getSellableProductInventories();
       setProducts(mapInventoryProductsToSalesProducts(inventoryProducts));
     } catch (error) {
       console.error("Lỗi lấy danh sách sản phẩm bán hàng", error);
@@ -140,53 +144,67 @@ export function SalesPage({
   }, [fetchProducts]);
 
   useEffect(() => {
-    if (!isEditMode || !orderId || hydratedRef.current) return;
+  if (!isEditMode || !orderId || hydratedRef.current) return;
 
-    const fetchEditOrder = async () => {
-      try {
-        setLoadingEditOrder(true);
+  const fetchEditOrder = async () => {
+    try {
+      setLoadingEditOrder(true);
+      setLoadEditOrderFailed(false);
 
-        const order = await getOrderById(Number(orderId));
+      const order = await getOrderById(Number(orderId));
 
-        sales.setWholeOrderForEdit({
-          cartItems: mapOrderDetailsToCartItems(order),
-          shippingFee: Number(order.shippingFee ?? 0),
-          taxPercent: Number(order.tax ?? 0),
-          paidAmount: Number(order.paidAmount ?? 0),
-          customerOrderInfo: mapOrderToCustomerOrderInfo(order),
-        });
+      sales.setWholeOrderForEdit({
+        cartItems: mapOrderDetailsToCartItems(sortOrderResDetails(order)),
+        shippingFee: Number(order.shippingFee ?? 0),
+        taxPercent: Number(order.tax ?? 0),
+        paidAmount: Number(order.paidAmount ?? 0),
+        customerOrderInfo: mapOrderToCustomerOrderInfo(order),
+      });
 
-        setSelectedCustomerFromPicker(
-          order.customer
-            ? {
-                id: order.customer.id ?? 0,
-                name: order.customer.name ?? "",
-                phone: order.customer.phone ?? "",
-                address: order.customer.address ?? "",
-              }
-            : null
-        );
+      setSelectedCustomerFromPicker(
+        order.customer
+          ? {
+              id: order.customer.id ?? 0,
+              name: order.customer.name ?? "",
+              phone: order.customer.phone ?? "",
+              address: order.customer.address ?? "",
+            }
+          : null
+      );
 
-        hydratedRef.current = true;
-      } catch (error) {
-        console.error("Lỗi tải hóa đơn để chỉnh sửa", error);
-        toast.error("Không thể tải dữ liệu hóa đơn.");
-      } finally {
-        setLoadingEditOrder(false);
+      hydratedRef.current = true;
+    } catch (error) {
+      console.error("Lỗi tải hóa đơn để chỉnh sửa", error);
+
+      hydratedRef.current = false;
+      setSelectedCustomerFromPicker(null);
+      setLoadEditOrderFailed(true);
+
+      if (orderId) {
+        sales.removePersistedOrderById(Number(orderId));
+      } else {
+        sales.clearPersistedState();
       }
-    };
 
-    fetchEditOrder();
-  }, [isEditMode, orderId]);
+      toast.error("Không thể tải hóa đơn. Hệ thống đã xóa bản nháp lỗi khỏi bộ nhớ.");
+    } finally {
+      setLoadingEditOrder(false);
+    }
+  };
+
+  fetchEditOrder();
+}, [isEditMode, orderId]);
 
   useEffect(() => {
     hydratedRef.current = false;
   }, [orderId]);
 
   const productsWithAvailableStock = useMemo(() => {
+  
     return products.map((product) => ({
       ...product,
       realStock: product.stock ?? 0,
+      
       stock: sales.getAvailableStock(product),
     })) as Product[];
   }, [products, sales]);
@@ -284,12 +302,9 @@ export function SalesPage({
     finalOrderId?: string
   ) => {
     if (checkedPrintInvoice && printableOrder) {
-      printInvoice(printableOrder, {
-        paperSize: "A4",
-        pageOrientation: "portrait",
-      });
+      printInvoice(printableOrder);
     }
-
+    // sales.assignOrderCodeForDraft(sales.activeOrderId ?? 0);
     toast.success(messageText);
 
     await fetchProducts();
@@ -314,7 +329,7 @@ export function SalesPage({
 
   const submitCheckout = async () => {
     if (isCartEmpty) {
-      toast.error("Giỏ hàng đang trống.");
+      toast.info("Giỏ hàng đang trống.");
       return;
     }
 
@@ -332,11 +347,12 @@ export function SalesPage({
           created.id.toString()
         );
       }
+      
     } catch (error) {
       console.error("Lỗi lưu hóa đơn", error);
-      toast.error(
-        isEditMode ? "Không thể cập nhật hóa đơn." : "Không thể tạo đơn hàng."
-      );
+      // toast.error(
+      //   isEditMode ? "Không thể cập nhật hóa đơn." : "Không thể tạo đơn hàng."
+      // );
     } finally {
       setCheckoutLoading(false);
     }
@@ -344,7 +360,7 @@ export function SalesPage({
 
   const handleSaveDraft = useCallback(async () => {
     if (isCartEmpty) {
-      toast.error("Giỏ hàng đang trống.");
+      toast.info("Giỏ hàng đang trống.");
       return;
     }
 
@@ -364,9 +380,9 @@ export function SalesPage({
       }
     } catch (error) {
       console.error("Lỗi lưu nháp hóa đơn", error);
-      toast.error(
-        isEditMode ? "Không thể cập nhật bản nháp." : "Không thể lưu đơn hàng."
-      );
+      // toast.error(
+      //   isEditMode ? "Không thể cập nhật bản nháp." : "Không thể lưu đơn hàng."
+      // );
     } finally {
       setCheckoutLoading(false);
     }
@@ -374,7 +390,7 @@ export function SalesPage({
 
   const handleCheckoutClick = async () => {
     if (isCartEmpty) {
-      toast.error("Giỏ hàng đang trống.");
+      toast.info("Giỏ hàng đang trống.");
       return;
     }
 
@@ -412,9 +428,36 @@ export function SalesPage({
       toast.success("Đã copy hóa đơn dưới dạng ảnh");
     } catch (error) {
       console.error("Lỗi copy hóa đơn", error);
-      toast.error("Copy hóa đơn thất bại");
+      // toast.error("Copy hóa đơn thất bại");
     }
   };
+
+  if (loadingEditOrder&& isEditMode) {
+    return (
+      <PageShell>
+        <div className="flex min-h-[300px] items-center justify-center">
+          <Spin size="large" />
+        </div>
+      </PageShell>
+    );
+  }
+
+  if (loadEditOrderFailed&&isEditMode) {
+    return (
+      <PageShell>
+        <Card>
+          <CardContent className="py-10">
+            <Empty description="Không tìm thấy hóa đơn" />
+            <div className="mt-4 flex justify-center">
+              <Button onClick={() => navigate("/transactions")}>
+                Quay lại lịch sử giao dịch
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </PageShell>
+    );
+  }
 
   return (
     <PageShell>
@@ -469,7 +512,7 @@ export function SalesPage({
                 <span className="mr-1 h-2 w-2 rounded-full bg-orange-500" />
               )}
 
-              {!isEditMode && sales.orders.length > 1 && (
+              {!isEditMode &&  (
                 <button
                   type="button"
                   onClick={() => requestCloseOrder(order.id)}

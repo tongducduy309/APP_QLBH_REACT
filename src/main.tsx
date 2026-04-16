@@ -5,6 +5,7 @@ import { AppProvider } from "@/app/providers/app-provider";
 // import "antd/dist/reset.css";
 import "@/styles/globals.css";
 import viVN from "antd/locale/vi_VN";
+import { TooltipProvider } from "./components/ui/tooltip";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -18,7 +19,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       }}
       locale={viVN}
     >
-      <AppProvider />
+      <TooltipProvider>
+        <AppProvider />
+      </TooltipProvider>
     </ConfigProvider>
   </React.StrictMode>,
 );

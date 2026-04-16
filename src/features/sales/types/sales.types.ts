@@ -5,6 +5,7 @@ import { OrderStatus } from "@/types/order";
 export type Product = {
   id: number;
   sku: string;
+  description: string;
   name: string;
   category: string;
   stock: number;

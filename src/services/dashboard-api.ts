@@ -1,5 +1,5 @@
 import { SalesAnalysisResponse } from "@/features/statistics/types/statistics.types";
-import { apiClient } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import type { OrderRecentRes } from "@/types/order";
 
 

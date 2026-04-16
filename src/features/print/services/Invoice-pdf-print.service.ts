@@ -13,8 +13,8 @@ import { buildMergedNameRowsFromAllProducts, formatMoney } from "../utils/print-
 import { sortOrderResDetails } from "@/utils/order.helper";
 import { useSettingsStore } from "@/features/settings/store/settings-store";
 
-(pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
-
+// (pdfMake as any).vfs = (pdfFonts as any)?.pdfMake?.vfs || (pdfFonts as any);
+(pdfMake as any).addVirtualFileSystem(pdfFonts);
 
 
 
@@ -196,7 +196,7 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
   ];
 
   const body = buildMergedNameRowsFromAllProducts(data.products);
-
+  console.log("createdAt", data.createdAt);
   const createdAt = data.createdAt ? formatTimestampDMY(data.createdAt) : formatTimestampDMY();
   const ngay = createdAt.day;
   const thang = createdAt.month;
@@ -572,6 +572,7 @@ function buildInvoiceContent(data: DataPdf, opt: PrintOptions): Content[] {
 
 function buildInvoiceDocDefinition(
   order: OrderRes,
+  mode: "print" | "preview" | "download" = "print"
 ): TDocumentDefinitions {
   const data = toDataPdf(order);
   const settings = useSettingsStore.getState().settings;
@@ -595,7 +596,7 @@ function buildInvoiceDocDefinition(
         headerRight: { fontSize: 10, margin: [0, 1], alignment: "center" as Alignment },
         deliveryNoteTitle: { fontSize: 13, bold: true, margin: [0, 6, 0, 2], alignment: "center" as Alignment },
         deliveryNoteCode: { fontSize: 11, italics: true, alignment: "center" as Alignment },
-        tableHeader: { bold: true, fontSize: 10, fillColor: "#f1c40f", alignment: "center" as Alignment },
+        tableHeader: { bold: true, fontSize: 10, fillColor: mode === "print" ? "#ffffff" : "#f1c40f", alignment: "center" as Alignment },
         centerCell: { alignment: "center" as Alignment },
         priceCell: { alignment: "right" as Alignment },
         s12: { fontSize: 12 },
@@ -609,7 +610,7 @@ function buildInvoiceDocDefinition(
         headerRight: { fontSize: 9, margin: [0, 1], alignment: "center" as Alignment },
         deliveryNoteTitle: { fontSize: 11, bold: true, margin: [0, 6, 0, 2], alignment: "center" as Alignment },
         deliveryNoteCode: { fontSize: 10, italics: true, alignment: "center" as Alignment },
-        tableHeader: { bold: true, fontSize: 9, fillColor: "#f1c40f", alignment: "center" as Alignment },
+        tableHeader: { bold: true, fontSize: 9, fillColor: mode === "print" ? "#ffffff" : "#f1c40f", alignment: "center" as Alignment },
         centerCell: { alignment: "center" as Alignment },
         priceCell: { alignment: "right" as Alignment },
         s12: { fontSize: 10 },
@@ -628,7 +629,7 @@ function buildInvoiceDocDefinition(
       keywords: "hoa don, bien nhan, giao hang, ton thep",
       creator: "QLBH",
       producer: "QLBH App",
-      creationDate: new Date(data.createdAt ?? Date.now()),
+      creationDate: new Date(),
       trapped: "False" as any,
     },
     images: {
@@ -641,22 +642,27 @@ function buildInvoiceDocDefinition(
   };
 }
 
-function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    try {
-      pdfMake.createPdf(docDefinition).getBuffer((buffer: Uint8Array) => {
-        resolve(buffer);
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
+async function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> {
+  try {
+    return await pdfMake.createPdf(docDefinition).getBuffer();
+  } catch (error) {
+    console.error("getPdfBuffer failed", error);
+    throw error;
+  }
+}
+
+async function getPdfBlob(docDefinition: TDocumentDefinitions): Promise<Blob> {
+  try {
+    return await pdfMake.createPdf(docDefinition).getBlob();
+  } catch (error) {
+    console.error("getPdfBlob failed", error);
+    throw error;
+  }
 }
 
 
-
 export async function printInvoice(data: OrderRes) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), "print");
   const settings = useSettingsStore.getState().settings;
   const opts: PrintOptions = settings?.printOptions || {};
   if (window.qlbh?.printPdfSilent) {
@@ -680,11 +686,16 @@ export async function printInvoice(data: OrderRes) {
 }
 
 export function previewInvoice(data: OrderRes) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), "preview");
   pdfMake.createPdf(dd).open();
 }
 
 export function downloadInvoice(data: OrderRes) {
-  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data));
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), "download");
   pdfMake.createPdf(dd).download(data.code ? `${data.code}.pdf` : "hoa-don.pdf");
+}
+
+export async function getInvoicePdfBlob(data: OrderRes): Promise<Blob> {
+  const dd = buildInvoiceDocDefinition(sortOrderResDetails(data), "download");
+  return await getPdfBlob(dd);
 }

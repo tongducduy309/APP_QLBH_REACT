@@ -55,7 +55,6 @@ export function LoginPage() {
       toast.success("Đăng nhập thành công");
       navigate("/sales");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Đăng nhập thất bại");
     } finally {
       setLoading(false);
     }

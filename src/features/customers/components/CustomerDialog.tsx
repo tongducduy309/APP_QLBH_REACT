@@ -49,22 +49,22 @@ export function CustomerDialog({
 
   const handleSubmit = () => {
     if (!value.name?.trim()) {
-      toast.error("Vui lòng nhập tên khách hàng.");
+      toast.info("Vui lòng nhập tên khách hàng.");
       return;
     }
 
     if (!value.phone?.trim()) {
-      toast.error("Vui lòng nhập số điện thoại.");
+      toast.info("Vui lòng nhập số điện thoại.");
       return;
     }
 
     if (phoneError) {
-      toast.error(phoneError);
+      toast.info(phoneError);
       return;
     }
 
     if (emailError) {
-      toast.error(emailError);
+      toast.info(emailError);
       return;
     }
 

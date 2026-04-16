@@ -12,7 +12,7 @@ export const INVENTORY_EXPORT_COLUMNS: InventoryExportColumnOption[] = [
   { key: "retailPrice", label: "Giá bán lẻ" },
   { key: "storePrice", label: "Giá bán buôn" },
   { key: "variantActive", label: "Biến thể đang bán" },
-  { key: "lotCode", label: "Mã lô" },
+  { key: "inventoryCode", label: "Mã kho" },
   { key: "originalQty", label: "SL ban đầu" },
   { key: "remainingQty", label: "SL tồn" },
   { key: "costPrice", label: "Giá vốn" },
@@ -28,7 +28,7 @@ export const DEFAULT_INVENTORY_EXPORT_COLUMNS = [
   "weight",
   "retailPrice",
   "storePrice",
-  "lotCode",
+  "inventoryCode",
   "remainingQty",
   "costPrice",
 ] as const;

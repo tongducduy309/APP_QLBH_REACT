@@ -6,7 +6,7 @@ import { ProductDialog } from "../components/ProductDialog";
 import { useInventoryPage } from "../hooks/useInventoryPage";
 import { PurchaseReceiptDialog } from "@/features/inventory/components/purchase-receipt-dialog-inventory";
 import { InventoryExportDialog } from "../components/InventoryExportDialog";
-import { InventoryImportDialog } from "../components/InventoryImportDialog";
+import { ProductImportDialog } from "../components/InventoryImportDialog";
 
 export function InventoryPage() {
   const inventory = useInventoryPage();
@@ -28,6 +28,7 @@ export function InventoryPage() {
         onImportStock={inventory.openPurchaseReceiptDialog}
         onExportExcel={inventory.openExportDialog}
         onImportExcel={inventory.openImportDialog}
+        onDeleteInventory={inventory.handleDeleteInventory}
       />
 
       <ProductDialog
@@ -47,7 +48,7 @@ export function InventoryPage() {
 
       <InventoryEditDialog
         open={inventory.isInventoryDialogOpen}
-        variantLabel={inventory.editingVariantLabel}
+        productName={inventory.editingProductName}
         value={inventory.inventoryEditForm}
         onClose={() => inventory.setIsInventoryDialogOpen(false)}
         onChange={inventory.setInventoryEditForm}
@@ -75,7 +76,7 @@ export function InventoryPage() {
         loading={inventory.isExportingExcel}
       />
 
-      <InventoryImportDialog
+      <ProductImportDialog
         open={inventory.isImportDialogOpen}
         onClose={() => inventory.setIsImportDialogOpen(false)}
         onSubmit={inventory.handleImportExcel}

@@ -76,9 +76,9 @@ export function CustomerOrderInfoDialog({
 
   const hasCustomerInfo = Boolean(
     draft.customerId ||
-      draft.customerName.trim() ||
-      draft.customerPhone.trim() ||
-      draft.customerAddress.trim()
+    draft.customerName.trim() ||
+    draft.customerPhone.trim() ||
+    draft.customerAddress.trim()
   );
 
   const isDirty = useMemo(() => {
@@ -205,11 +205,10 @@ export function CustomerOrderInfoDialog({
 
             <label
               htmlFor="save-new-customer"
-              className={`inline-flex w-full items-center gap-3 rounded-md border px-3 py-3 text-sm transition-all ${
-                hasCustomerId
+              className={`inline-flex w-full items-center gap-3 rounded-md border px-3 py-3 text-sm transition-all ${hasCustomerId
                   ? "cursor-not-allowed border-muted bg-muted/40 text-muted-foreground"
                   : "cursor-pointer bg-background hover:bg-muted"
-              }`}
+                }`}
             >
               <Checkbox
                 id="save-new-customer"
@@ -251,34 +250,33 @@ export function CustomerOrderInfoDialog({
               </div>
 
               <div className="space-y-2">
-  <Label className="text-sm font-medium">Ngày tạo</Label>
+                <Label className="text-sm font-medium">Ngày tạo</Label>
 
-  <DatePicker
-    className="w-full"
-    format="DD/MM/YYYY"
-    value={
-      draft.createdDate ? dayjs(draft.createdDate) : null
-    }
-    onChange={(date) => {
-      setDraft((prev) => ({
-        ...prev,
-        createdDate: date?.toISOString() || "",
-      }));
-    }}
-    placeholder="Chọn ngày"
-  />
-</div>
+                <DatePicker
+                  className="w-full"
+                  format="DD/MM/YYYY"
+                  value={
+                    draft.createdDate ? dayjs(draft.createdDate) : null
+                  }
+                  onChange={(date) => {
+                    setDraft((prev) => ({
+                      ...prev,
+                      createdDate: date?.toISOString() || "",
+                    }));
+                  }}
+                  placeholder="Chọn ngày"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Ghi chú</Label>
                 <span
-                  className={`text-xs ${
-                    draft.note.length >= MAX_NOTE_LENGTH
+                  className={`text-xs ${draft.note.length >= MAX_NOTE_LENGTH
                       ? "text-red-500"
                       : "text-muted-foreground"
-                  }`}
+                    }`}
                 >
                   {draft.note.length}/{MAX_NOTE_LENGTH}
                 </span>

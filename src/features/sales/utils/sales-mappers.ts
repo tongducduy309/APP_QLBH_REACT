@@ -73,6 +73,7 @@ export function mapInventoryProductsToSalesProducts(
           sku: product.sku ?? "",
           name: product.name ?? "",
           category: product.categoryName ?? "",
+          description: product.description ?? "",
           stock: Number(product.stock ?? 0),
           price: 0,
           retailPrice: 0,
@@ -90,6 +91,7 @@ export function mapInventoryProductsToSalesProducts(
     return variants.map((variant) => ({
       id: product.id,
       sku: variant.sku ?? product.sku ?? "",
+      description: product.description ?? "",
       name: product.name ?? "",
       category: product.categoryName ?? "",
       stock: Number(variant.remainingQty ?? 0),

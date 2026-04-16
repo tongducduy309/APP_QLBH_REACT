@@ -34,7 +34,7 @@ export function mapOrderToCustomerOrderInfo(order: OrderRes): Partial<CustomerOr
     customerPhone: order.customer?.phone ?? "",
     customerAddress: order.customer?.address ?? "",
     orderCode: order.code ?? "",
-    createdDate: toISOStringFromVNDate(order.createdAt),
+    createdDate: order.createdAt,
     note: order.note ?? "",
     saveAsNewCustomer: false,
   };

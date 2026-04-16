@@ -4,7 +4,7 @@ import {
   CustomerRes,
   CustomerUpdateReq,
 } from "@/features/customers/types/customer.types";
-import { apiClient } from "@/lib/api-client";
+import  apiClient  from "@/lib/api-client";
 
 export async function getCustomers(): Promise<CustomerRes[]> {
   const { data } = await apiClient.get("customers");
@@ -43,4 +43,9 @@ export async function updateCustomer(
   });
 
   return data.data as CustomerRes;
+}
+
+export async function getCustomersWithDebt(): Promise<CustomerRes[]> {
+  const { data } = await apiClient.get("customers/with-debt");
+  return data.data as CustomerRes[];
 }

@@ -2,7 +2,7 @@ export interface ProductVariantInventoryRes {
   inventoryId: number | null;
   productName?: string;
   sku: string;
-  lotCode: string;
+  inventoryCode: string;
   originalQty: number;
   outOfStock: boolean;
   variantId: number | null;
@@ -31,7 +31,7 @@ export interface ProductInventoryRes {
 // export interface ProductVariantForm {
 //   id: string;
 //   inventoryId: number | null;
-//   lotCode: string;
+//   inventoryCode: string;
 //   originalQty: number;
 //   outOfStock: boolean;
 //   variantId: number | null;
@@ -57,9 +57,10 @@ export interface ProductForm {
 
 
 export interface InventoryEditForm {
+  id?:number;
   remainingQty: number;
   costPrice: number;
-  active: boolean;
+  inventoryCode?:string;
 }
 
 export interface ProductCreateReq{
@@ -113,7 +114,7 @@ export type InventoryExportColumnKey =
   | "retailPrice"
   | "storePrice"
   | "variantActive"
-  | "lotCode"
+  | "inventoryCode"
   | "originalQty"
   | "remainingQty"
   | "costPrice"

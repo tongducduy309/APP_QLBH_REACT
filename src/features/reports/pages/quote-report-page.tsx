@@ -36,6 +36,7 @@ import {
   previewQuotation,
   printQuotation,
 } from "@/features/print/services/Quotation-pdf-print.service";
+import { QuotationExportDialog } from "@/features/print/components/QuotationExportDialog";
 
 type PriceMode = "retail" | "store";
 type QuoteAction = "preview" | "print" | "download" | null;
@@ -51,9 +52,9 @@ type QuoteRow = {
   inventoryId: number | null;
   variantId: number | null;
   sku: string;
-  lotCode: string;
+  inventoryCode: string;
   variantCode: string;
-  weight: number;
+  weight: string;
   retailPrice: number;
   storePrice: number;
   remainingQty: number;
@@ -69,38 +70,30 @@ type QuoteMetaForm = {
   note: string;
 };
 
-function downloadCsv(filename: string, rows: Record<string, unknown>[]) {
-  if (!rows.length) {
-    message.warning("Không có dữ liệu để xuất");
-    return;
-  }
-
-  const headers = Object.keys(rows[0]);
-
-  const escapeCsvValue = (value: unknown) => {
-    const text = String(value ?? "");
-    return `"${text.replace(/"/g, '""')}"`;
+function createDefaultQuoteMeta(): QuoteMetaForm {
+  return {
+    createdAt: dayjs(),
+    customerName: "",
+    customerPhone: "",
+    customerAddress: "",
+    note: "",
   };
+}
 
-  const csvContent = [
-    headers.join(","),
-    ...rows.map((row) =>
-      headers.map((header) => escapeCsvValue(row[header])).join(",")
-    ),
-  ].join("\n");
+function buildQuoteCode(createdAt?: Dayjs | null) {
+  const now = createdAt?.toDate() ?? new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${d}-${m}-${y}`;
+}
 
-  const blob = new Blob(["\uFEFF" + csvContent], {
-    type: "text/csv;charset=utf-8;",
-  });
+function buildProductDisplayName(row: Pick<QuoteRow, "productName" | "variantCode">) {
+  const name = String(row.productName ?? "").trim();
+  const variant = String(row.variantCode ?? "").trim();
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", filename);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  if (name && variant) return `${name} (${variant})`;
+  return name || variant || "-";
 }
 
 function mapProductsToQuoteRows(items: ProductInventoryRes[]): QuoteRow[] {
@@ -113,13 +106,12 @@ function mapProductsToQuoteRows(items: ProductInventoryRes[]): QuoteRow[] {
       baseUnit: product.baseUnit ?? "",
       description: product.description ?? "",
       productActive: Boolean(product.active),
-
       inventoryId: variant.inventoryId ?? null,
       variantId: variant.variantId ?? null,
       sku: variant.sku ?? "",
-      lotCode: variant.lotCode ?? "",
+      inventoryCode: variant.inventoryCode ?? "",
       variantCode: variant.variantCode ?? "",
-      weight: Number(variant.weight ?? 0),
+      weight: String(variant.weight ?? ""),
       retailPrice: Number(variant.retailPrice ?? 0),
       storePrice: Number(variant.storePrice ?? 0),
       remainingQty: Number(variant.remainingQty ?? 0),
@@ -127,14 +119,6 @@ function mapProductsToQuoteRows(items: ProductInventoryRes[]): QuoteRow[] {
       active: Boolean(variant.active),
     }))
   );
-}
-
-function buildQuoteCode(createdAt?: Dayjs | null) {
-  const now = createdAt?.toDate() ?? new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${d}-${m}-${y}`;
 }
 
 function buildQuotationOrder(
@@ -159,24 +143,23 @@ function buildQuotationOrder(
     return {
       id: index + 1,
       index,
-      name: row.productName,
+      name: buildProductDisplayName(row),
       baseUnit: row.baseUnit || "",
-      quantity: null,
+      quantity: 1,
       length: null,
-      totalQuantity: null,
+      weight: row.weight || "",
+      totalQuantity: 1,
       price,
       sku: row.sku || "",
       inventoryId: row.inventoryId,
       productVariantId: row.variantId,
-      kind: "INVENTORY" as any,
-    };
+      kind: row.variantCode || "",
+    } as OrderDetailRes;
   });
 
-  const subtotal = details.reduce(
-    (sum, item) =>
-      sum + Number(item.price ?? 0) * Number(item.totalQuantity ?? 0),
-    0
-  );
+  const subtotal = details.reduce((sum, item) => {
+    return sum + Number(item.price ?? 0) * Number(item.totalQuantity ?? 0);
+  }, 0);
 
   return {
     id: 0,
@@ -200,16 +183,8 @@ function buildQuotationOrder(
     details,
     status: OrderStatus.DRAFT,
     createdAt: (meta.createdAt ?? dayjs()).toISOString(),
-  };
+  } as OrderRes;
 }
-
-const createDefaultQuoteMeta = (): QuoteMetaForm => ({
-  createdAt: dayjs(),
-  customerName: "",
-  customerPhone: "",
-  customerAddress: "",
-  note: "",
-});
 
 export function QuoteReportPage() {
   const [products, setProducts] = useState<ProductInventoryRes[]>([]);
@@ -228,6 +203,8 @@ export function QuoteReportPage() {
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
   const [quoteAction, setQuoteAction] = useState<QuoteAction>(null);
   const [quoteMeta, setQuoteMeta] = useState<QuoteMetaForm>(createDefaultQuoteMeta());
+
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -266,36 +243,38 @@ export function QuoteReportPage() {
   );
 
   const filteredRows = useMemo(() => {
-    return allRows.filter((item) => {
-      const haystack = removeVietnameseTones(
-        [
-          item.productName,
-          item.categoryName,
-          item.baseUnit,
-          item.description,
-          item.sku,
-          item.lotCode,
-          item.variantCode,
-          String(item.weight ?? ""),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase()
-      );
+  return allRows.filter((item) => {
+    const haystack = removeVietnameseTones(
+      [
+        item.productName,
+        item.categoryName,
+        item.baseUnit,
+        item.description,
+        item.sku,
+        item.inventoryCode,
+        item.variantCode,
+        String(item.weight ?? ""),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+    );
 
-      const matchKeyword =
-        !normalizedKeyword || haystack.includes(normalizedKeyword);
+    const matchKeyword =
+      !normalizedKeyword || haystack.includes(normalizedKeyword);
 
-      const matchCategory =
-        category === "all" || item.categoryName === category;
+    const matchCategory =
+      category === "all" || item.categoryName === category;
 
-      const matchActive = !onlyActive || (item.productActive && item.active);
+    const isSelling = item.productActive === true && item.active === true;
+    const hasStock = Number(item.remainingQty ?? 0) > 0;
 
-      const matchStock = !onlyInStock || item.remainingQty > 0;
+    const matchSelling = !onlyActive || isSelling;
+    const matchStock = !onlyInStock || hasStock;
 
-      return matchKeyword && matchCategory && matchActive && matchStock;
-    });
-  }, [allRows, normalizedKeyword, category, onlyActive, onlyInStock]);
+    return matchKeyword && matchCategory && matchSelling && matchStock;
+  });
+}, [allRows, normalizedKeyword, category, onlyActive, onlyInStock]);
 
   const getDefaultPrice = (row: QuoteRow) =>
     priceMode === "retail"
@@ -328,34 +307,14 @@ export function QuoteReportPage() {
     return Math.round(total / effectiveRows.length);
   }, [effectiveRows, editedPrices, priceMode]);
 
-  const exportRows = useMemo(() => {
-    return effectiveRows.map((item, index) => {
-      const sellingPrice = getQuotePrice(item);
-
-      return {
-        STT: index + 1,
-        "Tên sản phẩm": item.productName,
-        "Danh mục": item.categoryName,
-        "SKU": item.sku || "",
-        "Mã lô": item.lotCode || "",
-        "Loại biến thể": item.variantCode || "",
-        "Trọng lượng": item.weight || 0,
-        "Đơn vị": item.baseUnit || "",
-        "Tồn kho": item.remainingQty ?? 0,
-        "Giá gốc":
-          priceMode === "retail"
-            ? formatCurrency(item.retailPrice ?? 0)
-            : formatCurrency(item.storePrice ?? 0),
-        "Giá báo": sellingPrice,
-        "Giá báo định dạng": formatCurrency(sellingPrice),
-        "Mô tả": item.description || "",
-      };
-    });
-  }, [effectiveRows, editedPrices, priceMode]);
-
-  const handleExportCsv = () => {
-    downloadCsv("bang-bao-gia.csv", exportRows);
-  };
+  const quotationOrderForExport = useMemo(() => {
+    return buildQuotationOrder(
+      effectiveRows,
+      priceMode,
+      editedPrices,
+      quoteMeta
+    );
+  }, [effectiveRows, priceMode, editedPrices, quoteMeta]);
 
   const openQuoteDialog = (action: QuoteAction) => {
     if (!effectiveRows.length) {
@@ -372,6 +331,15 @@ export function QuoteReportPage() {
       note: prev.note,
     }));
     setQuoteDialogOpen(true);
+  };
+
+  const handleOpenExportDialog = () => {
+    if (!effectiveRows.length) {
+      message.warning("Không có dữ liệu để xuất Excel");
+      return;
+    }
+
+    setExportDialogOpen(true);
   };
 
   const handleSubmitQuoteDialog = async () => {
@@ -439,9 +407,10 @@ export function QuoteReportPage() {
       key: "productName",
       render: (_, record) => (
         <div>
-          <div className="font-medium">{record.productName}</div>
+          <div className="font-medium">{buildProductDisplayName(record)}</div>
           <div className="text-xs text-muted-foreground">
             {record.categoryName || "-"} · {record.baseUnit || "-"}
+            {record.weight ? ` · ${record.weight}` : ""}
           </div>
         </div>
       ),
@@ -454,19 +423,7 @@ export function QuoteReportPage() {
       render: (value: string) => value || "-",
     },
     {
-      title: "Loại",
-      dataIndex: "variantCode",
-      key: "variantCode",
-      width: 160,
-      render: (_, record) => {
-        if (!record.variantCode) return "-";
-        return record.weight
-          ? `${record.variantCode} (${record.weight})`
-          : record.variantCode;
-      },
-    },
-    {
-      title: priceMode === "retail" ? "Giá gốc lẻ" : "Giá gốc cửa hàng",
+      title: "Giá gốc",
       key: "basePrice",
       width: 160,
       align: "right",
@@ -521,8 +478,8 @@ export function QuoteReportPage() {
     quoteAction === "preview"
       ? "Thông tin để xem bảng báo giá"
       : quoteAction === "print"
-      ? "Thông tin để in bảng báo giá"
-      : "Thông tin để tải bảng báo giá";
+        ? "Thông tin để in bảng báo giá"
+        : "Thông tin để tải bảng báo giá";
 
   return (
     <PageShell>
@@ -560,9 +517,9 @@ export function QuoteReportPage() {
                 Tải PDF
               </Button>
 
-              <Button onClick={handleExportCsv}>
+              <Button onClick={handleOpenExportDialog}>
                 <Download className="mr-2 h-4 w-4" />
-                Xuất CSV
+                Xuất Excel
               </Button>
             </div>
           </CardHeader>
@@ -573,7 +530,7 @@ export function QuoteReportPage() {
                 allowClear
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
-                placeholder="Tìm tên, SKU, mã lô, loại..."
+                placeholder="Tìm tên, SKU, Mã kho, loại..."
                 prefix={<Search className="h-4 w-4" />}
               />
 
@@ -690,14 +647,14 @@ export function QuoteReportPage() {
 
                 return (
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={3}>
+                    <Table.Summary.Cell index={0} colSpan={2}>
                       <span className="font-semibold">
                         {selectedRowKeys.length > 0
                           ? `Đang chọn ${selectedRows.length} mặt hàng`
                           : `Trang hiện tại: ${pageData.length} mặt hàng`}
                       </span>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4} align="right" colSpan={2}>
+                    <Table.Summary.Cell index={2} align="right">
                       <span className="font-semibold">
                         TB giá gốc:{" "}
                         {formatCurrency(
@@ -712,11 +669,12 @@ export function QuoteReportPage() {
                         )}
                       </span>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5} align="right" colSpan={2}>
+                    <Table.Summary.Cell index={3} align="right">
                       <span className="font-semibold">
                         TB giá báo: {formatCurrency(avgPrice)}
                       </span>
                     </Table.Summary.Cell>
+                    <Table.Summary.Cell index={4} />
                   </Table.Summary.Row>
                 );
               }}
@@ -734,8 +692,8 @@ export function QuoteReportPage() {
           quoteAction === "preview"
             ? "Xem bảng báo giá"
             : quoteAction === "print"
-            ? "In bảng báo giá"
-            : "Tải bảng báo giá"
+              ? "In bảng báo giá"
+              : "Tải bảng báo giá"
         }
         cancelText="Hủy"
         confirmLoading={pdfLoading}
@@ -744,7 +702,6 @@ export function QuoteReportPage() {
           <div>
             <label className="mb-1 block text-sm font-medium">Thời gian</label>
             <DatePicker
-              
               format="DD/MM/YYYY"
               className="w-full"
               value={quoteMeta.createdAt}
@@ -771,34 +728,6 @@ export function QuoteReportPage() {
             />
           </div>
 
-          {/* <div>
-            <label className="mb-1 block text-sm font-medium">Số điện thoại</label>
-            <Input
-              value={quoteMeta.customerPhone}
-              onChange={(e) =>
-                setQuoteMeta((prev) => ({
-                  ...prev,
-                  customerPhone: e.target.value,
-                }))
-              }
-              placeholder="Nhập số điện thoại"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Địa chỉ</label>
-            <Input
-              value={quoteMeta.customerAddress}
-              onChange={(e) =>
-                setQuoteMeta((prev) => ({
-                  ...prev,
-                  customerAddress: e.target.value,
-                }))
-              }
-              placeholder="Nhập địa chỉ"
-            />
-          </div> */}
-
           <div>
             <label className="mb-1 block text-sm font-medium">Ghi chú</label>
             <Input.TextArea
@@ -815,6 +744,12 @@ export function QuoteReportPage() {
           </div>
         </div>
       </Modal>
+
+      <QuotationExportDialog
+        open={exportDialogOpen}
+        order={quotationOrderForExport}
+        onClose={() => setExportDialogOpen(false)}
+      />
     </PageShell>
   );
 }

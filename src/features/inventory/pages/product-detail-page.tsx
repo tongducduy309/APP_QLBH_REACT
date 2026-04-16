@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Button, Descriptions, Empty, Spin, Table, Tag } from "antd";
+import { Button, Descriptions, Empty, Modal, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
     ArrowLeft,
     Pencil,
     ReceiptText,
+    Trash2,
 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
+    deleteProduct,
     getInventoryById,
     getProductImportHistory,
 } from "@/services/product-api";
@@ -23,7 +25,6 @@ import { useInventoryPage } from "../hooks/useInventoryPage";
 import { ProductDialog } from "../components/ProductDialog";
 import { PurchaseReceiptRes } from "@/features/purchase-receipts/types/purchase-receipt.types";
 
-
 export function ProductDetailPage() {
     const navigate = useNavigate();
     const { id } = useParams();
@@ -32,6 +33,8 @@ export function ProductDetailPage() {
 
     const [product, setProduct] = useState<ProductInventoryRes | null>(null);
     const [loading, setLoading] = useState(true);
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const [importHistoryData, setImportHistoryData] = useState<
         PurchaseReceiptRes[]
@@ -96,9 +99,9 @@ export function ProductDetailPage() {
                 render: (value: string) => value || "-",
             },
             {
-                title: "Lô hàng",
-                dataIndex: "lotCode",
-                key: "lotCode",
+                title: "Mã kho",
+                dataIndex: "inventoryCode",
+                key: "inventoryCode",
                 render: (value: string) => value || "-",
             },
             {
@@ -179,7 +182,6 @@ export function ProductDetailPage() {
                 width: 160,
                 render: (value?: string) => value || "-",
             },
-            
             {
                 title: "Phương thức nhập",
                 dataIndex: "purchaseReceiptMethod",
@@ -237,6 +239,31 @@ export function ProductDetailPage() {
         inventory.openEditDialog(product);
     };
 
+    const handleOpenDeleteDialog = () => {
+        if (!product) return;
+        setDeleteModalOpen(true);
+    };
+
+    const handleCloseDeleteDialog = () => {
+        if (deleting) return;
+        setDeleteModalOpen(false);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!productId || deleting) return;
+
+        try {
+            setDeleting(true);
+            await deleteProduct(productId);
+            setDeleteModalOpen(false);
+            navigate("/products");
+        } catch (error) {
+            console.error("Failed to delete product:", error);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     const handleCloseProductDialog = () => {
         inventory.setIsProductDialogOpen(false);
         inventory.resetForm();
@@ -286,7 +313,6 @@ export function ProductDetailPage() {
                             <Tag color={product.active ? "green" : "red"}>
                                 {product.active ? "Đang bán" : "Ngừng bán"}
                             </Tag>
-                            {/* <Tag color={getStatusColor(product.status)}>{product.status}</Tag> */}
                         </div>
                     </div>
 
@@ -297,12 +323,20 @@ export function ProductDetailPage() {
                         >
                             Sửa nhanh sản phẩm
                         </Button>
+
+                        <Button
+                            danger
+                            icon={<Trash2 size={16} />}
+                            onClick={handleOpenDeleteDialog}
+                        >
+                            Xóa sản phẩm
+                        </Button>
+
                         <Button icon={<ArrowLeft size={16} />} onClick={() => navigate(-1)}>
                             Quay lại
                         </Button>
                     </div>
                 </div>
-
 
                 <Card className="border-0 shadow-sm">
                     <CardHeader className="pb-4">
@@ -317,11 +351,11 @@ export function ProductDetailPage() {
                             column={2}
                             size="middle"
                             className="
-        [&_.ant-descriptions-item-label]:w-[180px]
-        [&_.ant-descriptions-item-label]:bg-muted/40
-        [&_.ant-descriptions-item-label]:font-medium
-        [&_.ant-descriptions-item-content]:bg-background
-      "
+                                [&_.ant-descriptions-item-label]:w-[180px]
+                                [&_.ant-descriptions-item-label]:bg-muted/40
+                                [&_.ant-descriptions-item-label]:font-medium
+                                [&_.ant-descriptions-item-content]:bg-background
+                            "
                         >
                             <Descriptions.Item label="Tên sản phẩm">
                                 <span className="font-medium">{product.name || "-"}</span>
@@ -343,7 +377,6 @@ export function ProductDetailPage() {
                                 </Tag>
                             </Descriptions.Item>
 
-                            {/* Mô tả full dòng */}
                             <Descriptions.Item label="Mô tả" span={2}>
                                 <div className="whitespace-pre-line break-words text-sm leading-6">
                                     {product.description || "-"}
@@ -404,6 +437,33 @@ export function ProductDetailPage() {
                 onUpdateVariant={inventory.updateVariant}
                 onSubmit={handleSubmitProductDialog}
             />
+
+            <Modal
+                title="Xác nhận xóa sản phẩm"
+                open={deleteModalOpen}
+                onCancel={handleCloseDeleteDialog}
+                onOk={handleConfirmDelete}
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{
+                    danger: true,
+                    loading: deleting,
+                }}
+                cancelButtonProps={{
+                    disabled: deleting,
+                }}
+                centered
+            >
+                <div className="space-y-2">
+                    <p>
+                        Bạn có chắc chắn muốn xóa sản phẩm{" "}
+                        <span className="font-semibold">{product.name}</span> không?
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                        Hành động này không thể hoàn tác.
+                    </p>
+                </div>
+            </Modal>
         </PageShell>
     );
 }

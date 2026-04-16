@@ -122,24 +122,24 @@ const readStorage = (storageKey: string): PersistedState | null => {
 
     const orders = Array.isArray(parsed.orders)
       ? parsed.orders.map((item) => ({
-          id: item.id ?? createDraftId(),
-          cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
-          shippingFee: Number(item.shippingFee ?? 0),
-          taxPercent: Number(item.taxPercent ?? 0),
-          discount: Number(item.discount ?? 0),
-          paidAmount: Number(item.paidAmount ?? 0),
-          customerOrderInfo: {
-            ...createDefaultCustomerOrderInfo(),
-            ...(item.customerOrderInfo ?? {}),
-          },
-          otherExpenseDraft: {
-            ...createDefaultOtherExpenseDraft(),
-            ...(item.otherExpenseDraft ?? {}),
-          },
-          editingGroupKey: item.editingGroupKey ?? null,
-          selectedProduct: item.selectedProduct ?? null,
-          createdAt: item.createdAt ?? nowIso(),
-        }))
+        id: item.id ?? createDraftId(),
+        cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
+        shippingFee: Number(item.shippingFee ?? 0),
+        taxPercent: Number(item.taxPercent ?? 0),
+        discount: Number(item.discount ?? 0),
+        paidAmount: Number(item.paidAmount ?? 0),
+        customerOrderInfo: {
+          ...createDefaultCustomerOrderInfo(),
+          ...(item.customerOrderInfo ?? {}),
+        },
+        otherExpenseDraft: {
+          ...createDefaultOtherExpenseDraft(),
+          ...(item.otherExpenseDraft ?? {}),
+        },
+        editingGroupKey: item.editingGroupKey ?? null,
+        selectedProduct: item.selectedProduct ?? null,
+        createdAt: item.createdAt ?? nowIso(),
+      }))
       : [];
 
     return {
@@ -157,17 +157,17 @@ const isDraftMeaningful = (draft: SalesOrderDraft) => {
 
   return Boolean(
     draft.cartItems.length > 0 ||
-      draft.shippingFee > 0 ||
-      draft.taxPercent > 0 ||
-      draft.discount > 0 ||
-      draft.paidAmount > 0 ||
-      info.customerName?.trim() ||
-      info.customerPhone?.trim() ||
-      info.customerAddress?.trim() ||
-      info.note?.trim() ||
-      draft.otherExpenseDraft.description?.trim() ||
-      Number(draft.otherExpenseDraft.price) > 0 ||
-      Number(draft.otherExpenseDraft.length) > 0
+    draft.shippingFee > 0 ||
+    draft.taxPercent > 0 ||
+    draft.discount > 0 ||
+    draft.paidAmount > 0 ||
+    info.customerName?.trim() ||
+    info.customerPhone?.trim() ||
+    info.customerAddress?.trim() ||
+    info.note?.trim() ||
+    draft.otherExpenseDraft.description?.trim() ||
+    Number(draft.otherExpenseDraft.price) > 0 ||
+    Number(draft.otherExpenseDraft.length) > 0
   );
 };
 
@@ -275,6 +275,10 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     },
     [updateOrder]
   );
+
+  useEffect(() => {
+    assignOrderCodeForDraft(activeOrderId ?? 0);
+  }, []);
 
   const createNewOrder = useCallback(async () => {
     const newDraft: SalesOrderDraft = {
@@ -602,22 +606,117 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
   const reservedStockMap = useMemo(() => {
     const map = new Map<string, number>();
 
-    orders.forEach((order) => {
-      order.cartItems.forEach((item) => {
-        if (!isProductCartItem(item)) return;
+    if (!activeOrder) return map;
 
-        const key = buildStockKey({
-          inventoryId: item.inventoryId ?? null,
-          variantId: item.variantId ?? null,
-          productId: item.productId ?? null,
-        });
+    activeOrder.cartItems.forEach((item) => {
+      if (!isProductCartItem(item)) return;
 
-        map.set(key, (map.get(key) ?? 0) + getEffectiveQuantity(item));
+      const key = buildStockKey({
+        inventoryId: item.inventoryId ?? null,
+        variantId: item.variantId ?? null,
+        productId: item.productId ?? null,
       });
+
+      map.set(key, (map.get(key) ?? 0) + getEffectiveQuantity(item));
     });
 
     return map;
-  }, [orders]);
+  }, [activeOrder]);
+
+  const clearStorageByKey = (storageKey: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem(storageKey);
+    } catch (error) {
+      console.error("Không thể xóa dữ liệu hóa đơn nháp", error);
+    }
+  };
+
+  const removeOrderFromStorage = (
+    storageKey: string,
+    orderId: number
+  ): PersistedState | null => {
+    if (typeof window === "undefined") return null;
+
+    try {
+      const raw = window.localStorage.getItem(storageKey);
+      if (!raw) return null;
+
+      const parsed = JSON.parse(raw) as Partial<PersistedState>;
+      const orders = Array.isArray(parsed.orders) ? parsed.orders : [];
+      const nextOrders = orders.filter((item: any) => item?.id !== orderId);
+
+      const nextState: PersistedState = {
+        activeOrderId:
+          parsed.activeOrderId === orderId
+            ? nextOrders[0]?.id ?? null
+            : (parsed.activeOrderId as number | null) ?? nextOrders[0]?.id ?? null,
+        orders: nextOrders,
+      };
+
+      if (nextOrders.length === 0) {
+        window.localStorage.removeItem(storageKey);
+        return { activeOrderId: null, orders: [] };
+      }
+
+      window.localStorage.setItem(storageKey, JSON.stringify(nextState));
+      return nextState;
+    } catch (error) {
+      console.error("Không thể xóa hóa đơn khỏi bộ nhớ", error);
+      return null;
+    }
+  };
+
+  const clearPersistedState = useCallback(() => {
+    clearStorageByKey(storageKey);
+    const fallback = createEmptyDraft();
+    setOrders([fallback]);
+    setActiveOrderId(fallback.id);
+  }, [storageKey]);
+
+  const removePersistedOrderById = useCallback(
+    (orderId: number) => {
+      const nextState = removeOrderFromStorage(storageKey, orderId);
+
+      if (!nextState) {
+        const fallback = createEmptyDraft();
+        setOrders([fallback]);
+        setActiveOrderId(fallback.id);
+        return;
+      }
+
+      if (nextState.orders.length === 0) {
+        const fallback = createEmptyDraft();
+        setOrders([fallback]);
+        setActiveOrderId(fallback.id);
+        return;
+      }
+
+      const normalizedOrders = nextState.orders.map((item) => ({
+        id: item.id ?? createDraftId(),
+        cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
+        shippingFee: Number(item.shippingFee ?? 0),
+        taxPercent: Number(item.taxPercent ?? 0),
+        discount: Number(item.discount ?? 0),
+        paidAmount: Number(item.paidAmount ?? 0),
+        customerOrderInfo: {
+          ...createDefaultCustomerOrderInfo(),
+          ...(item.customerOrderInfo ?? {}),
+        },
+        otherExpenseDraft: {
+          ...createDefaultOtherExpenseDraft(),
+          ...(item.otherExpenseDraft ?? {}),
+        },
+        editingGroupKey: item.editingGroupKey ?? null,
+        selectedProduct: item.selectedProduct ?? null,
+        createdAt: item.createdAt ?? nowIso(),
+      }));
+
+      setOrders(normalizedOrders);
+      setActiveOrderId(nextState.activeOrderId ?? normalizedOrders[0]?.id ?? null);
+    },
+    [storageKey]
+  );
 
   const getReservedQuantity = useCallback(
     (input: {
@@ -678,64 +777,38 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     [activeOrder, reservedStockMap]
   );
 
-  const validateOrderedProductsAgainstStock = useCallback(
-    (orderedProducts: OrderedProduct[]) => {
-      const product = selectedProduct;
-      if (!product) {
-        toast.error("Chưa chọn sản phẩm.");
-        return false;
-      }
 
-      const totalQty = orderedProducts.reduce(
-        (sum, line) => sum + getEffectiveQuantity(line),
-        0
-      );
-
-      const availableStock = Number(product.stock ?? 0);
-
-      if (totalQty > availableStock) {
-        toast.error(
-          `${getProductDisplayName(product)} chỉ còn ${availableStock} trong tồn khả dụng.`
-        );
-        return false;
-      }
-
-      return true;
-    },
-    [selectedProduct]
-  );
 
   const handleAddOrder = useCallback(
     (orderedProducts: OrderedProduct[]) => {
+
+      console.log("orderedProducts", orderedProducts);
       if (!selectedProduct) {
-        toast.error("Chưa chọn sản phẩm.");
+        toast.info("Chưa chọn sản phẩm.");
         return;
       }
 
-      const isValid = validateOrderedProductsAgainstStock(orderedProducts);
-      if (!isValid) return;
 
       const fallbackUnit = selectedProduct.baseUnit || "mét";
       const newLines = mapOrderedProductsToCartLines(orderedProducts, fallbackUnit);
+
 
       updateActiveOrder((draft) => ({
         ...draft,
         cartItems: [...draft.cartItems, ...newLines],
       }));
     },
-    [selectedProduct, updateActiveOrder, validateOrderedProductsAgainstStock]
+    [selectedProduct, updateActiveOrder]
   );
 
   const handleUpdateOrder = useCallback(
     (orderedProducts: OrderedProduct[]) => {
       if (!editingGroup) return;
       if (!selectedProduct) {
-        toast.error("Chưa chọn sản phẩm.");
+        toast.info("Chưa chọn sản phẩm.");
         return;
       }
 
-      const isValid = validateOrderedProductsAgainstStock(orderedProducts);
-      if (!isValid) return;
 
       const fallbackUnit = editingGroup.unit || "mét";
       const updatedLines = mapOrderedProductsToCartLines(
@@ -757,7 +830,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
         };
       });
     },
-    [editingGroup, selectedProduct, updateActiveOrder, validateOrderedProductsAgainstStock]
+    [editingGroup, selectedProduct, updateActiveOrder]
   );
 
   const addOtherExpense = useCallback(() => {
@@ -969,5 +1042,10 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
     handleCheckout,
     replaceActiveOrderDraft,
     setWholeOrderForEdit,
+
+    assignOrderCodeForDraft,
+
+    clearPersistedState,
+    removePersistedOrderById,
   };
 }

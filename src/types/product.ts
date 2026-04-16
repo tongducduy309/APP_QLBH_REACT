@@ -21,3 +21,19 @@ export interface ProductVariantRes {
   inventories?:InventoryRes[];
   productName?: string;
 }
+
+export interface InventoryUpdateReq {
+  remainingQty: number;
+  costPrice: number;
+  inventoryCode?:string;
+}
+
+export type ProductImportRes = {
+  totalRows: number;
+  createdProducts: number;
+  updatedProducts: number;
+  createdVariants: number;
+  updatedVariants: number;
+  skippedRows: number;
+  errors: string[];
+};

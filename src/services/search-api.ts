@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import type { SearchSuggestion } from "@/types/search";
 
 export async function searchGlobal(keyword: string, limit = 8): Promise<SearchSuggestion[]> {

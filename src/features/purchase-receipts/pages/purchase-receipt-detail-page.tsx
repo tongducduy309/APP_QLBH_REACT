@@ -87,7 +87,7 @@ export function PurchaseReceiptDetailPage() {
       navigate("/purchase-receipts");
     } catch (error) {
       console.error("Lỗi xóa phiếu nhập", error);
-      toast.error("Không thể xóa phiếu nhập kho.");
+      // toast.error("Không thể xóa phiếu nhập kho.");
     } finally {
       setDeleteLoading(false);
     }
@@ -95,7 +95,7 @@ export function PurchaseReceiptDetailPage() {
 
   useEffect(() => {
     if (!receiptId) {
-      toast.error("ID phiếu nhập không hợp lệ.");
+      toast.info("ID phiếu nhập không hợp lệ.");
       setLoading(false);
       return;
     }
@@ -107,7 +107,7 @@ export function PurchaseReceiptDetailPage() {
         setData(response);
       } catch (error) {
         console.error("Lỗi tải chi tiết phiếu nhập", error);
-        toast.error("Không thể tải chi tiết phiếu nhập kho.");
+        // toast.error("Không thể tải chi tiết phiếu nhập kho.");
         setData(null);
       } finally {
         setLoading(false);
@@ -355,9 +355,9 @@ export function PurchaseReceiptDetailPage() {
               size="middle"
               items={[
                 {
-                  key: "inventoryLotCode",
+                  key: "inventoryCode",
                   label: "Mã kho",
-                  children: data.inventoryLotCode || "-",
+                  children: data.inventoryCode || "-",
                 },
                 {
                   key: "inventoryOriginalQty",

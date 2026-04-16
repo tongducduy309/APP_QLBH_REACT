@@ -46,7 +46,7 @@ type DataPdf = {
 };
 
 const LOGO_BASE64 = 'data:image/jpeg;base64,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'
-;
+  ;
 
 function formatMoney(n: number): string {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0));
@@ -183,10 +183,10 @@ function toDataPdf(data: OrderRes): DataPdf {
     createdAt: data.createdAt ?? new Date().toISOString(),
     customer: data.customer
       ? {
-          name: (data.customer as any).name ?? "",
-          phone: (data.customer as any).phone ?? "",
-          address: (data.customer as any).address ?? "",
-        }
+        name: (data.customer as any).name ?? "",
+        phone: (data.customer as any).phone ?? "",
+        address: (data.customer as any).address ?? "",
+      }
       : null,
     products,
     subtotal: Number(data.subtotal ?? 0),
@@ -245,79 +245,79 @@ function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
   let leftBody: any[] = [
     ...(hasSubtotal
       ? [
-          [
-            {
-              text: "TẠM TÍNH:",
-              bold: true,
-              alignment: "left",
-              style: "s12",
-              margin: [10, 0, 0, 0],
-            },
-            {
-              text: formatMoney(data.subtotal || 0),
-              alignment: "left",
-              style: "s12",
-            },
-          ],
-        ]
-      : []),
-
-    ...(hasTax
-      ? [
-          [
-            {
-              text: `THUẾ GTGT(${data.tax}%):`,
-              bold: true,
-              alignment: "left",
-              style: "s12",
-              margin: [10, 0, 0, 0],
-            },
-            {
-              text: formatMoney(data.taxAmount || 0),
-              alignment: "left",
-              style: "s12",
-            },
-          ],
-        ]
-      : []),
-
-    ...(hasShip
-      ? [
-          [
-            {
-              text: "PHÍ VẬN CHUYỂN:",
-              bold: true,
-              alignment: "left",
-              style: "s12",
-              margin: [10, 0, 0, 0],
-            },
-            {
-              text: formatMoney(data.shippingFee || 0),
-              alignment: "left",
-              style: "s12",
-            },
-          ],
-        ]
-      : []),
-  ];
-
-  let rightBody: any[] = hasTotal
-    ? [
         [
           {
-            text: "TỔNG CỘNG:",
+            text: "TẠM TÍNH:",
             bold: true,
             alignment: "left",
             style: "s12",
+            margin: [10, 0, 0, 0],
           },
           {
-            text: formatMoney(data.total || 0),
-            bold: true,
+            text: formatMoney(data.subtotal || 0),
             alignment: "left",
             style: "s12",
           },
         ],
       ]
+      : []),
+
+    ...(hasTax
+      ? [
+        [
+          {
+            text: `THUẾ GTGT(${data.tax}%):`,
+            bold: true,
+            alignment: "left",
+            style: "s12",
+            margin: [10, 0, 0, 0],
+          },
+          {
+            text: formatMoney(data.taxAmount || 0),
+            alignment: "left",
+            style: "s12",
+          },
+        ],
+      ]
+      : []),
+
+    ...(hasShip
+      ? [
+        [
+          {
+            text: "PHÍ VẬN CHUYỂN:",
+            bold: true,
+            alignment: "left",
+            style: "s12",
+            margin: [10, 0, 0, 0],
+          },
+          {
+            text: formatMoney(data.shippingFee || 0),
+            alignment: "left",
+            style: "s12",
+          },
+        ],
+      ]
+      : []),
+  ];
+
+  let rightBody: any[] = hasTotal
+    ? [
+      [
+        {
+          text: "TỔNG CỘNG:",
+          bold: true,
+          alignment: "left",
+          style: "s12",
+        },
+        {
+          text: formatMoney(data.total || 0),
+          bold: true,
+          alignment: "left",
+          style: "s12",
+        },
+      ],
+    ]
     : [];
 
   const hasSummary = leftBody.length > 0 || rightBody.length > 0;
@@ -356,12 +356,12 @@ function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
 
   const summary: Content | null = hasSummary
     ? {
-        table: {
-          widths: ["*", "*"],
-          body: [[{ stack: [leftTable] }, { stack: [rightTable] }]],
-        },
-        layout: noPaddingLayout,
-      }
+      table: {
+        widths: ["*", "*"],
+        body: [[{ stack: [leftTable] }, { stack: [rightTable] }]],
+      },
+      layout: noPaddingLayout,
+    }
     : null;
 
   const headerColumns: any[] = [
@@ -422,12 +422,12 @@ function buildQuotationContent(data: DataPdf, opt: PrintOptions): Content[] {
     ...(summary ? [summary] : []),
     ...(hasTotal
       ? [
-          {
-            text: `\nBằng chữ: ${numberToVietnameseWords(data.total || 0)}`,
-            italics: true,
-            style: "s12",
-          },
-        ]
+        {
+          text: `\nBằng chữ: ${numberToVietnameseWords(data.total || 0)}`,
+          italics: true,
+          style: "s12",
+        },
+      ]
       : []),
     {
       columns: [
@@ -500,6 +500,15 @@ function buildQuotationDocDefinition(
     pageOrientation: opts.pageOrientation ?? "portrait",
     pageMargins: paperSize === "A4" ? [20, 20, 20, 20] : [16, 16, 16, 16],
     content,
+    watermark: {
+      text: "TÂM ĐỨC CƯỜNG",
+      color: "#6b7280", // gray-500
+      opacity: 0.08,    // nhẹ hơn (đỡ che nội dung)
+      bold: true,
+      italics: false,
+      fontSize: 70,
+      angle: -30,
+    },
     info: {
       title: `BBG-${data.code}`,
       author: "CÔNG TY TNHH MTV DV TÔN THÉP TÂM ĐỨC CƯỜNG",
@@ -512,10 +521,10 @@ function buildQuotationDocDefinition(
     },
     ...(LOGO_BASE64
       ? {
-          images: {
-            logo: LOGO_BASE64,
-          },
-        }
+        images: {
+          logo: LOGO_BASE64,
+        },
+      }
       : {}),
     styles: {
       companyName: { fontSize: 14, bold: true },

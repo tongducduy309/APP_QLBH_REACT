@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Button, Descriptions, Empty, Spin, Table, Tag, message } from "antd";
+import { Button, Descriptions, Empty, Spin, Table, Tag } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   ArrowLeft,
+  CircleDollarSign,
   Copy,
+  EllipsisVertical,
   Eye,
   FileDown,
+  Mail,
   Pencil,
   Printer,
   Trash2,
@@ -29,7 +32,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
 import { OrderStatus, type OrderDetailRes, type OrderRes } from "@/types/order";
-import { cancelOrder, getOrderById } from "@/services/order-api";
+import { cancelOrder, getOrderById, payOrder } from "@/services/order-api";
 import {
   downloadInvoice,
   previewInvoice,
@@ -37,6 +40,12 @@ import {
 } from "@/features/print/services/Invoice-pdf-print.service";
 import { Button as ShadcnButton } from "@/components/ui/button";
 import { InvoiceCopyImageTemplate } from "@/features/print/components/invoice-copy-image-template";
+import { NumberInput } from "@/components/ui/number-input";
+import { toast } from "sonner";
+import { sortOrderResDetails } from "@/utils/order.helper";
+import { SendInvoiceEmailDialog } from "../components/SendInvoiceEmailDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { formatDateToDDMMYYYY } from "@/utils/date";
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -49,7 +58,11 @@ export function OrderDetailPage() {
   const [cancelConfirmed, setCancelConfirmed] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
 
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -57,12 +70,52 @@ export function OrderDetailPage() {
     try {
       setLoading(true);
       const res = await getOrderById(Number(id));
-      setOrder(res);
+      console.log("res", res);
+      setOrder(sortOrderResDetails(res));
     } catch (error) {
       console.error("Lỗi lấy chi tiết hóa đơn", error);
       setOrder(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const remainingBeforePayment = order?.remainingAmount ?? 0;
+
+  const remainingAfterPayment = Math.max(
+    remainingBeforePayment - paymentAmount,
+    0
+  );
+
+  const changeAfterPayment =
+    paymentAmount > remainingBeforePayment
+      ? paymentAmount - remainingBeforePayment
+      : 0;
+
+  const handleConfirmPayment = async () => {
+    if (!order?.id) return;
+
+    if (!paymentAmount || paymentAmount <= 0) {
+      toast.info("Vui lòng nhập số tiền hợp lệ");
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+
+      await payOrder({
+        orderId: order.id,
+        amount: paymentAmount,
+      });
+
+      toast.success("Thanh toán thành công");
+      setPaymentDialogOpen(false);
+      await fetchOrder();
+    } catch (error) {
+      console.error("Lỗi thanh toán hóa đơn", error);
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -116,7 +169,7 @@ export function OrderDetailPage() {
 
       await cancelOrder(order.id);
 
-      message.success("Đã hủy hóa đơn");
+      toast.success("Đã hủy hóa đơn");
 
       setCancelDialogOpen(false);
       setCancelConfirmed(false);
@@ -125,7 +178,6 @@ export function OrderDetailPage() {
       navigate("/transactions");
     } catch (error) {
       console.error("Lỗi hủy hóa đơn", error);
-      message.error("Hủy hóa đơn thất bại");
     } finally {
       setCancelLoading(false);
     }
@@ -153,10 +205,10 @@ export function OrderDetailPage() {
     },
     {
       title: "Mã kho",
-      dataIndex: "inventoryId",
-      key: "inventoryId",
+      dataIndex: "inventoryCode",
+      key: "inventoryCode",
       width: 120,
-      render: (value: number | null) => value ?? "-",
+      render: (value: string | null) => value ?? "-",
     },
     {
       title: "Chiều dài",
@@ -250,44 +302,68 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <ShadcnButton
+              variant="outline"
+              size="icon"
+              aria-label="Thao tác hóa đơn"
+            >
+              <EllipsisVertical className="h-4 w-4" />
+            </ShadcnButton>
+          </DropdownMenuTrigger>
 
-          <Button
-            icon={<FileDown className="h-4 w-4" />}
-            onClick={handleDownloadOrder}
-          >
-            Tải hóa đơn
-          </Button>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuGroup>
+              {order.status === OrderStatus.CONFIRMED &&
+                (order.remainingAmount ?? 0) > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => setPaymentDialogOpen(true)}
+                  >
+                    <CircleDollarSign className="mr-2 h-4 w-4" />
+                    Thanh toán
+                  </DropdownMenuItem>
+                )}
 
-          <Button
-            icon={<Pencil size={16} />}
-            onClick={() => navigate(`/transactions/edit/${order.id}`)}
-          >
-            Chỉnh sửa
-          </Button>
+              <DropdownMenuItem onClick={() => setSendEmailOpen(true)}>
+                <Mail className="mr-2 h-4 w-4" />
+                Gửi email
+              </DropdownMenuItem>
 
-          <Button
-            icon={<Eye className="h-4 w-4" />}
-            onClick={handleViewOrder}
-          >
-            Xem hóa đơn
-          </Button>
+              <DropdownMenuItem onClick={handleDownloadOrder}>
+                <FileDown className="mr-2 h-4 w-4" />
+                Tải hóa đơn
+              </DropdownMenuItem>
 
-          <Button
-            icon={<Printer className="h-4 w-4" />}
-            onClick={handlePrintOrder}
-          >
-            In hóa đơn
-          </Button>
+              <DropdownMenuItem
+                onClick={() => navigate(`/transactions/edit/${order.id}`)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Chỉnh sửa
+              </DropdownMenuItem>
 
-          <Button
-            danger
-            icon={<Trash2 className="h-4 w-4" />}
-            onClick={openCancelDialog}
-          >
-            Hủy hóa đơn
-          </Button>
-        </div>
+              <DropdownMenuItem onClick={handleViewOrder}>
+                <Eye className="mr-2 h-4 w-4" />
+                Xem hóa đơn
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={handlePrintOrder}>
+                <Printer className="mr-2 h-4 w-4" />
+                In hóa đơn
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                onClick={openCancelDialog}
+                variant="destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Hủy hóa đơn
+              </DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -302,7 +378,7 @@ export function OrderDetailPage() {
                 {order.code || "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">
-                {order.createdAt || "-"}
+                {formatDateToDDMMYYYY(order.createdAt) || "-"}
               </Descriptions.Item>
 
               <Descriptions.Item label="Khách hàng">
@@ -496,6 +572,121 @@ export function OrderDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={paymentDialogOpen}
+        onOpenChange={(open) => {
+          setPaymentDialogOpen(open);
+          if (!open) {
+            setPaymentAmount(0);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Thanh toán hóa đơn</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="rounded-md border p-3 text-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span>Mã hóa đơn</span>
+                <span className="font-medium">{order.code}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Tổng cộng</span>
+                <span className="font-medium">
+                  {formatCurrency(order.total ?? 0)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Đã thanh toán</span>
+                <span className="font-medium">
+                  {formatCurrency(order.paidAmount ?? 0)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Còn phải trả</span>
+                <span className="font-medium text-red-500">
+                  {formatCurrency(order.remainingAmount ?? 0)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2 flex gap-2 items-center">
+              <label className="text-sm font-medium shrink-0">Số tiền khách trả</label>
+              <NumberInput
+                className="w-full"
+                value={paymentAmount}
+                onValueChange={(value) => setPaymentAmount(value)}
+                placeholder="Nhập số tiền khách trả"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <ShadcnButton
+                type="button"
+                variant="outline"
+                onClick={() => setPaymentAmount(order.remainingAmount ?? 0)}
+              >
+                Trả hết
+              </ShadcnButton>
+
+              <ShadcnButton
+                type="button"
+                variant="outline"
+                onClick={() => setPaymentAmount(0)}
+              >
+                Xóa số tiền
+              </ShadcnButton>
+            </div>
+
+            <div className="rounded-md border p-3 text-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span>Còn lại sau thanh toán</span>
+                <span className="font-medium text-red-500">
+                  {formatCurrency(remainingAfterPayment)}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span>Tiền thừa</span>
+                <span className="font-medium">
+                  {formatCurrency(changeAfterPayment)}
+                </span>
+              </div>
+            </div>
+
+
+            <div className="flex justify-end gap-2">
+              <ShadcnButton
+                variant="outline"
+                onClick={() => setPaymentDialogOpen(false)}
+                disabled={paymentLoading}
+              >
+                Đóng
+              </ShadcnButton>
+
+              <ShadcnButton
+                onClick={handleConfirmPayment}
+                disabled={paymentLoading || paymentAmount <= 0}
+              >
+                {paymentLoading ? "Đang thanh toán..." : "Xác nhận thanh toán"}
+              </ShadcnButton>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <SendInvoiceEmailDialog
+        open={sendEmailOpen}
+        customerEmail={order.customer?.email ?? ""}
+        onOpenChange={setSendEmailOpen}
+        order={order}
+      />
 
       <div
         style={{

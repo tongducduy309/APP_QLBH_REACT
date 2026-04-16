@@ -1,7 +1,7 @@
 // src/modules/sales/components/ProductSelectorCard.tsx
 
 import { useMemo, useState } from "react";
-import { Input, Table, Tag } from "antd";
+import { Input, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { Search } from "lucide-react";
 import {
@@ -73,7 +73,7 @@ export function ProductSelectorCard({
       ),
     },
 
-    { title: "Danh mục", dataIndex: "category", key: "category", width: 140 },
+    
 
     {
       title: "Tồn kho",
@@ -88,6 +88,35 @@ export function ProductSelectorCard({
       key: "price",
       width: 140,
       render: (value: number) => formatCurrency(value),
+    },
+
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+      width: 180,
+      render: (value: string) => {
+        if (!value) return "-";
+
+        return (
+          <Tooltip title={value}>
+            <div
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "normal",
+                lineHeight: "1.4em",
+                maxHeight: "2.8em",
+              }}
+            >
+              {value}
+            </div>
+          </Tooltip>
+        );
+      },
     },
 
     {

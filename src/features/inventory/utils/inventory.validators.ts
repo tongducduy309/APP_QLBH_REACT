@@ -8,27 +8,27 @@ export function validateProductForm(
 ) {
 
   if (!form.name.trim()) {
-    toast.error("Vui lòng nhập tên sản phẩm.");
+    toast.info("Vui lòng nhập tên sản phẩm.");
     return false;
   }
 
   if (!form.categoryName.trim()) {
-    toast.error("Vui lòng nhập danh mục.");
+    toast.info("Vui lòng nhập danh mục.");
     return false;
   }
 
   if (!form.baseUnit.trim()) {
-    toast.error("Vui lòng nhập đơn vị cơ bản.");
+    toast.info("Vui lòng nhập đơn vị cơ bản.");
     return false;
   }
 
   if (form.variants.length === 0) {
-    toast.error("Sản phẩm phải có ít nhất 1 biến thể.");
+    toast.info("Sản phẩm phải có ít nhất 1 biến thể.");
     return false;
   }
 
   if (form.description?.length > 250) {
-    toast.error("Mô tả không được vượt quá 250 ký tự.");
+    toast.info("Mô tả không được vượt quá 250 ký tự.");
     return false;
   }
 
@@ -39,7 +39,7 @@ export function validateProductForm(
 //   });
 
 //   if (duplicatedSku) {
-//     toast.error("SKU đã tồn tại.");
+//     toast.info("SKU đã tồn tại.");
 //     return false;
 //   }
 
@@ -47,38 +47,38 @@ export function validateProductForm(
 
   for (const variant of form.variants) {
     if (!variant.variantCode.trim()) {
-      toast.error("Mỗi biến thể phải có loại.");
+      toast.info("Mỗi biến thể phải có loại.");
       return false;
     }
 
     if (Number(variant.weight ?? 0) < 0) {
-      toast.error("Trọng lượng biến thể không hợp lệ.");
+      toast.info("Trọng lượng biến thể không hợp lệ.");
       return false;
     }
 
     if (Number(variant.retailPrice ?? 0) < 0 || Number(variant.storePrice ?? 0) < 0) {
-      toast.error("Giá của biến thể không hợp lệ.");
+      toast.info("Giá của biến thể không hợp lệ.");
       return false;
     }
 
     if (Number(variant.storePrice ?? 0) > Number(variant.retailPrice ?? 0)) {
-      toast.error("Giá cửa hàng không nên lớn hơn giá bán lẻ.");
+      toast.info("Giá cửa hàng không nên lớn hơn giá bán lẻ.");
       return false;
     }
 
     if (Number(variant.remainingQty ?? 0) < 0) {
-      toast.error("Tồn kho biến thể không hợp lệ.");
+      toast.info("Tồn kho biến thể không hợp lệ.");
       return false;
     }
 
     if (Number(variant.costPrice ?? 0) < 0) {
-      toast.error("Giá vốn không hợp lệ.");
+      toast.info("Giá vốn không hợp lệ.");
       return false;
     }
 
     const normalizedCode = variant.variantCode.trim().toLowerCase();
     if (seenVariantCodes.has(normalizedCode)) {
-      toast.error("Biến thể bị trùng loại.");
+      toast.info("Biến thể bị trùng loại.");
       return false;
     }
     seenVariantCodes.add(normalizedCode);
@@ -92,12 +92,12 @@ export function validateInventoryEditForm(form: {
   costPrice: number;
 }) {
   if (Number.isNaN(form.remainingQty) || form.remainingQty < 0) {
-    toast.error("Tồn kho không hợp lệ.");
+    toast.info("Tồn kho không hợp lệ.");
     return false;
   }
 
   if (Number.isNaN(form.costPrice) || form.costPrice < 0) {
-    toast.error("Giá vốn không hợp lệ.");
+    toast.info("Giá vốn không hợp lệ.");
     return false;
   }
 

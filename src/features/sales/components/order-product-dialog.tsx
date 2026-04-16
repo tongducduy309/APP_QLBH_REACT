@@ -393,17 +393,17 @@ export function OrderProductDialog({
 
   const validateForm = () => {
     if (!product?.id && !editValue?.productId) {
-      toast.error("Không tìm thấy sản phẩm.");
+      toast.info("Không tìm thấy sản phẩm.");
       return false;
     }
 
     if (!productName.trim()) {
-      toast.error("Tên sản phẩm không hợp lệ.");
+      toast.info("Tên sản phẩm không hợp lệ.");
       return false;
     }
 
     if (computedUnitPrice < 0) {
-      toast.error("Đơn giá không hợp lệ.");
+      toast.info("Đơn giá không hợp lệ.");
       return false;
     }
 
@@ -412,35 +412,35 @@ export function OrderProductDialog({
       form.curving.enabled &&
       form.curving.price < 0
     ) {
-      toast.error("Đơn giá uốn vòm không hợp lệ.");
+      toast.info("Đơn giá uốn vòm không hợp lệ.");
       return false;
     }
 
     if (form.type === "D") {
       if (form.flatSheet.width <= 0 || form.flatSheet.width > 120) {
-        toast.error("Khổ phải nằm trong khoảng 1 - 120 cm.");
+        toast.info("Khổ phải nằm trong khoảng 1 - 120 cm.");
         return false;
       }
 
       if (form.flatSheet.panelSizes.some((size) => size <= 0)) {
-        toast.error("Kích thước tấm phải lớn hơn 0.");
+        toast.info("Kích thước tấm phải lớn hơn 0.");
         return false;
       }
     }
 
     if (sizeLines.length === 0) {
-      toast.error("Phải có ít nhất một dòng kích thước.");
+      toast.info("Phải có ít nhất một dòng kích thước.");
       return false;
     }
 
     for (const line of sizeLines) {
       if (line.length && line.length <= 0) {
-        toast.error("Chiều dài phải lớn hơn 0.");
+        toast.info("Chiều dài phải lớn hơn 0.");
         return false;
       }
 
       if (line.quantity <= 0) {
-        toast.error("Số lượng phải lớn hơn 0.");
+        toast.info("Số lượng phải lớn hơn 0.");
         return false;
       }
     }
@@ -480,7 +480,7 @@ export function OrderProductDialog({
         inventoryId: null,
       });
     }
-
+    console.log("orders", orders);
     onOrder(orders);
     toast.success(editValue ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm.");
     onOpenChange(false);
@@ -499,7 +499,7 @@ export function OrderProductDialog({
 
   const handleConfirmOutsideStock = () => {
     if (!allowOutsideStock) {
-      toast.error("Bạn cần xác nhận lấy hàng ngoài kho.");
+      toast.info("Bạn cần xác nhận lấy hàng ngoài kho.");
       return;
     }
 

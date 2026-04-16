@@ -13,6 +13,7 @@ export interface OrderDetailRes {
   price:number;
   totalQuantity:number | null;
   inventoryId: number | null;
+  weight:string;
   sku: string;
   name: string;
   kind:LineKind;
@@ -72,3 +73,17 @@ export interface OrderUpdateReq {
   createdAt:string;
   status: OrderStatus;
 }
+
+export type PayOrderReq = {
+  orderId:number;
+  amount: number;
+};
+
+export type SendInvoiceEmailReq = {
+  orderId: number;
+  to: string;
+  subject?: string;
+  content?: string;
+  pdfBlob: Blob;
+  fileName?: string;
+};

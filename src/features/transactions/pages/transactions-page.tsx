@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { DatePicker, Input, Space, Table, Tag } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
-
-dayjs.extend(isBetween);
 import { Search } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
 import { PageShell } from "@/components/layout/page-shell";
 import {
   Card,
@@ -15,21 +15,40 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getOrders } from "@/services/order-api";
 import { formatCurrency } from "@/lib/utils";
 import { removeVietnameseTones } from "@/utils/string";
 import { OrderRes, OrderStatus } from "@/types/order";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { formatDateToDDMMYYYY } from "@/utils/date";
+
+dayjs.extend(isBetween);
 
 const { RangePicker } = DatePicker;
+const PAGE_SIZE = 6;
 
 export function TransactionsPage() {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [orders, setOrders] = useState<OrderRes[]>([]);
   const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState("");
-  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(null);
-  const navigate = useNavigate();
+
+  const keywordParam = searchParams.get("keyword") || "";
+  const fromParam = searchParams.get("from") || "";
+  const toParam = searchParams.get("to") || "";
+  const pageParam = Number(searchParams.get("page") || "1");
+
+  const [keyword, setKeyword] = useState(keywordParam);
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null] | null>(
+    fromParam || toParam
+      ? [
+        fromParam ? dayjs(fromParam, "YYYY-MM-DD") : null,
+        toParam ? dayjs(toParam, "YYYY-MM-DD") : null,
+      ]
+      : null
+  );
+
   useEffect(() => {
     const fetchOrders = async () => {
       try {
@@ -47,19 +66,101 @@ export function TransactionsPage() {
     fetchOrders();
   }, []);
 
+  useEffect(() => {
+    setKeyword(keywordParam);
+    setDateRange(
+      fromParam || toParam
+        ? [
+          fromParam ? dayjs(fromParam, "YYYY-MM-DD") : null,
+          toParam ? dayjs(toParam, "YYYY-MM-DD") : null,
+        ]
+        : null
+    );
+  }, [keywordParam, fromParam, toParam]);
+
+  const updateSearchParams = (next: {
+    keyword?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+  }) => {
+    const params = new URLSearchParams(searchParams);
+
+    const finalKeyword = next.keyword ?? keywordParam;
+    const finalFrom = next.from ?? fromParam;
+    const finalTo = next.to ?? toParam;
+    const finalPage = next.page ?? pageParam;
+
+    if (finalKeyword?.trim()) {
+      params.set("keyword", finalKeyword.trim());
+    } else {
+      params.delete("keyword");
+    }
+
+    if (finalFrom) {
+      params.set("from", finalFrom);
+    } else {
+      params.delete("from");
+    }
+
+    if (finalTo) {
+      params.set("to", finalTo);
+    } else {
+      params.delete("to");
+    }
+
+    if (finalPage && finalPage > 1) {
+      params.set("page", String(finalPage));
+    } else {
+      params.delete("page");
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleKeywordChange = (value: string) => {
+    setKeyword(value);
+    updateSearchParams({
+      keyword: value,
+      page: 1,
+    });
+  };
+
+  const handleDateRangeChange = (
+    dates: null | (Dayjs | null)[]
+  ) => {
+    const nextRange: [Dayjs | null, Dayjs | null] | null =
+      dates && dates.length === 2
+        ? [dates[0] ?? null, dates[1] ?? null]
+        : null;
+
+    setDateRange(nextRange);
+
+    updateSearchParams({
+      from: nextRange?.[0] ? nextRange[0].format("YYYY-MM-DD") : "",
+      to: nextRange?.[1] ? nextRange[1].format("YYYY-MM-DD") : "",
+      page: 1,
+    });
+  };
+
   const normalizedKeyword = useMemo(
-    () => removeVietnameseTones(keyword || ""),
-    [keyword]
+    () => removeVietnameseTones((keywordParam || "").trim()),
+    [keywordParam]
   );
 
   const filteredOrders = useMemo(() => {
+    const fromDate = fromParam ? dayjs(fromParam, "YYYY-MM-DD") : null;
+    const toDate = toParam ? dayjs(toParam, "YYYY-MM-DD") : null;
+
     return orders.filter((order: OrderRes) => {
+      const createdAt = dayjs(order.createdAt, "DD-MM-YYYY");
+
       const customerName = removeVietnameseTones(order.customer?.name || "");
       const phone = removeVietnameseTones(order.customer?.phone || "");
       const note = removeVietnameseTones(order.note || "");
       const orderCode = removeVietnameseTones(order.code || "");
       const detailsText = removeVietnameseTones(
-        (order.details ?? []).map((d) => `${d.name} ${d.sku}`).join(" ")
+        (order.details ?? []).map((d) => `${d.name} ${d.sku || ""}`).join(" ")
       );
 
       const matchesKeyword =
@@ -67,23 +168,22 @@ export function TransactionsPage() {
         customerName.includes(normalizedKeyword) ||
         phone.includes(normalizedKeyword) ||
         note.includes(normalizedKeyword) ||
-        orderCode.includes(keyword.trim()) ||
+        orderCode.includes(normalizedKeyword) ||
         detailsText.includes(normalizedKeyword);
 
       const matchesDate =
-        !dateRange ||
-        !dateRange[0] ||
-        !dateRange[1] ||
-        dayjs(order.createdAt).isBetween(
-          dateRange[0].startOf("day"),
-          dateRange[1].endOf("day"),
-          null,
-          "[]"
+        !fromDate ||
+        !toDate ||
+        (
+          createdAt.valueOf() >= fromDate.startOf("day").valueOf() &&
+          createdAt.valueOf() <= toDate.endOf("day").valueOf()
         );
 
       return matchesKeyword && matchesDate;
     });
-  }, [orders, normalizedKeyword, keyword, dateRange]);
+  }, [orders, normalizedKeyword, fromParam, toParam]);
+
+  const currentPage = Math.max(pageParam || 1, 1);
 
   const columns: ColumnsType<OrderRes> = [
     {
@@ -99,43 +199,37 @@ export function TransactionsPage() {
       width: 220,
       render: (_, record) => (
         <div>
-          <div className="font-medium">
-            {record.customer?.name || "Khách lẻ"}
-          </div>
+          <div className="font-medium">{record.customer?.name || "Khách lẻ"}</div>
           <div className="text-xs text-muted-foreground">
             {record.customer?.phone || "-"}
           </div>
         </div>
       ),
     },
-    // {
-    //   title: "Số mặt hàng",
-    //   key: "detailsCount",
-    //   width: 120,
-    //   render: (_, record) => record.details?.length ?? 0,
-    // },
     {
       title: "Ngày tạo",
       dataIndex: "createdAt",
       key: "createdAt",
       width: 180,
-      render: (value: string) => value || "-",
+      render: (value: string) => formatDateToDDMMYYYY(value),
     },
     {
       title: "Đã thanh toán",
       dataIndex: "paidAmount",
       key: "paidAmount",
-      width: 120,
+      width: 140,
       render: (value: number) => formatCurrency(value ?? 0),
     },
     {
       title: "Còn lại",
       dataIndex: "remainingAmount",
       key: "remainingAmount",
-      width: 120,
-      render: (value: number) => {
-        return <Tag color={value > 0 ? "red" : "green"}>{formatCurrency(value ?? 0)}</Tag>
-      },
+      width: 140,
+      render: (value: number) => (
+        <Tag color={(value ?? 0) > 0 ? "red" : "green"}>
+          {formatCurrency(value ?? 0)}
+        </Tag>
+      ),
     },
     {
       title: "Tổng tiền",
@@ -149,15 +243,16 @@ export function TransactionsPage() {
     {
       title: "Thanh toán",
       key: "paymentStatus",
-      width: 140,
+      width: 160,
       render: (_, record) => {
         const remaining = record.remainingAmount ?? 0;
+        const paidAmount = record.paidAmount ?? 0;
 
         if (remaining <= 0) {
           return <Tag color="green">Đã thanh toán</Tag>;
         }
 
-        if ((record.paidAmount ?? 0) > 0) {
+        if (paidAmount > 0) {
           return <Tag color="orange">Thanh toán một phần</Tag>;
         }
 
@@ -168,9 +263,11 @@ export function TransactionsPage() {
       title: "Trạng thái",
       key: "status",
       width: 120,
-      render: (_, record) => {
-        return <Tag color={record.status === OrderStatus.CONFIRMED ? "green" : "red"}>{record.status === OrderStatus.CONFIRMED ? "Chính thức" : "Bản nháp"}</Tag>;
-      },
+      render: (_, record) => (
+        <Tag color={record.status === OrderStatus.CONFIRMED ? "green" : "red"}>
+          {record.status === OrderStatus.CONFIRMED ? "Chính thức" : "Bản nháp"}
+        </Tag>
+      ),
     },
     {
       title: "Thao tác",
@@ -178,12 +275,23 @@ export function TransactionsPage() {
       width: 140,
       fixed: "right",
       render: (_, record) => (
-        <Button variant="link" onClick={() => navigate(`/transactions/${record.id}`)}>
+        <Button
+          variant="link"
+          onClick={() =>
+            navigate(`/transactions/${record.id}${window.location.search}`)
+          }
+        >
           Xem chi tiết
         </Button>
       ),
     },
   ];
+
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    updateSearchParams({
+      page: pagination.current || 1,
+    });
+  };
 
   return (
     <PageShell>
@@ -200,7 +308,7 @@ export function TransactionsPage() {
             <Input
               allowClear
               value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              onChange={(e) => handleKeywordChange(e.target.value)}
               placeholder="Tìm mã đơn, khách hàng, SĐT, sản phẩm..."
               prefix={<Search className="h-4 w-4" />}
               className="w-[280px]"
@@ -209,11 +317,7 @@ export function TransactionsPage() {
             <RangePicker
               format="DD/MM/YYYY"
               value={dateRange}
-              onChange={(dates) =>
-                setDateRange(
-                  dates ? [dates[0] ?? null, dates[1] ?? null] : null
-                )
-              }
+              onChange={handleDateRangeChange}
             />
           </Space>
         </CardHeader>
@@ -224,7 +328,13 @@ export function TransactionsPage() {
             columns={columns}
             dataSource={filteredOrders}
             loading={loading}
-            pagination={{ pageSize: 6 }}
+            onChange={handleTableChange}
+            pagination={{
+              current: currentPage,
+              pageSize: PAGE_SIZE,
+              total: filteredOrders.length,
+              showSizeChanger: false,
+            }}
             scroll={{ x: 1300 }}
             expandable={{
               expandedRowRender: (record) => (
@@ -249,9 +359,9 @@ export function TransactionsPage() {
                     },
                     {
                       title: "Mã kho",
-                      key: "variant",
-                      render: (_, detail) =>
-                        detail.inventoryId || "-",
+                      dataIndex: "inventoryCode",
+                      key: "inventoryCode",
+                      render: (value: string | null) => value ?? "-",
                     },
                     {
                       title: "Chiều dài",
@@ -269,9 +379,8 @@ export function TransactionsPage() {
                       title: "Tổng số lượng",
                       dataIndex: "totalQuantity",
                       key: "totalQuantity",
-                      render: (_: number, detail) => {
-                        return (detail.quantity ?? 0) * (detail.length || 1)
-                      },
+                      render: (_: number, detail) =>
+                        (detail.quantity ?? 0) * (detail.length || 1),
                     },
                     {
                       title: "Đơn vị",

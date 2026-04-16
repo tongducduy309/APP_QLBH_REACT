@@ -1,7 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input, Table, Tag, Tooltip } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { Package2, Pencil, Search, Truck } from "lucide-react";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
+import { Package2, Pencil, Search, Truck, Eye, EllipsisVertical, Trash, CircleAlert } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,15 +12,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Link } from "react-router-dom";
-import { Eye } from "lucide-react";
 import { paths } from "@/routes/paths";
 import { formatCurrency } from "@/lib/utils";
+import { removeVietnameseTones } from "@/utils/string";
 import type {
   ProductInventoryRes,
   ProductVariantInventoryRes,
 } from "../types/inventory.types";
-import { removeVietnameseTones } from "@/utils/string";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { deleteInventory } from "@/services/product-api";
+import { toast } from "sonner";
 
 type Props = {
   items: ProductInventoryRes[];
@@ -35,44 +38,101 @@ type Props = {
   ) => void;
   onExportExcel: () => void;
   onImportExcel: () => void;
+  onDeleteInventory: (id: number) => void;
 };
+
+const PAGE_SIZE = 6;
 
 export function InventoryTable({
   items,
   onCreate,
   onEditProduct,
   onEditInventory,
+  onDeleteInventory,
   onImportStock,
   onExportExcel,
   onImportExcel,
 }: Props) {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const keywordParam = searchParams.get("keyword") || "";
+  const pageParam = Number(searchParams.get("page") || "1");
+
+  const [keyword, setKeyword] = useState(keywordParam);
   const [manualExpandedKeys, setManualExpandedKeys] = useState<React.Key[]>([]);
 
+  useEffect(() => {
+    setKeyword(keywordParam);
+  }, [keywordParam]);
+
+  const updateSearchParams = (next: {
+    keyword?: string;
+    page?: number;
+  }) => {
+    const params = new URLSearchParams(searchParams);
+
+    const finalKeyword = next.keyword ?? keywordParam;
+    const finalPage = next.page ?? pageParam;
+
+    if (finalKeyword?.trim()) {
+      params.set("keyword", finalKeyword.trim());
+    } else {
+      params.delete("keyword");
+    }
+
+    if (finalPage && finalPage > 1) {
+      params.set("page", String(finalPage));
+    } else {
+      params.delete("page");
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleKeywordChange = (value: string) => {
+    setKeyword(value);
+    updateSearchParams({
+      keyword: value,
+      page: 1,
+    });
+  };
+
   const normalizedKeyword = useMemo(
-    () => removeVietnameseTones(search),
-    [search]
+    () => removeVietnameseTones((keywordParam || "").trim().toLowerCase()),
+    [keywordParam]
   );
 
   const filteredItems = useMemo(() => {
     if (!normalizedKeyword) return items;
 
     return items.filter((item) => {
-      const name = removeVietnameseTones(item.name || "");
-      const category = removeVietnameseTones(item.categoryName || "");
+      const name = removeVietnameseTones((item.name || "").toLowerCase());
+      const category = removeVietnameseTones(
+        (item.categoryName || "").toLowerCase()
+      );
+      const description = removeVietnameseTones(
+        (item.description || "").toLowerCase()
+      );
+      const baseUnit = removeVietnameseTones((item.baseUnit || "").toLowerCase());
 
       const matchProduct =
         name.includes(normalizedKeyword) ||
-        category.includes(normalizedKeyword);
+        category.includes(normalizedKeyword) ||
+        description.includes(normalizedKeyword) ||
+        baseUnit.includes(normalizedKeyword);
 
       const matchVariant = (item.variants ?? []).some((variant) => {
-        const variantCode = removeVietnameseTones(variant.variantCode || "");
-        const lotCode = removeVietnameseTones(variant.lotCode || "");
-        const sku = removeVietnameseTones(variant.sku || "");
+        const variantCode = removeVietnameseTones(
+          (variant.variantCode || "").toLowerCase()
+        );
+        const inventoryCode = removeVietnameseTones(
+          (variant.inventoryCode || "").toLowerCase()
+        );
+        const sku = removeVietnameseTones((variant.sku || "").toLowerCase());
 
         return (
           variantCode.includes(normalizedKeyword) ||
-          lotCode.includes(normalizedKeyword) ||
+          inventoryCode.includes(normalizedKeyword) ||
           sku.includes(normalizedKeyword)
         );
       });
@@ -87,13 +147,17 @@ export function InventoryTable({
     return filteredItems
       .filter((item) =>
         (item.variants ?? []).some((variant) => {
-          const variantCode = removeVietnameseTones(variant.variantCode || "");
-          const lotCode = removeVietnameseTones(variant.lotCode || "");
-          const sku = removeVietnameseTones(variant.sku || "");
+          const variantCode = removeVietnameseTones(
+            (variant.variantCode || "").toLowerCase()
+          );
+          const inventoryCode = removeVietnameseTones(
+            (variant.inventoryCode || "").toLowerCase()
+          );
+          const sku = removeVietnameseTones((variant.sku || "").toLowerCase());
 
           return (
             variantCode.includes(normalizedKeyword) ||
-            lotCode.includes(normalizedKeyword) ||
+            inventoryCode.includes(normalizedKeyword) ||
             sku.includes(normalizedKeyword)
           );
         })
@@ -105,6 +169,8 @@ export function InventoryTable({
     if (normalizedKeyword) return autoExpandedKeys;
     return manualExpandedKeys;
   }, [normalizedKeyword, autoExpandedKeys, manualExpandedKeys]);
+
+  const currentPage = Math.max(pageParam || 1, 1);
 
   const columns: ColumnsType<ProductInventoryRes> = [
     {
@@ -162,7 +228,7 @@ export function InventoryTable({
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
-      width: 120,
+      width: 180,
       render: (value: string) => {
         if (!value) return "-";
 
@@ -220,6 +286,14 @@ export function InventoryTable({
     },
   ];
 
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    updateSearchParams({
+      page: pagination.current || 1,
+    });
+  };
+
+
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -232,19 +306,19 @@ export function InventoryTable({
 
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
           <Input
-            placeholder="Tìm theo tên, danh mục, SKU, mã lô, loại biến thể..."
-            prefix={<Search className="h-4 w-4" />}
             allowClear
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={keyword}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            placeholder="Tìm theo tên, danh mục, SKU, Mã kho, loại biến thể..."
+            prefix={<Search className="h-4 w-4" />}
             className="md:w-[360px]"
           />
           <Button variant="outline" onClick={onImportExcel}>
-  Import Excel
-</Button>
-<Button variant="outline" onClick={onExportExcel}>
-  Xuất Excel
-</Button>
+            Nhập từ file
+          </Button>
+          <Button variant="outline" onClick={onExportExcel}>
+            Xuất ra file
+          </Button>
           <Button onClick={onCreate}>Thêm sản phẩm</Button>
         </div>
       </CardHeader>
@@ -254,9 +328,15 @@ export function InventoryTable({
           rowKey="id"
           columns={columns}
           dataSource={filteredItems}
-          pagination={{ pageSize: 6 }}
+          onChange={handleTableChange}
+          pagination={{
+            current: currentPage,
+            pageSize: PAGE_SIZE,
+            total: filteredItems.length,
+            showSizeChanger: false,
+          }}
           locale={{
-            emptyText: search
+            emptyText: keywordParam
               ? "Không tìm thấy sản phẩm phù hợp."
               : "Chưa có dữ liệu hàng hóa.",
           }}
@@ -294,8 +374,8 @@ export function InventoryTable({
                 },
                 {
                   title: "Mã kho",
-                  dataIndex: "lotCode",
-                  key: "lotCode",
+                  dataIndex: "inventoryCode",
+                  key: "inventoryCode",
                   width: 140,
                   render: (value) => value || "-",
                 },
@@ -306,6 +386,7 @@ export function InventoryTable({
                   width: 140,
                   render: (_, variant) => {
                     if (!variant.variantCode) return "-";
+
                     if (variant.weight) {
                       return (
                         <Tooltip
@@ -316,10 +397,11 @@ export function InventoryTable({
                             </div>
                           }
                         >
-                          {variant.variantCode} {`(${variant.weight})`}
+                          {variant.variantCode} ({variant.weight})
                         </Tooltip>
                       );
                     }
+
                     return variant.variantCode;
                   },
                 },
@@ -327,11 +409,11 @@ export function InventoryTable({
                   title: "Giá bán lẻ / Giá cửa hàng",
                   dataIndex: "retailPrice_storePrice",
                   key: "retailPrice_storePrice",
-                  width: 150,
+                  width: 180,
                   render: (_: number, variant: ProductVariantInventoryRes) =>
-                    formatCurrency(Number(variant.retailPrice ?? 0)) +
-                    " / " +
-                    formatCurrency(Number(variant.storePrice ?? 0)),
+                    `${formatCurrency(Number(variant.retailPrice ?? 0))} / ${formatCurrency(
+                      Number(variant.storePrice ?? 0)
+                    )}`,
                 },
                 {
                   title: "Giá vốn",
@@ -348,8 +430,10 @@ export function InventoryTable({
                   width: 100,
                   render: (value: number) => {
                     const qty = Number(value ?? 0);
+
                     if (qty <= 0) return <Tag color="red">{qty}</Tag>;
                     if (qty <= 10) return <Tag color="orange">{qty}</Tag>;
+
                     return <Tag color="green">{qty}</Tag>;
                   },
                 },
@@ -367,28 +451,75 @@ export function InventoryTable({
                 {
                   title: "Thao tác",
                   key: "actions",
-                  width: 260,
-                  render: (_, variant) => (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onImportStock(record.id ?? 0, variant, record.name)}
-                      >
-                        <Truck className="mr-2 h-4 w-4" />
-                        Nhập hàng
-                      </Button>
+                  width: 80,
+                  render: (_, variant) => {
+                    if (!variant.inventoryId) {
+                      return (
+                        <Tooltip
+                          title={
+                            <div className="max-w-xs space-y-1 text-sm leading-relaxed">
+                              <div className="font-medium">Chưa có tồn kho cho biến thể này</div>
+                              <div>
+                                Bạn chưa thể chỉnh sửa hoặc xóa tồn kho vì hệ thống chưa có bản ghi tồn kho.
+                              </div>
+                              <div>
+                                Để bổ sung tồn kho, vào <strong>Phiếu nhập hàng</strong> và tạo phiếu nhập mới.
+                              </div>
+                            </div>
+                          }
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-amber-600 hover:text-amber-700"
+                            aria-label="Chưa có tồn kho"
+                          >
+                            <CircleAlert className="h-4 w-4" />
+                          </Button>
+                        </Tooltip>
+                      );
+                    }
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onEditInventory(record.id ?? 0, variant)}
-                      >
-                        <Package2 className="mr-2 h-4 w-4" />
-                        Chỉnh tồn kho
-                      </Button>
-                    </div>
-                  ),
+                    return (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="icon" aria-label="Thao tác tồn kho">
+                            <EllipsisVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuGroup>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                onImportStock(record.id ?? 0, variant, record.name)
+                              }
+                            >
+                              <Truck className="mr-2 h-4 w-4" />
+                              Nhập hàng
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => onEditInventory(record.id ?? 0, variant)}
+                            >
+                              <Package2 className="mr-2 h-4 w-4" />
+                              Chỉnh tồn kho
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              onClick={() => onDeleteInventory(variant.inventoryId ?? 0)}
+                              variant="destructive"
+                            >
+                              <Trash className="mr-2 h-4 w-4" />
+                              Xóa tồn kho
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    );
+                  },
                 },
               ];
 
@@ -397,17 +528,19 @@ export function InventoryTable({
                   ? record.variants ?? []
                   : (record.variants ?? []).filter((variant) => {
                     const variantCode = removeVietnameseTones(
-                      variant.variantCode || ""
+                      (variant.variantCode || "").toLowerCase()
                     );
-                    const sku = removeVietnameseTones(variant.sku || "");
-                    const lotCode = removeVietnameseTones(
-                      variant.lotCode || ""
+                    const sku = removeVietnameseTones(
+                      (variant.sku || "").toLowerCase()
+                    );
+                    const inventoryCode = removeVietnameseTones(
+                      (variant.inventoryCode || "").toLowerCase()
                     );
 
                     return (
                       variantCode.includes(normalizedKeyword) ||
                       sku.includes(normalizedKeyword) ||
-                      lotCode.includes(normalizedKeyword)
+                      inventoryCode.includes(normalizedKeyword)
                     );
                   });
 
@@ -416,7 +549,7 @@ export function InventoryTable({
                   <Table<ProductVariantInventoryRes>
                     rowKey={(variant) =>
                       variant.inventoryId?.toString() ??
-                      `${record.id}-${variant.variantId}-${variant.lotCode}-${variant.sku}`
+                      `${record.id}-${variant.variantId}-${variant.inventoryCode}-${variant.sku}`
                     }
                     columns={variantColumns}
                     dataSource={filteredVariants}

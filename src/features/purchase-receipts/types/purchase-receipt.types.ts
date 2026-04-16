@@ -10,7 +10,7 @@ export interface PurchaseReceiptCreateReq {
   supplier?: string;
   note?: string;
   totalCost?: number;
-  lotCode?:string;
+  inventoryCode?:string;
 }
 
 export interface PurchaseReceiptRes {
@@ -26,6 +26,7 @@ export interface PurchaseReceiptRes {
   note?: string;
   createdAt?: string;
   totalCost?: number;
+  inventoryCode?:string;
 }
 
 export interface PurchaseReceiptForm {
@@ -35,7 +36,7 @@ export interface PurchaseReceiptForm {
   supplier: string;
   note: string;
   totalCost?: number;
-  lotCode?:string;
+  inventoryCode?:string;
 }
 
 export interface PurchaseReceiptDetailRes {
@@ -58,8 +59,8 @@ export interface PurchaseReceiptDetailRes {
   note?: string;
   createdAt?: string;
 
-  inventoryLotId?: number;
-  inventoryLotCode?: string;
+  inventoryId?: number;
+  inventoryCode?: string;
   inventoryOriginalQty?: number;
   inventoryRemainingQty?: number;
   inventoryCostPrice?: number;

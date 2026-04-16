@@ -1,4 +1,4 @@
-import { apiClient } from "@/lib/api-client";
+import apiClient from "@/lib/api-client";
 import type { AuthRes, LoginReq } from "@/features/auth/types/auth.types";
 
 

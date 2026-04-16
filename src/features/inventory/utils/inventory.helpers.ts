@@ -6,7 +6,7 @@ import type { ProductForm, ProductVariantInventoryRes } from "../types/inventory
 export const createInitialVariant = (): ProductVariantInventoryRes => ({
   inventoryId: null,
   sku: "",
-  lotCode: "",
+  inventoryCode: "",
   originalQty: 0,
   outOfStock: false,
   variantId: null,

@@ -3,12 +3,12 @@ import { NumberInput } from "@/components/ui/number-input";
 import { formatCurrency } from "@/lib/utils";
 import type {
   PurchaseReceiptCreateReq,
-  PurchaseReceiptMethod,
 } from "../types/purchase-receipt.types";
 import { useEffect, useMemo, useState } from "react";
 import { getAllProductVariants } from "@/services/product-api";
 import type { ProductVariantRes } from "@/types/product";
 import { toast } from "sonner";
+import { removeVietnameseTones } from "@/utils/string";
 
 type VariantOption = {
   label: string;
@@ -41,7 +41,7 @@ function buildVariantOptions(variants: ProductVariantRes[]): VariantOption[] {
       label: `${variant.productName} ${variant.weight ? `(${variant.weight})` : ""} - ${variant.variantCode || variant.sku || "Biến thể"}`,
       productName: variant.productName || "",
       variantCode: variant.variantCode || "",
-      weight: variant.weight?variant.weight+"":"",
+      weight: variant.weight ? variant.weight + "" : "",
       sku: variant.sku,
     }));
 }
@@ -82,7 +82,7 @@ export function PurchaseReceiptDialog({
         setVariantOptions(buildVariantOptions(data || []));
       } catch (error) {
         console.error("Không thể tải danh sách biến thể sản phẩm:", error);
-        toast.error("Không thể tải danh sách biến thể sản phẩm.");
+        // toast.error("Không thể tải danh sách biến thể sản phẩm.");
       }
     };
 
@@ -119,7 +119,12 @@ export function PurchaseReceiptDialog({
             showSearch
             loading={inventoryLoading}
             placeholder="Chọn biến thể"
-            optionFilterProp="label"
+            filterOption={(input, option) => {
+    const label = option?.label ?? "";
+
+    return removeVietnameseTones(label)
+      .includes(removeVietnameseTones(input));
+  }}
             options={variantOptions}
           />
         </Form.Item>
@@ -139,20 +144,10 @@ export function PurchaseReceiptDialog({
         )}
 
         <Form.Item
-          label="Mã lô hàng"
-          name="lotCode"
-          rules={[
-            { required: true, message: "Vui lòng nhập mã lô hàng." },
-            {
-              validator: async (_, value) => {
-                if (!value || !String(value).trim()) {
-                  throw new Error("Mã lô hàng không được để trống.");
-                }
-              },
-            },
-          ]}
+          label="Mã kho hàng"
+          name="inventoryCode"
         >
-          <Input placeholder="Nhập mã lô hàng" />
+          <Input placeholder="Nhập Mã kho hàng" />
         </Form.Item>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -295,8 +290,8 @@ export function PurchaseReceiptDialog({
         </div>
       </Form>
       <div className="border-b pb-2">
-          <span className="text-sm text-muted-foreground">Phiếu nhập này sẽ tạo một lô hàng riêng biệt, không ảnh hưởng tồn kho cũ.</span>
-        </div>
+        <span className="text-sm text-muted-foreground">Phiếu nhập này sẽ tạo một lô hàng riêng biệt, không ảnh hưởng tồn kho cũ.</span>
+      </div>
     </Modal>
   );
 }

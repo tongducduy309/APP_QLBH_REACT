@@ -1,43 +1,52 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+
 import type {
   InventoryEditForm,
+  InventoryExportColumnKey,
   ProductForm,
+  ProductInventoryRes,
   ProductVariantInventoryRes,
 } from "../types/inventory.types";
+
+
 import {
   createInitialForm,
   createInitialVariant,
-  getProductStatusFromVariants,
   getTotalProductStock,
 } from "../utils/inventory.helpers";
+
 import {
   mapProductFormToCreateReq,
   mapProductFormToUpdateReq,
   mapProductToForm,
 } from "../utils/inventory.mappers";
+
 import {
   validateInventoryEditForm,
   validateProductForm,
 } from "../utils/inventory.validators";
-import type { ProductInventoryRes } from "../types/inventory.types";
-import {
-  createProduct,
-  getAllInventory,
-  updateProduct,
-} from "@/services/product-api";
-import { createPurchaseReceipt } from "@/services/purchase-receipt-api";
-import { PurchaseReceiptCreateReq, PurchaseReceiptForm } from "@/features/purchase-receipts/types/purchase-receipt.types";
 
 import {
+  createProduct,
+  deleteInventory,
   exportInventoryExcel,
-  importInventoryExcel,
+  getAllInventory,
+  importProductExcelApi,
+  updateInventory,
+  updateProduct,
 } from "@/services/product-api";
+
+import { createPurchaseReceipt } from "@/services/purchase-receipt-api";
+
 import type {
-  InventoryExportColumnKey,
-  InventoryImportRes,
-} from "../types/inventory.types";
+  PurchaseReceiptCreateReq,
+  PurchaseReceiptForm,
+} from "@/features/purchase-receipts/types/purchase-receipt.types";
+
 import { DEFAULT_INVENTORY_EXPORT_COLUMNS } from "../constants/inventory-export-columns";
+import type { InventoryUpdateReq, ProductImportRes } from "@/types/product";
+
 function createInitialPurchaseReceiptForm(): PurchaseReceiptForm {
   return {
     productVariantId: null,
@@ -52,13 +61,13 @@ export function useInventoryPage() {
   const [inventoryItems, setInventoryItems] = useState<ProductInventoryRes[]>([]);
 
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-const [selectedExportColumns, setSelectedExportColumns] = useState<InventoryExportColumnKey[]>(
-  [...DEFAULT_INVENTORY_EXPORT_COLUMNS]
-);
-const [isExportingExcel, setIsExportingExcel] = useState(false);
-const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
-const [isImportingExcel, setIsImportingExcel] = useState(false);
-const [importResult, setImportResult] = useState<InventoryImportRes | null>(null);
+  const [selectedExportColumns, setSelectedExportColumns] =
+    useState<InventoryExportColumnKey[]>([...DEFAULT_INVENTORY_EXPORT_COLUMNS]);
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const [importResult, setImportResult] = useState<ProductImportRes | null>(null);
 
   const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
@@ -67,12 +76,12 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
   const [isInventoryDialogOpen, setIsInventoryDialogOpen] = useState(false);
   const [editingParentProductId, setEditingParentProductId] = useState<number | null>(null);
   const [editingVariantId, setEditingVariantId] = useState<number | null>(null);
-  const [editingVariantLabel, setEditingVariantLabel] = useState("");
+  const [editingProductName, setEditingProductName] = useState("");
 
   const [inventoryEditForm, setInventoryEditForm] = useState<InventoryEditForm>({
     remainingQty: 0,
     costPrice: 0,
-    active: true,
+    inventoryCode: "",
   });
 
   const [isPurchaseReceiptDialogOpen, setIsPurchaseReceiptDialogOpen] = useState(false);
@@ -86,9 +95,9 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
 
   const totalProducts = useMemo(() => inventoryItems.length, [inventoryItems]);
 
+
   const totalVariantCount = useMemo(
-    () =>
-      inventoryItems.reduce((sum, item) => sum + (item.variants?.length ?? 0), 0),
+    () => inventoryItems.reduce((sum, item) => sum + (item.variants?.length ?? 0), 0),
     [inventoryItems]
   );
 
@@ -103,11 +112,24 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
 
   const outOfStockCount = useMemo(
     () =>
-      inventoryItems.filter(
-        (item) => getTotalProductStock(item.variants ?? []) <= 0
-      ).length,
+      inventoryItems.filter((item) => getTotalProductStock(item.variants ?? []) <= 0)
+        .length,
     [inventoryItems]
   );
+
+  const fetchInventory = async () => {
+    try {
+      const data = await getAllInventory();
+      setInventoryItems(data);
+    } catch (error) {
+      console.error("Failed to fetch inventory:", error);
+      toast.error("Không thể tải danh sách hàng hóa.");
+    }
+  };
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
 
   const resetForm = () => {
     setForm(createInitialForm());
@@ -117,11 +139,11 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
   const resetInventoryEditState = () => {
     setEditingParentProductId(null);
     setEditingVariantId(null);
-    setEditingVariantLabel("");
+    setEditingProductName("");
     setInventoryEditForm({
       remainingQty: 0,
       costPrice: 0,
-      active: true,
+      inventoryCode: "",
     });
   };
 
@@ -147,11 +169,13 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
   ) => {
     setEditingParentProductId(parentProductId);
     setEditingVariantId(variant.variantId);
-    setEditingVariantLabel(variant.variantCode || "Biến thể");
+    setEditingProductName(
+      `${variant.productName} (${variant.variantCode}${variant.weight ? ` - ${variant.weight}` : ""})${variant.sku ? ` - ${variant.sku}` : ""}`
+    );
     setInventoryEditForm({
       remainingQty: Number(variant.remainingQty ?? 0),
       costPrice: Number(variant.costPrice ?? 0),
-      active: Boolean(variant.active),
+      inventoryCode: variant.inventoryCode ?? "",
     });
     setIsInventoryDialogOpen(true);
   };
@@ -162,11 +186,7 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
     productName: string
   ) => {
     setPurchaseReceiptVariantLabel(
-      `${productName}${
-        variant.weight ? ` (${variant.weight})` : ""
-      } - ${variant.variantCode || "Biến thể"}${
-        variant.sku ? ` - ${variant.sku}` : ""
-      }`
+      `${productName}${variant.weight ? ` (${variant.weight})` : ""} - ${variant.variantCode || "Biến thể"}${variant.sku ? ` - ${variant.sku}` : ""}`
     );
 
     setPurchaseReceiptForm({
@@ -210,84 +230,65 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
     const isValid = validateProductForm(form);
     if (!isValid) return;
 
-    if (isEditingProduct && editingProductId !== null) {
-      const productReq = mapProductFormToUpdateReq(form, editingProductId);
+    try {
+      if (isEditingProduct && editingProductId !== null) {
+        const productReq = mapProductFormToUpdateReq(form, editingProductId);
+        await updateProduct(editingProductId, productReq);
+        toast.success("Cập nhật sản phẩm thành công.");
+      } else {
+        const productReq = await mapProductFormToCreateReq(form);
+        await createProduct(productReq);
+        toast.success("Thêm mới sản phẩm thành công.");
+      }
 
-      updateProduct(editingProductId, productReq)
-        .then(() => {
-          fetchInventory();
-          setIsProductDialogOpen(false);
-          resetForm();
-          toast.success("Cập nhật sản phẩm thành công.");
-        })
-        .catch(() => {
-          toast.error("Cập nhật sản phẩm thất bại.");
-        });
-    } else {
-      const productReq = await mapProductFormToCreateReq(form);
-
-      createProduct(productReq)
-        .then(() => {
-          fetchInventory();
-          setIsProductDialogOpen(false);
-          resetForm();
-          toast.success("Thêm mới sản phẩm thành công.");
-        })
-        .catch(() => {
-          toast.error("Thêm mới sản phẩm thất bại.");
-        });
+      setIsProductDialogOpen(false);
+      resetForm();
+      await fetchInventory();
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        isEditingProduct ? "Cập nhật sản phẩm thất bại." : "Thêm mới sản phẩm thất bại."
+      );
     }
   };
 
-  const handleSaveInventory = () => {
+  const handleSaveInventory = async () => {
     if (editingParentProductId === null || !editingVariantId) return;
 
     const isValid = validateInventoryEditForm(inventoryEditForm);
     if (!isValid) return;
 
-    setInventoryItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== editingParentProductId) return item;
+    const inventoryUpdateReq: InventoryUpdateReq = {
+      remainingQty: Number(inventoryEditForm.remainingQty ?? 0),
+      costPrice: Number(inventoryEditForm.costPrice ?? 0),
+      inventoryCode: inventoryEditForm.inventoryCode ?? "",
+    };
 
-        const nextVariants = (item.variants ?? []).map((variant) =>
-          variant?.variantId === editingVariantId
-            ? {
-                ...variant,
-                remainingQty: Number(inventoryEditForm.remainingQty ?? 0),
-                costPrice: Number(inventoryEditForm.costPrice ?? 0),
-                active: Boolean(inventoryEditForm.active),
-                outOfStock: Number(inventoryEditForm.remainingQty ?? 0) <= 0,
-              }
-            : variant
-        );
-
-        return {
-          ...item,
-          variants: nextVariants,
-          stock: getTotalProductStock(nextVariants),
-          status: getProductStatusFromVariants(nextVariants),
-        };
-      })
-    );
-
-    toast.success("Cập nhật tồn kho biến thể thành công.");
-    setIsInventoryDialogOpen(false);
-    resetInventoryEditState();
+    try {
+      await updateInventory(editingVariantId, inventoryUpdateReq);
+      toast.success("Cập nhật tồn kho biến thể thành công.");
+      setIsInventoryDialogOpen(false);
+      resetInventoryEditState();
+      await fetchInventory();
+    } catch (error) {
+      console.error(error);
+      toast.error("Cập nhật tồn kho biến thể thất bại.");
+    }
   };
 
   const handleCreatePurchaseReceipt = async () => {
     if (!purchaseReceiptForm.productVariantId) {
-      toast.error("Thiếu biến thể sản phẩm.");
+      toast.info("Thiếu biến thể sản phẩm.");
       return;
     }
 
     if (Number(purchaseReceiptForm.totalQuantity ?? 0) <= 0) {
-      toast.error("Số lượng nhập phải lớn hơn 0.");
+      toast.info("Số lượng nhập phải lớn hơn 0.");
       return;
     }
 
     if (Number(purchaseReceiptForm.cost ?? 0) < 0) {
-      toast.error("Giá nhập không hợp lệ.");
+      toast.info("Giá nhập không hợp lệ.");
       return;
     }
 
@@ -315,75 +316,78 @@ const [importResult, setImportResult] = useState<InventoryImportRes | null>(null
     }
   };
 
-  const openExportDialog = () => setIsExportDialogOpen(true);
-const openImportDialog = () => {
-  setImportResult(null);
-  setIsImportDialogOpen(true);
-};
+  const openExportDialog = () => {
+    setIsExportDialogOpen(true);
+  };
 
-const handleExportExcel = async () => {
-  if (selectedExportColumns.length === 0) {
-    toast.error("Vui lòng chọn ít nhất 1 cột để xuất.");
-    return;
-  }
+  const openImportDialog = () => {
+    setImportResult(null);
+    setIsImportDialogOpen(true);
+  };
 
-  try {
-    setIsExportingExcel(true);
-    const blob = await exportInventoryExcel({
-      columns: selectedExportColumns,
-      onlyActive: true,
-    });
-
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `hang-hoa-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    window.URL.revokeObjectURL(url);
-
-    toast.success("Xuất file Excel thành công.");
-    setIsExportDialogOpen(false);
-  } catch (error) {
-    console.error(error);
-    toast.error("Xuất file Excel thất bại.");
-  } finally {
-    setIsExportingExcel(false);
-  }
-};
-
-const handleImportExcel = async (file: File) => {
-  try {
-    setIsImportingExcel(true);
-    const res = await importInventoryExcel(file);
-    setImportResult(res);
-
-    if ((res.errors?.length ?? 0) > 0) {
-      toast.warning("Import hoàn tất nhưng có lỗi ở một số dòng.");
-    } else {
-      toast.success("Import Excel thành công.");
+  const handleExportExcel = async () => {
+    if (selectedExportColumns.length === 0) {
+      toast.info("Vui lòng chọn ít nhất 1 cột để xuất.");
+      return;
     }
 
-    await fetchInventory();
-  } catch (error) {
-    console.error(error);
-    toast.error("Import Excel thất bại.");
-  } finally {
-    setIsImportingExcel(false);
-  }
-};
-
-  const fetchInventory = async () => {
     try {
-      const data = await getAllInventory();
-      setInventoryItems(data);
+      setIsExportingExcel(true);
+
+      const blob = await exportInventoryExcel({
+        columns: selectedExportColumns,
+        onlyActive: true,
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `hang-hoa-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Xuất file Excel thành công.");
+      setIsExportDialogOpen(false);
     } catch (error) {
-      console.error("Failed to fetch inventory:", error);
+      console.error(error);
+      toast.error("Xuất file Excel thất bại.");
+    } finally {
+      setIsExportingExcel(false);
     }
   };
 
-  useEffect(() => {
-    fetchInventory();
-  }, []);
+  const handleImportExcel = async (file: File) => {
+    try {
+      setIsImportingExcel(true);
+
+      const res = await importProductExcelApi(file);
+      setImportResult(res);
+
+      if ((res.errors?.length ?? 0) > 0) {
+        toast.warning("Quá trình nhập hoàn tất nhưng có một số dòng lỗi.");
+      } else {
+        toast.success("Nhập sản phẩm từ file thành công.");
+      }
+
+      await fetchInventory();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || "Nhập sản phẩm từ file thất bại.");
+    } finally {
+      setIsImportingExcel(false);
+    }
+  };
+
+  const handleDeleteInventory = async (id: number) => {
+    try {
+      await deleteInventory(id);
+      await fetchInventory();
+      toast.success("Xóa thành công");
+    } catch (error) {
+      console.error(error);
+      toast.error("Xóa thất bại");
+    }
+  };
 
   return {
     inventoryItems,
@@ -397,7 +401,7 @@ const handleImportExcel = async (file: File) => {
 
     isInventoryDialogOpen,
     setIsInventoryDialogOpen,
-    editingVariantLabel,
+    editingProductName,
     inventoryEditForm,
     setInventoryEditForm,
 
@@ -426,17 +430,23 @@ const handleImportExcel = async (file: File) => {
     handleCreatePurchaseReceipt,
 
     isExportDialogOpen,
-setIsExportDialogOpen,
-selectedExportColumns,
-setSelectedExportColumns,
-isExportingExcel,
-openExportDialog,
-handleExportExcel,
-isImportDialogOpen,
-setIsImportDialogOpen,
-isImportingExcel,
-importResult,
-openImportDialog,
-handleImportExcel,
+    setIsExportDialogOpen,
+    selectedExportColumns,
+    setSelectedExportColumns,
+    isExportingExcel,
+    openExportDialog,
+    handleExportExcel,
+
+    isImportDialogOpen,
+    setIsImportDialogOpen,
+    isImportingExcel,
+    importResult,
+    openImportDialog,
+    handleImportExcel,
+
+    handleDeleteInventory,
+    fetchInventory,
+
+   
   };
 }

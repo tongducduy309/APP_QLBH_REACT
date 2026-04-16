@@ -43,7 +43,7 @@ export function CustomerDetailPage() {
         setCustomer(res);
       } catch (error) {
         console.error("Lỗi lấy chi tiết khách hàng", error);
-        toast.error("Không thể tải chi tiết khách hàng.");
+        // toast.error("Không thể tải chi tiết khách hàng.");
       } finally {
         setLoading(false);
       }

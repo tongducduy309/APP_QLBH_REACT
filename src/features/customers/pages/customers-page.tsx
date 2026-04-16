@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Input, Popconfirm, Table } from "antd";
-import type { ColumnsType } from "antd/es/table";
+import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { PageShell } from "@/components/layout/page-shell";
@@ -16,7 +16,7 @@ import { formatCurrency } from "@/lib/utils";
 import {
   createCustomer,
   deleteCustomer,
-  getCustomers,
+  getCustomersWithDebt,
   updateCustomer,
 } from "@/services/customer-api";
 import type {
@@ -25,7 +25,9 @@ import type {
 } from "../types/customer.types";
 import { CustomerDialog } from "../components/CustomerDialog";
 import { removeVietnameseTones } from "@/utils/string";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+const PAGE_SIZE = 10;
 
 const initialCreateForm: CustomerCreateReq = {
   name: "",
@@ -57,7 +59,6 @@ function getGroupKey(name?: string) {
 export function CustomersPage() {
   const [customers, setCustomers] = useState<CustomerRes[]>([]);
   const [loading, setLoading] = useState(false);
-  const [search, setSearch] = useState("");
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogLoading, setDialogLoading] = useState(false);
@@ -65,18 +66,23 @@ export function CustomersPage() {
   const [editingCustomer, setEditingCustomer] = useState<CustomerRes | null>(null);
 
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
+  const keywordParam = searchParams.get("keyword") || "";
+  const pageParam = Number(searchParams.get("page") || "1");
+
+  const [keyword, setKeyword] = useState(keywordParam);
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
         setLoading(true);
-        const res = await getCustomers();
+        const res = await getCustomersWithDebt();
         setCustomers(res);
       } catch (error) {
         console.error("Lỗi lấy khách hàng", error);
-        toast.error("Không thể tải danh sách khách hàng."+error);
+        // toast.error("Không thể tải danh sách khách hàng.");
       } finally {
         setLoading(false);
       }
@@ -84,6 +90,42 @@ export function CustomersPage() {
 
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    setKeyword(keywordParam);
+  }, [keywordParam]);
+
+  const updateSearchParams = (next: {
+    keyword?: string;
+    page?: number;
+  }) => {
+    const params = new URLSearchParams(searchParams);
+
+    const finalKeyword = next.keyword ?? keywordParam;
+    const finalPage = next.page ?? pageParam;
+
+    if (finalKeyword?.trim()) {
+      params.set("keyword", finalKeyword.trim());
+    } else {
+      params.delete("keyword");
+    }
+
+    if (finalPage && finalPage > 1) {
+      params.set("page", String(finalPage));
+    } else {
+      params.delete("page");
+    }
+
+    setSearchParams(params);
+  };
+
+  const handleKeywordChange = (value: string) => {
+    setKeyword(value);
+    updateSearchParams({
+      keyword: value,
+      page: 1,
+    });
+  };
 
   const handleOpenCreateDialog = () => {
     setEditingCustomer(null);
@@ -122,7 +164,7 @@ export function CustomersPage() {
       };
 
       if (editingCustomer?.id) {
-        const updatedCustomer = await updateCustomer(editingCustomer?.id, payload);
+        const updatedCustomer = await updateCustomer(editingCustomer.id, payload);
 
         setCustomers((prev) =>
           prev.map((item) =>
@@ -140,11 +182,11 @@ export function CustomersPage() {
       handleCloseDialog();
     } catch (error) {
       console.error("Lỗi lưu khách hàng", error);
-      toast.error(
-        editingCustomer
-          ? "Không thể cập nhật khách hàng."
-          : "Không thể thêm khách hàng."
-      );
+      // toast.error(
+      //   editingCustomer
+      //     ? "Không thể cập nhật khách hàng."
+      //     : "Không thể thêm khách hàng."
+      // );
     } finally {
       setDialogLoading(false);
     }
@@ -152,7 +194,7 @@ export function CustomersPage() {
 
   const handleDeleteCustomer = async (id?: number) => {
     if (!id) {
-      toast.error("Không tìm thấy khách hàng để xóa.");
+      toast.info("Không tìm thấy khách hàng để xóa.");
       return;
     }
 
@@ -163,33 +205,37 @@ export function CustomersPage() {
       toast.success("Xóa khách hàng thành công.");
     } catch (error) {
       console.error("Lỗi xóa khách hàng", error);
-      toast.error("Không thể xóa khách hàng.");
+      // toast.error("Không thể xóa khách hàng.");
     } finally {
       setDeletingId(null);
     }
   };
 
   const normalizedKeyword = useMemo(
-    () => removeVietnameseTones(search),
-    [search]
+    () => removeVietnameseTones((keywordParam || "").trim().toLowerCase()),
+    [keywordParam]
   );
 
   const filteredCustomers = useMemo(() => {
     if (!normalizedKeyword) return customers;
 
     return customers.filter((customer) => {
-      const name = removeVietnameseTones(customer.name || "");
-      const phone = removeVietnameseTones(customer.phone || "");
-      const email = removeVietnameseTones(customer.email || "");
-      const address = removeVietnameseTones(customer.address || "");
-      const taxCode = removeVietnameseTones(customer.taxCode || "");
+      const name = removeVietnameseTones((customer.name || "").toLowerCase());
+      const phone = removeVietnameseTones((customer.phone || "").toLowerCase());
+      const email = removeVietnameseTones((customer.email || "").toLowerCase());
+      const address = removeVietnameseTones((customer.address || "").toLowerCase());
+      const taxCode = removeVietnameseTones((customer.taxCode || "").toLowerCase());
+      const totalDebt = removeVietnameseTones(
+        String(customer.totalDebt ?? "").toLowerCase()
+      );
 
       return (
         name.includes(normalizedKeyword) ||
         phone.includes(normalizedKeyword) ||
         email.includes(normalizedKeyword) ||
         address.includes(normalizedKeyword) ||
-        taxCode.includes(normalizedKeyword)
+        taxCode.includes(normalizedKeyword) ||
+        totalDebt.includes(normalizedKeyword)
       );
     });
   }, [customers, normalizedKeyword]);
@@ -224,33 +270,38 @@ export function CustomersPage() {
     return result;
   }, [filteredCustomers]);
 
+  const currentPage = Math.max(pageParam || 1, 1);
+
   const columns: ColumnsType<CustomerTableRow> = [
     {
-  title: "Tên khách hàng",
-  key: "name",
-  render: (_, record) => {
-    if (record.rowType === "group") {
-      return {
-        children: <span>Nhóm {record.groupLabel}</span>,
-        props: {
-          colSpan: 7,
-        },
-      };
-    }
+      title: "Tên khách hàng",
+      key: "name",
+      render: (_, record) => {
+        if (record.rowType === "group") {
+          return {
+            children: <span>Nhóm {record.groupLabel}</span>,
+            props: {
+              colSpan: 7,
+            },
+          };
+        }
 
-    const customer = record.customer;
+        const customer = record.customer;
 
-    return (
-      <button
-        type="button"
-        onClick={() => customer.id && navigate(`/customers/${customer.id}`)}
-        className="font-medium text-left text-primary hover:underline"
-      >
-        {customer.name || "-"}
-      </button>
-    );
-  },
-},
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              customer.id &&
+              navigate(`/customers/${customer.id}${window.location.search}`)
+            }
+            className="font-medium text-left text-primary hover:underline"
+          >
+            {customer.name || "-"}
+          </button>
+        );
+      },
+    },
     {
       title: "Mã số thuế",
       key: "taxCode",
@@ -348,6 +399,12 @@ export function CustomersPage() {
     },
   ];
 
+  const handleTableChange = (pagination: TablePaginationConfig) => {
+    updateSearchParams({
+      page: pagination.current || 1,
+    });
+  };
+
   return (
     <PageShell>
       <Card>
@@ -364,8 +421,8 @@ export function CustomersPage() {
               placeholder="Tìm theo tên, SĐT, email, MST..."
               prefix={<Search className="h-4 w-4" />}
               allowClear
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={keyword}
+              onChange={(e) => handleKeywordChange(e.target.value)}
               className="md:w-[320px]"
             />
             <Button onClick={handleOpenCreateDialog}>Thêm khách hàng</Button>
@@ -378,10 +435,16 @@ export function CustomersPage() {
             columns={columns}
             dataSource={tableData}
             loading={loading}
-            pagination={{ pageSize: 10 }}
+            onChange={handleTableChange}
+            pagination={{
+              current: currentPage,
+              pageSize: PAGE_SIZE,
+              total: tableData.length,
+              showSizeChanger: false,
+            }}
             scroll={{ x: 1200 }}
             locale={{
-              emptyText: search
+              emptyText: keywordParam
                 ? "Không tìm thấy khách hàng phù hợp."
                 : "Chưa có khách hàng",
             }}
