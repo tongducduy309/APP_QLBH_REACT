@@ -1,6 +1,6 @@
 import { Button, Input, InputNumber, Select, Switch, message } from "antd";
 import { Save, RotateCcw, Printer } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
 import {
   Card,

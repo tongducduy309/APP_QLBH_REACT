@@ -2,7 +2,6 @@
 
 import type { CartLineItem, CustomerOrderInfo } from "@/features/sales/types/sales.types";
 import type { OrderRes } from "@/types/order";
-import { toISOStringFromVNDate } from "@/utils/date";
 
 export function mapOrderDetailsToCartItems(order: OrderRes): CartLineItem[] {
   return (order.details ?? []).map((detail) => {

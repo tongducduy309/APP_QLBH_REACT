@@ -27,7 +27,6 @@ import {
 
 import type {
   PurchaseReceiptCreateReq,
-  PurchaseReceiptMethod,
   PurchaseReceiptRes,
 } from "../types/purchase-receipt.types";
 import { PurchaseReceiptDialog } from "../components/purchase-receipt-dialog";
@@ -42,18 +41,7 @@ type PurchaseReceiptTableRow = PurchaseReceiptRes & {
 const MAX_NOTE_LENGTH = 250;
 const PAGE_SIZE = 10;
 
-const purchaseReceiptMethodOptions: {
-  label: string;
-  value: PurchaseReceiptMethod;
-  description: string;
-}[] = [
-    {
-      label: "Tạo tồn kho riêng",
-      value: "SEPARATE",
-      description:
-        "Dùng cho tôn cuộn hoặc hàng cần theo dõi riêng từng lần nhập.",
-    },
-  ];
+
 
 const initialFormValues: PurchaseReceiptCreateReq = {
   productVariantId: undefined,

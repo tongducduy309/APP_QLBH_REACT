@@ -21,10 +21,7 @@ import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-p
 import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/purchase-receipt-detail-page";
 
 export const router = createBrowserRouter([
-  {
-    path: "/",
-    element: <Navigate to="/dashboard" replace />,
-  },
+  
   {
     element: <GuestRoute />,
     children: [{ path: "/login", element: <LoginPage /> }],
@@ -54,6 +51,10 @@ export const router = createBrowserRouter([
         ],
       },
     ],
+  },
+  {
+    path: "/",
+    element: <Navigate to="/sales" replace />,
   },
   { path: "/forbidden", element: <ForbiddenPage /> },
   { path: "*", element: <NotFoundPage /> },

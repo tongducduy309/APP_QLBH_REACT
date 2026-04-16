@@ -20,8 +20,7 @@ import type {
   ProductVariantInventoryRes,
 } from "../types/inventory.types";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { deleteInventory } from "@/services/product-api";
-import { toast } from "sonner";
+
 
 type Props = {
   items: ProductInventoryRes[];

@@ -17,7 +17,7 @@ function formatQuantity(n: number): string {
 }
 
 
-const LOGO_URL = "/logo.png";
+// const LOGO_URL = "/logo.png";
 
 export function InvoiceCopyImageTemplate({ order }: Props) {
   if (!order) return;

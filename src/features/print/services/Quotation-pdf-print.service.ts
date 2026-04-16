@@ -52,11 +52,11 @@ function formatMoney(n: number): string {
   return new Intl.NumberFormat("vi-VN").format(Number(n || 0));
 }
 
-function formatQuantity(n: number): string {
-  const num = Number(n || 0);
-  if (Number.isInteger(num)) return String(num);
-  return num.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
-}
+// function formatQuantity(n: number): string {
+//   const num = Number(n || 0);
+//   if (Number.isInteger(num)) return String(num);
+//   return num.toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+// }
 
 function numberToVietnameseWords(num: number): string {
   const units = [
@@ -563,13 +563,14 @@ function getPdfBuffer(docDefinition: TDocumentDefinitions): Promise<Uint8Array> 
   });
 }
 
-export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
+export async function printQuotation(data: OrderRes) {
   const dd = buildQuotationDocDefinition(sortOrderResDetails(data));
 
   if (window.qlbh?.printPdfSilent) {
     const buf = await getPdfBuffer(dd);
     const bytes = Array.from(buf);
-
+    const settings = useSettingsStore.getState().settings;
+    const opts: PrintOptions = settings?.printOptions || {};
     const res = await window.qlbh.printPdfSilent({
       bytes,
       fileName: data.code ? `${data.code}-bao-gia.pdf` : "bang-bao-gia.pdf",
@@ -586,12 +587,12 @@ export async function printQuotation(data: OrderRes, opts: PrintOptions = {}) {
   pdfMake.createPdf(dd).print();
 }
 
-export function previewQuotation(data: OrderRes, opts: PrintOptions = {}) {
+export function previewQuotation(data: OrderRes) {
   const dd = buildQuotationDocDefinition(sortOrderResDetails(data));
   pdfMake.createPdf(dd).open();
 }
 
-export function downloadQuotation(data: OrderRes, opts: PrintOptions = {}) {
+export function downloadQuotation(data: OrderRes) {
   const name = formatDateToDDMMYYYY(
     data.createdAt ?? new Date().toISOString()
   );

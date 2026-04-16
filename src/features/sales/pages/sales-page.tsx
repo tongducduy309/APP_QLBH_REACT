@@ -404,10 +404,7 @@ export function SalesPage({
 
   const handleDownloadQuote = useCallback(() => {
     if (!printableOrder) return;
-    downloadQuotation(printableOrder, {
-      paperSize: "A4",
-      pageOrientation: "portrait",
-    });
+    downloadQuotation(printableOrder);
   }, [printableOrder]);
 
   if (loadingEditOrder) {

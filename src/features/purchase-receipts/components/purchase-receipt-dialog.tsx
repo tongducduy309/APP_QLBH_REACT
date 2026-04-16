@@ -7,7 +7,6 @@ import type {
 import { useEffect, useMemo, useState } from "react";
 import { getAllProductVariants } from "@/services/product-api";
 import type { ProductVariantRes } from "@/types/product";
-import { toast } from "sonner";
 import { removeVietnameseTones } from "@/utils/string";
 
 type VariantOption = {

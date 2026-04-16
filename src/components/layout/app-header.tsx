@@ -5,7 +5,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
-import { useSettingsStore } from "@/features/settings/store/settings-store";
 import { navigationItems } from "@/routes/navigation";
 import { resolveSearchItemRoute } from "@/features/search/utils/search-route";
 import { GlobalSearchDropdown } from "@/features/search/components/global-search-dropdown";

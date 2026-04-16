@@ -24,6 +24,7 @@ export const mapSalesDraftToOrderRes = (
     inventoryId: item.inventoryId ?? null,
     sku: item.sku ?? "",
     kind: item.kind,
+    weight: item.weight ?? "",
     name: item.name ?? "",
     productVariantId: item.variantId ?? null,
     baseUnit: item.unit ?? "",

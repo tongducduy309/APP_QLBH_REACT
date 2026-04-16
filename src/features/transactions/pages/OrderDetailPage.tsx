@@ -5,7 +5,6 @@ import type { ColumnsType } from "antd/es/table";
 import {
   ArrowLeft,
   CircleDollarSign,
-  Copy,
   EllipsisVertical,
   Eye,
   FileDown,

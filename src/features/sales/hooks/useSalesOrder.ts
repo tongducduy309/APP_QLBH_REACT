@@ -202,16 +202,16 @@ function buildStockKey(input: {
   return `product:${input.productId ?? 0}`;
 }
 
-function getProductDisplayName(product?: {
-  name?: string | null;
-  variantCode?: string | null;
-}) {
-  const name = product?.name?.trim();
-  const variantCode = product?.variantCode?.trim();
+// function getProductDisplayName(product?: {
+//   name?: string | null;
+//   variantCode?: string | null;
+// }) {
+//   const name = product?.name?.trim();
+//   const variantCode = product?.variantCode?.trim();
 
-  if (name && variantCode) return `${name} - ${variantCode}`;
-  return name || variantCode || "Sản phẩm";
-}
+//   if (name && variantCode) return `${name} - ${variantCode}`;
+//   return name || variantCode || "Sản phẩm";
+// }
 
 export function useSalesOrders(options?: UseSalesOrdersOptions) {
   const storageKey = options?.storageKey ?? DEFAULT_STORAGE_KEY;

@@ -10,7 +10,6 @@ import {
   User2,
   Wallet,
 } from "lucide-react";
-import { toast } from "sonner";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Button as AntdButton } from "antd";

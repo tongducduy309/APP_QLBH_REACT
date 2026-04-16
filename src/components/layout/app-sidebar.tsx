@@ -1,9 +1,8 @@
 import { NavLink } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Package2 } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { navigationItems } from "@/routes/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 type Props = {
   collapsed: boolean;

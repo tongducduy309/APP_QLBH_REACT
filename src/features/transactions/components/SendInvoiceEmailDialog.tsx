@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Input, Select } from "antd";
+import { Input } from "antd";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,10 +8,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getCustomers } from "@/services/customer-api";
 import { sendInvoiceEmail } from "@/services/order-api";
 import { getInvoicePdfBlob } from "@/features/print/services/Invoice-pdf-print.service";
-import type { CustomerRes } from "@/features/customers/types/customer.types";
 import type { OrderRes } from "@/types/order";
 
 type Props = {

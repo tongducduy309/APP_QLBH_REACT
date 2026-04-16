@@ -354,29 +354,20 @@ export function QuoteReportPage() {
 
     try {
       if (quoteAction === "preview") {
-        previewQuotation(quotationOrder, {
-          paperSize: "A4",
-          pageOrientation: "portrait",
-        });
+        previewQuotation(quotationOrder);
         setQuoteDialogOpen(false);
         return;
       }
 
       if (quoteAction === "download") {
-        downloadQuotation(quotationOrder, {
-          paperSize: "A4",
-          pageOrientation: "portrait",
-        });
+        downloadQuotation(quotationOrder);
         setQuoteDialogOpen(false);
         return;
       }
 
       if (quoteAction === "print") {
         setPdfLoading(true);
-        await printQuotation(quotationOrder, {
-          paperSize: "A4",
-          pageOrientation: "portrait",
-        });
+        await printQuotation(quotationOrder);
         setQuoteDialogOpen(false);
       }
     } catch (error) {

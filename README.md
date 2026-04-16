@@ -59,3 +59,9 @@ src/
 - Dự án này tập trung vào việc **chuyển kiến trúc Angular sang React** và dựng sẵn UI/flow để bạn có thể chạy ngay.
 - `src/lib/axios.ts` đã sẵn sàng để nối backend thật.
 - Dữ liệu hiện dùng mock ở `src/lib/mock-data.ts` để dự án chạy độc lập.
+
+
+## BUILD
+
+```bash
+npm run dist:win             

@@ -246,3 +246,6 @@ release/win-unpacked/resources/jre/conf/security/policy/limited/default_local.po
 release/win-unpacked/resources/jre/conf/security/policy/unlimited/default_local.policy
 release/win-unpacked/resources/jre/conf/security/policy/limited/default_US_export.policy
 release/win-unpacked/resources/jre/conf/security/policy/unlimited/default_US_export.policy
+/backend
+/backend
+*.jar

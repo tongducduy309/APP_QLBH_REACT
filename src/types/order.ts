@@ -13,7 +13,7 @@ export interface OrderDetailRes {
   price:number;
   totalQuantity:number | null;
   inventoryId: number | null;
-  weight:string;
+  weight:string | null;
   sku: string;
   name: string;
   kind:LineKind;

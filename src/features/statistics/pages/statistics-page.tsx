@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { Button, DatePicker, Empty, Select, Spin, Table, Tag } from "antd";
+import { Button, DatePicker, Empty, Spin, Table, Tag } from "antd";
 import dayjs, { Dayjs } from "dayjs";
 import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,18 +9,17 @@ import { getStatisticsSummary } from "@/services/analysis-api";
 import type {
   RevenueBucketRes,
   SalesAnalysisResponse,
-  StatisticsMode,
 } from "@/features/statistics/types/statistics.types";
 
 const { RangePicker } = DatePicker;
 
-const modeOptions: { label: string; value: StatisticsMode }[] = [
-  { label: "Theo ngày", value: "date" },
-  { label: "Theo tuần", value: "weekly" },
-  { label: "Theo tháng", value: "monthly" },
-  { label: "Theo quý", value: "quarterly" },
-  { label: "Theo năm", value: "yearly" },
-];
+// const modeOptions: { label: string; value: StatisticsMode }[] = [
+//   { label: "Theo ngày", value: "date" },
+//   { label: "Theo tuần", value: "weekly" },
+//   { label: "Theo tháng", value: "monthly" },
+//   { label: "Theo quý", value: "quarterly" },
+//   { label: "Theo năm", value: "yearly" },
+// ];
 
 function formatPeriodLabel(value?: string) {
   if (!value) return "-";
@@ -39,7 +38,6 @@ function normalizeChartData(buckets: RevenueBucketRes[]) {
 }
 
 export function StatisticsPage() {
-  const [mode, setMode] = useState<StatisticsMode>("weekly");
   const [range, setRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf("month"),
     dayjs().endOf("month"),
@@ -48,13 +46,11 @@ export function StatisticsPage() {
   const [data, setData] = useState<SalesAnalysisResponse | null>(null);
 
   const fetchStatistics = async (
-    nextMode: StatisticsMode = mode,
     nextRange: [Dayjs, Dayjs] = range
   ) => {
     try {
       setLoading(true);
       const res = await getStatisticsSummary(
-        nextMode,
         nextRange[0].format("YYYY-MM-DD"),
         nextRange[1].format("YYYY-MM-DD")
       );
