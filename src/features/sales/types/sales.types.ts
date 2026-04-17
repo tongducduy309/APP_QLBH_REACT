@@ -18,6 +18,7 @@ export type Product = {
   variantId?: number | null;
   variantCode?: string;
   inventoryId?: number | null;
+  kind?: LineKind;
 };
 
 export type CustomerOrderInfo = {

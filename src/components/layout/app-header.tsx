@@ -1,5 +1,5 @@
 import { Menu } from "antd";
-import { Bell, LogOut, MenuIcon, Search } from "lucide-react";
+import { Bell, LogOut, MenuIcon, RefreshCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -145,9 +145,9 @@ export function AppHeader() {
             </div>
           </div>
 
-          <Button variant="outline" size="sm" className="gap-2">
-            <Bell className="h-4 w-4" />
-            Thông báo
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.reload()}>
+            <RefreshCcw className="h-4 w-4" />
+            Tải lại trang
           </Button>
 
           <Button

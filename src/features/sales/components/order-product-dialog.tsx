@@ -16,7 +16,7 @@ import { Plus, TriangleAlert, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getEffectiveQuantity } from "../utils/sales-calculations";
-import { OrderedProduct } from "../types/sales.types";
+import { LineKind, OrderedProduct } from "../types/sales.types";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -32,6 +32,7 @@ export type InventoryRes = {
   storePrice?: number;
   cost?: number;
   stock?: number;
+  kind?: LineKind;
 };
 
 type OrderSizeLine = {
@@ -137,7 +138,6 @@ export function OrderProductDialog({
   const [isOverStockDialogOpen, setIsOverStockDialogOpen] = useState(false);
   const [allowOutsideStock, setAllowOutsideStock] = useState(false);
 
-  const [checkStock, setCheckStock] = useState<boolean>(true);
 
   const lengthRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
@@ -147,10 +147,10 @@ export function OrderProductDialog({
     if (!open) return;
 
     if (editValue) {
-      setForm((prev) => ({
-        ...prev,
+      setForm({
+        ...createInitialForm(product),
         price: editValue.price,
-      }));
+      });
       setPriceMode("A");
       setUnit(editValue.unit || product?.baseUnit || "");
       setSizeLines(
@@ -162,10 +162,8 @@ export function OrderProductDialog({
       );
       setProductName(editValue.name || "");
       setIsProductNameManuallyEdited(true);
-      setAllowOutsideStock(false);
+      setAllowOutsideStock(product?.kind === "NON_INVENTORY");
       setIsOverStockDialogOpen(false);
-      setCheckStock(product?.inventoryId !== null&&product?.inventoryId !== undefined&&product?.inventoryId !== 0);
-      console.log(checkStock);
 
       setTimeout(() => {
         const first = editValue.sizeLines[0];
@@ -461,6 +459,8 @@ export function OrderProductDialog({
       inventoryId: product?.inventoryId ?? editValue?.inventoryId ?? null,
     }));
 
+    
+
     if ((form.type === "B" || form.type === "C") && form.curving.enabled) {
       const totalCurvingQty = sizeLines.reduce(
         (sum, line) => sum + Number(line.quantity || 0),
@@ -480,7 +480,7 @@ export function OrderProductDialog({
         inventoryId: null,
       });
     }
-    console.log("orders", orders);
+    // console.log("orders", orders);
     onOrder(orders);
     toast.success(editValue ? "Đã cập nhật sản phẩm." : "Đã thêm sản phẩm.");
     onOpenChange(false);
@@ -488,8 +488,8 @@ export function OrderProductDialog({
 
   const handleSubmit = () => {
     if (!validateForm()) return;
-
-    if (checkStock&&isOverStock && !allowOutsideStock) {
+    console.log(allowOutsideStock,isOverStock)
+    if (!allowOutsideStock&&isOverStock) {
       setIsOverStockDialogOpen(true);
       return;
     }
@@ -797,7 +797,7 @@ export function OrderProductDialog({
               </div>
 
               {
-                checkStock && (
+                !allowOutsideStock && (
                   <div className="flex items-center justify-between gap-4">
                     <span className="text-muted-foreground">Tồn kho hiện tại</span>
                     <span className="font-medium">{availableStock}</span>
@@ -807,8 +807,8 @@ export function OrderProductDialog({
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Tổng số lượng</span>
-                <span className={isOverStock&&checkStock ? "font-medium text-red-600" : "font-medium"}>
-                  {totalQuantity} {isOverStock&&checkStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
+                <span className={isOverStock&&!allowOutsideStock ? "font-medium text-red-600" : "font-medium"}>
+                  {totalQuantity} {isOverStock&&!allowOutsideStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
                 </span>
               </div>
 

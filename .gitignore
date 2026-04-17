@@ -249,3 +249,5 @@ release/win-unpacked/resources/jre/conf/security/policy/unlimited/default_US_exp
 /backend
 /backend
 *.jar
+backend/app.jar
+backend/app.jar

@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
+import { Navigate, createBrowserRouter, createHashRouter  } from "react-router-dom";
 import { ProtectedRoute, GuestRoute } from "@/app/router/guards";
 import { MainLayout } from "@/layouts/main-layout";
 import { DashboardPage } from "@/features/dashboard/pages/dashboard-page";
@@ -20,7 +20,9 @@ import { ProductDetailPage } from "@/features/inventory/pages/product-detail-pag
 import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-page";
 import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/purchase-receipt-detail-page";
 
-export const router = createBrowserRouter([
+const isElectron = window.location.protocol === "file:";
+
+export const router = (isElectron ? createHashRouter : createBrowserRouter)([
   
   {
     element: <GuestRoute />,

@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { navigationItems } from "@/routes/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-
+import logo from "@/assets/logo.png";
 type Props = {
   collapsed: boolean;
   onToggle: () => void;
@@ -24,7 +24,7 @@ export function AppSidebar({ collapsed, onToggle }: Props) {
       <div className="mb-8 flex items-center gap-3 px-2">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-primary/10 text-primary">
           <img
-              src="/logo.png"
+              src={logo}
               alt={appName}
               className="h-full w-full object-cover"
             />

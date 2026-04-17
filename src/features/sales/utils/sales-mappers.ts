@@ -84,6 +84,7 @@ export function mapInventoryProductsToSalesProducts(
           variantId: null,
           variantCode: "",
           inventoryId: null,
+          // kind: "INVENTORY",
         },
       ];
     }

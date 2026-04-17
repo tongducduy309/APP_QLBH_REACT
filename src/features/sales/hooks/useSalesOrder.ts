@@ -218,21 +218,27 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
 
   const storageRef = useRef<PersistedState | null>(readStorage(storageKey));
 
-  const [orders, setOrders] = useState<SalesOrderDraft[]>(() => {
-    const savedOrders = storageRef.current?.orders ?? [];
-    return savedOrders.length > 0 ? savedOrders : [createEmptyDraft()];
-  });
+const fallbackDraftRef = useRef<SalesOrderDraft>(createEmptyDraft());
 
-  const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
-    const savedActiveId = storageRef.current?.activeOrderId;
-    const savedOrders = storageRef.current?.orders ?? [];
+const [orders, setOrders] = useState<SalesOrderDraft[]>(() => {
+  const savedOrders = storageRef.current?.orders ?? [];
+  return savedOrders.length > 0 ? savedOrders : [fallbackDraftRef.current];
+});
 
-    if (savedActiveId && savedOrders.some((o) => o.id === savedActiveId)) {
-      return savedActiveId;
-    }
+const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
+  const savedActiveId = storageRef.current?.activeOrderId;
+  const savedOrders = storageRef.current?.orders ?? [];
 
-    return savedOrders[0]?.id ?? null;
-  });
+  if (savedActiveId && savedOrders.some((o) => o.id === savedActiveId)) {
+    return savedActiveId;
+  }
+
+  if (savedOrders.length > 0) {
+    return savedOrders[0].id;
+  }
+
+  return fallbackDraftRef.current.id;
+});
 
   const activeOrder = useMemo(() => {
     return orders.find((order) => order.id === activeOrderId) ?? orders[0] ?? null;
@@ -248,12 +254,28 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
   );
 
   const updateActiveOrder = useCallback(
-    (updater: (draft: SalesOrderDraft) => SalesOrderDraft) => {
-      if (!activeOrderId) return;
-      updateOrder(activeOrderId, updater);
-    },
-    [activeOrderId, updateOrder]
-  );
+  (updater: (draft: SalesOrderDraft) => SalesOrderDraft) => {
+    setOrders((prev) => {
+      if (prev.length === 0) {
+        const fallback = createEmptyDraft();
+        const nextDraft = updater(fallback);
+        setActiveOrderId(nextDraft.id);
+        return [nextDraft];
+      }
+
+      const targetId = activeOrderId ?? prev[0].id;
+
+      return prev.map((order) =>
+        order.id === targetId ? updater(order) : order
+      );
+    });
+
+    if (activeOrderId == null) {
+      setActiveOrderId((prev) => prev ?? orders[0]?.id ?? null);
+    }
+  },
+  [activeOrderId, orders]
+);
 
   const assignOrderCodeForDraft = useCallback(
     async (draftId: number) => {
@@ -617,7 +639,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
         productId: item.productId ?? null,
       });
 
-      map.set(key, (map.get(key) ?? 0) + getEffectiveQuantity(item));
+      map.set(key, (map.get(key) ?? 0) + (item.kind === "INVENTORY" ? getEffectiveQuantity(item) : 0));
     });
 
     return map;
@@ -767,6 +789,7 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
           });
 
           if (editingKey === key) {
+            
             editingOldQty += getEffectiveQuantity(item);
           }
         });

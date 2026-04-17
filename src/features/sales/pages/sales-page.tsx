@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { ArrowLeft, GripVertical, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, GripVertical, X } from "lucide-react";
 import { useSalesOrders } from "../hooks/useSalesOrder";
 import { mapSalesDraftToOrderRes } from "@/features/print/utils/order-print-mapper";
 import { printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
@@ -47,6 +47,7 @@ import { InvoiceCopyImageTemplate } from "@/features/print/components/invoice-co
 import { copyElementAsImage } from "@/features/print/utils/copy-invoice-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { sortOrderResDetails } from "@/utils/order.helper";
+import checkoutSuccessSound from "@/assets/sounds/checkout.mp3";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -96,6 +97,37 @@ export function SalesPage({
   const [loadEditOrderFailed, setLoadEditOrderFailed] = useState(false);
 
   const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
+
+  const checkoutSuccessAudioRef = useRef<HTMLAudioElement | null>(null);
+
+const successTimerRef = useRef<number | null>(null);
+const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+
+  const playCheckoutSuccessSound = () => {
+  if (!checkoutSuccessAudioRef.current) {
+    checkoutSuccessAudioRef.current = new Audio(checkoutSuccessSound);
+    checkoutSuccessAudioRef.current.preload = "auto";
+  }
+
+  checkoutSuccessAudioRef.current.currentTime = 0;
+  checkoutSuccessAudioRef.current.play().catch((error) => {
+    console.warn("Không phát được âm thanh checkout:", error);
+  });
+};
+
+const triggerCheckoutSuccessEffect = () => {
+  playCheckoutSuccessSound();
+  setShowCheckoutSuccess(true);
+
+  if (successTimerRef.current) {
+    window.clearTimeout(successTimerRef.current);
+  }
+
+  successTimerRef.current = window.setTimeout(() => {
+    setShowCheckoutSuccess(false);
+  }, 1600);
+};
+
 
   const printableOrder = useMemo(() => {
     if (!sales.activeOrder) return null;
@@ -199,6 +231,14 @@ export function SalesPage({
     hydratedRef.current = false;
   }, [orderId]);
 
+  useEffect(() => {
+  return () => {
+    if (successTimerRef.current) {
+      window.clearTimeout(successTimerRef.current);
+    }
+  };
+}, []);
+
   const productsWithAvailableStock = useMemo(() => {
 
     return products.map((product) => ({
@@ -298,34 +338,34 @@ export function SalesPage({
   };
 
   const afterSubmitSuccess = async (
-    messageText: string,
-    finalOrderId?: string
-  ) => {
-    if (checkedPrintInvoice && printableOrder) {
-      printInvoice(printableOrder);
-    }
-    // sales.assignOrderCodeForDraft(sales.activeOrderId ?? 0);
-    toast.success(messageText);
+  messageText: string,
+  finalOrderId?: string
+) => {
+  if (checkedPrintInvoice && printableOrder) {
+    printInvoice(printableOrder);
+  }
 
-    await fetchProducts();
+  if (!isEditMode)triggerCheckoutSuccessEffect();
+  else toast.success(messageText);
 
-    setMissingCustomerDialogOpen(false);
-    setCustomerOrderDialogOpen(false);
-    setCustomerPickerOpen(false);
-    setDialogOpen(false);
+  await fetchProducts();
+  setMissingCustomerDialogOpen(false);
+  setCustomerOrderDialogOpen(false);
+  setCustomerPickerOpen(false);
+  setDialogOpen(false);
 
-    if (isEditMode && finalOrderId) {
-      navigate(`/transactions/${finalOrderId}`, { replace: true });
-      return;
-    }
+  if (isEditMode && finalOrderId) {
+    navigate(`/transactions/${finalOrderId}`, { replace: true });
+    return;
+  }
 
-    const completedId = sales.activeOrderId;
-    if (completedId) {
-      sales.forceRemoveOrder(completedId);
-    }
+  const completedId = sales.activeOrderId;
+  if (completedId) {
+    sales.forceRemoveOrder(completedId);
+  }
 
-    setSelectedCustomerFromPicker(null);
-  };
+  setSelectedCustomerFromPicker(null);
+};
 
   const submitCheckout = async () => {
     if (isCartEmpty) {
@@ -407,15 +447,7 @@ export function SalesPage({
     downloadQuotation(printableOrder);
   }, [printableOrder]);
 
-  if (loadingEditOrder) {
-    return (
-      <PageShell>
-        <div className="rounded-xl border bg-white p-8 text-center text-sm text-muted-foreground">
-          Đang tải dữ liệu hóa đơn...
-        </div>
-      </PageShell>
-    );
-  }
+  
 
   const handleCopyInvoiceImage = async () => {
     if (!printableOrder || !invoiceCopyRef.current) return;
@@ -429,15 +461,18 @@ export function SalesPage({
     }
   };
 
-  if (loadingEditOrder && isEditMode) {
+  
+
+  if (loadingEditOrder) {
     return (
       <PageShell>
-        <div className="flex min-h-[300px] items-center justify-center">
-          <Spin size="large" />
+        <div className="rounded-xl border bg-white p-8 text-center text-sm text-muted-foreground">
+          Đang tải dữ liệu hóa đơn...
         </div>
       </PageShell>
     );
   }
+
 
   if (loadEditOrderFailed && isEditMode) {
     return (
@@ -482,8 +517,8 @@ export function SalesPage({
               }}
               onDragEnd={() => setDraggingOrderId(null)}
               className={`flex items-center rounded-lg border ${order.isActive
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background hover:bg-muted/50"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background hover:bg-muted/50"
                 } ${draggingOrderId === order.id ? "opacity-50" : ""}`}
             >
               <button
@@ -558,11 +593,11 @@ export function SalesPage({
                       (p.variantId ?? null) === (group.variantId ?? null) ||
                       (p.id ?? null) === (group.productId ?? null)
                   );
-
+                // console.log("matchedProduct", matchedProduct?.kind , group.kind);
+                console.log("group", group);
                 const baseProduct = {
                   id: matchedProduct?.id ?? group.productId ?? null,
-                  inventoryId:
-                    (matchedProduct as any)?.inventoryId ?? group.inventoryId ?? null,
+                  inventoryId: (matchedProduct as any)?.inventoryId ?? group.inventoryId ?? null,
                   name: matchedProduct?.name ?? group.name,
                   retailPrice: matchedProduct?.retailPrice ?? group.price,
                   storePrice: matchedProduct?.storePrice ?? group.price,
@@ -571,6 +606,7 @@ export function SalesPage({
                   stock: matchedProduct?.stock ?? 0,
                   variantId: matchedProduct?.variantId ?? group.variantId ?? null,
                   variantCode: matchedProduct?.variantCode ?? "",
+                  kind: matchedProduct?.kind ?? group.kind
                 } as Product;
 
                 sales.setSelectedProduct({
@@ -579,6 +615,7 @@ export function SalesPage({
                   stock: sales.getAvailableStock(baseProduct, {
                     editingGroupKey: group.groupKey,
                   }),
+                  kind: group.displayType
                 } as Product);
 
                 sales.setEditingGroupKey(group.groupKey);
@@ -741,6 +778,30 @@ export function SalesPage({
           <InvoiceCopyImageTemplate order={printableOrder} />
         </div>
       </div>
+
+      {showCheckoutSuccess && (
+  <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+    <div className="animate-in fade-in zoom-in-95 duration-300">
+      <div className="flex min-w-[260px] flex-col items-center gap-3 rounded-2xl bg-white px-8 py-7 shadow-2xl">
+        <div className="relative">
+          <div className="absolute inset-0 animate-ping rounded-full bg-green-500/25" />
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-9 w-9 text-green-600" />
+          </div>
+        </div>
+
+        <div className="text-center">
+          <p className="text-lg font-semibold text-slate-900">
+            Thanh toán thành công
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Hóa đơn đã được hoàn thành
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
     </PageShell>
   );
 }
