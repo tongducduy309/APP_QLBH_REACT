@@ -42,7 +42,7 @@ import {
   mapOrderDetailsToCartItems,
   mapOrderToCustomerOrderInfo,
 } from "@/features/transactions/utils/order-edit-mapper";
-import { Button as AntdButton, Empty, Spin } from "antd";
+import { Button as AntdButton, Empty } from "antd";
 import { InvoiceCopyImageTemplate } from "@/features/print/components/invoice-copy-image-template";
 import { copyElementAsImage } from "@/features/print/utils/copy-invoice-image";
 import { Card, CardContent } from "@/components/ui/card";
@@ -345,7 +345,7 @@ const triggerCheckoutSuccessEffect = () => {
     printInvoice(printableOrder);
   }
 
-  if (!isEditMode)triggerCheckoutSuccessEffect();
+  if (!isEditMode) triggerCheckoutSuccessEffect();
   else toast.success(messageText);
 
   await fetchProducts();
@@ -353,18 +353,21 @@ const triggerCheckoutSuccessEffect = () => {
   setCustomerOrderDialogOpen(false);
   setCustomerPickerOpen(false);
   setDialogOpen(false);
+  setSelectedCustomerFromPicker(null);
 
-  if (isEditMode && finalOrderId) {
-    navigate(`/transactions/${finalOrderId}`, { replace: true });
+  if (isEditMode) {
+    sales.clearPersistedState();
+
+    if (finalOrderId) {
+      navigate(`/transactions/${finalOrderId}`, { replace: true });
+      return;
+    }
+
+    navigate("/transactions", { replace: true });
     return;
   }
 
-  const completedId = sales.activeOrderId;
-  if (completedId) {
-    sales.forceRemoveOrder(completedId);
-  }
-
-  setSelectedCustomerFromPicker(null);
+  sales.clearCurrentDraftOnly();
 };
 
   const submitCheckout = async () => {

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { defaultSettings, useSettingsStore } from "../store/settings-store";
 import type { UserSettings } from "../types/settings.types";
+import { OrderStorageCard } from "../components/order-storage-card";
 
 const paperSizeOptions = [
   { label: "A4", value: "A4" },
@@ -236,6 +237,7 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+        <OrderStorageCard />
       </div>
     </PageShell>
   );

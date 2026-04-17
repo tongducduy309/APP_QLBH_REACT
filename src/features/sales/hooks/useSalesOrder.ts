@@ -28,6 +28,12 @@ import { getNextOrderCode } from "@/services/order-api";
 
 const DEFAULT_STORAGE_KEY = "sales-multi-order-draft-v2";
 
+
+const DRAFT_TTL_MS = 24 * 60 * 60 * 1000; // 24h
+const EDIT_DRAFT_TTL_MS = 6 * 60 * 60 * 1000; // 6h
+const MAX_PERSISTED_ORDERS = 10;
+const STORAGE_VERSION = 1;
+
 const nowIso = () => new Date().toISOString();
 
 export const createOrderCodeFallback = () => {
@@ -36,6 +42,7 @@ export const createOrderCodeFallback = () => {
   const m = String(now.getMonth() + 1).padStart(2, "0");
   const d = String(now.getDate()).padStart(2, "0");
   const rand = Math.floor(Math.random() * 900 + 100);
+
   return `HD-${y}${m}${d}-${rand}`;
 };
 
@@ -51,30 +58,15 @@ const createDefaultCustomerOrderInfo = (): CustomerOrderInfo => ({
   orderCode: "",
   createdDate: nowIso(),
   note: "",
-  saveAsNewCustomer: false,
 });
 
 const createDefaultOtherExpenseDraft = (): OtherExpenseDraft => ({
   description: "",
-  quantity: 1,
-  length: 0,
   price: 0,
-  unit: "",
+  length: 1,
+  quantity: 0,
+  unit: ""
 });
-
-export type SalesOrderDraft = {
-  id: number;
-  cartItems: CartLineItem[];
-  shippingFee: number;
-  taxPercent: number;
-  discount: number;
-  paidAmount: number;
-  customerOrderInfo: CustomerOrderInfo;
-  otherExpenseDraft: OtherExpenseDraft;
-  editingGroupKey: string | null;
-  selectedProduct: Product | null;
-  createdAt: string;
-};
 
 type ReplaceActiveOrderDraftInput = {
   cartItems?: CartLineItem[];
@@ -88,9 +80,24 @@ type ReplaceActiveOrderDraftInput = {
   editingGroupKey?: string | null;
 };
 
+type PersistedOrder = {
+  id: number;
+  cartItems: SalesOrderDraft["cartItems"];
+  shippingFee: number;
+  taxPercent: number;
+  discount: number;
+  paidAmount: number;
+  customerOrderInfo: SalesOrderDraft["customerOrderInfo"];
+  otherExpenseDraft: SalesOrderDraft["otherExpenseDraft"];
+  createdAt: string;
+};
+
 type PersistedState = {
+  version: number;
   activeOrderId: number | null;
-  orders: SalesOrderDraft[];
+  updatedAt: string;
+  expiresAt: string;
+  orders: PersistedOrder[];
 };
 
 type UseSalesOrdersOptions = {
@@ -111,6 +118,116 @@ const createEmptyDraft = (): SalesOrderDraft => ({
   createdAt: nowIso(),
 });
 
+const isDraftMeaningful = (draft: SalesOrderDraft) => {
+  const info = draft.customerOrderInfo;
+
+  return Boolean(
+    draft.cartItems.length > 0 ||
+      draft.shippingFee > 0 ||
+      draft.taxPercent > 0 ||
+      draft.discount > 0 ||
+      draft.paidAmount > 0 ||
+      info.customerName?.trim() ||
+      info.customerPhone?.trim() ||
+      info.customerAddress?.trim() ||
+      info.note?.trim() ||
+      draft.otherExpenseDraft.description?.trim() ||
+      Number(draft.otherExpenseDraft.price) > 0 ||
+      Number(draft.otherExpenseDraft.length) > 0
+  );
+};
+
+const getTtlByStorageKey = (storageKey: string) => {
+  return storageKey.startsWith("sales-edit-order-draft-")
+    ? EDIT_DRAFT_TTL_MS
+    : DRAFT_TTL_MS;
+};
+
+const isExpired = (expiresAt?: string | null) => {
+  if (!expiresAt) return true;
+
+  const time = new Date(expiresAt).getTime();
+  return Number.isNaN(time) || time <= Date.now();
+};
+
+const toPersistedOrder = (draft: SalesOrderDraft): PersistedOrder => ({
+  id: draft.id,
+  cartItems: Array.isArray(draft.cartItems) ? draft.cartItems : [],
+  shippingFee: Number(draft.shippingFee ?? 0),
+  taxPercent: Number(draft.taxPercent ?? 0),
+  discount: Number(draft.discount ?? 0),
+  paidAmount: Number(draft.paidAmount ?? 0),
+  customerOrderInfo: {
+    ...createDefaultCustomerOrderInfo(),
+    ...(draft.customerOrderInfo ?? {}),
+  },
+  otherExpenseDraft: {
+    ...createDefaultOtherExpenseDraft(),
+    ...(draft.otherExpenseDraft ?? {}),
+  },
+  createdAt: draft.createdAt ?? nowIso(),
+});
+
+const normalizeOrdersFromStorage = (
+  orders?: PersistedOrder[] | null
+): SalesOrderDraft[] => {
+  if (!Array.isArray(orders)) return [];
+
+  return orders.map((item) => ({
+    id: item.id ?? createDraftId(),
+    cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
+    shippingFee: Number(item.shippingFee ?? 0),
+    taxPercent: Number(item.taxPercent ?? 0),
+    discount: Number(item.discount ?? 0),
+    paidAmount: Number(item.paidAmount ?? 0),
+    customerOrderInfo: {
+      ...createDefaultCustomerOrderInfo(),
+      ...(item.customerOrderInfo ?? {}),
+    },
+    otherExpenseDraft: {
+      ...createDefaultOtherExpenseDraft(),
+      ...(item.otherExpenseDraft ?? {}),
+    },
+    editingGroupKey: null,
+    selectedProduct: null,
+    createdAt: item.createdAt ?? nowIso(),
+  }));
+};
+
+const buildPersistedState = (
+  storageKey: string,
+  payload: {
+    activeOrderId: number | null;
+    orders: SalesOrderDraft[];
+  }
+): PersistedState | null => {
+  const meaningfulOrders = payload.orders
+    .filter(isDraftMeaningful)
+    .map(toPersistedOrder)
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt ?? 0).getTime() -
+        new Date(a.createdAt ?? 0).getTime()
+    )
+    .slice(0, MAX_PERSISTED_ORDERS);
+
+  if (meaningfulOrders.length === 0) return null;
+
+  const activeOrderId = meaningfulOrders.some(
+    (item) => item.id === payload.activeOrderId
+  )
+    ? payload.activeOrderId
+    : meaningfulOrders[0]?.id ?? null;
+
+  return {
+    version: STORAGE_VERSION,
+    activeOrderId,
+    updatedAt: nowIso(),
+    expiresAt: new Date(Date.now() + getTtlByStorageKey(storageKey)).toISOString(),
+    orders: meaningfulOrders,
+  };
+};
+
 const readStorage = (storageKey: string): PersistedState | null => {
   if (typeof window === "undefined") return null;
 
@@ -120,56 +237,81 @@ const readStorage = (storageKey: string): PersistedState | null => {
 
     const parsed = JSON.parse(raw) as Partial<PersistedState>;
 
-    const orders = Array.isArray(parsed.orders)
-      ? parsed.orders.map((item) => ({
-        id: item.id ?? createDraftId(),
-        cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
-        shippingFee: Number(item.shippingFee ?? 0),
-        taxPercent: Number(item.taxPercent ?? 0),
-        discount: Number(item.discount ?? 0),
-        paidAmount: Number(item.paidAmount ?? 0),
-        customerOrderInfo: {
-          ...createDefaultCustomerOrderInfo(),
-          ...(item.customerOrderInfo ?? {}),
-        },
-        otherExpenseDraft: {
-          ...createDefaultOtherExpenseDraft(),
-          ...(item.otherExpenseDraft ?? {}),
-        },
-        editingGroupKey: item.editingGroupKey ?? null,
-        selectedProduct: item.selectedProduct ?? null,
-        createdAt: item.createdAt ?? nowIso(),
-      }))
-      : [];
+    if (isExpired(parsed.expiresAt ?? null)) {
+      window.localStorage.removeItem(storageKey);
+      return null;
+    }
+
+    const normalizedOrders = normalizeOrdersFromStorage(parsed.orders);
+
+    if (normalizedOrders.length === 0) {
+      window.localStorage.removeItem(storageKey);
+      return null;
+    }
+
+    const activeOrderId =
+      normalizedOrders.some((item) => item.id === parsed.activeOrderId)
+        ? (parsed.activeOrderId ?? null)
+        : normalizedOrders[0]?.id ?? null;
 
     return {
-      activeOrderId: parsed.activeOrderId ?? orders[0]?.id ?? null,
-      orders,
+      version: Number(parsed.version ?? STORAGE_VERSION),
+      activeOrderId,
+      updatedAt: parsed.updatedAt ?? nowIso(),
+      expiresAt:
+        parsed.expiresAt ??
+        new Date(Date.now() + getTtlByStorageKey(storageKey)).toISOString(),
+      orders: normalizedOrders.map(toPersistedOrder),
     };
   } catch (error) {
     console.error("Không thể đọc dữ liệu hóa đơn nháp", error);
+    window.localStorage.removeItem(storageKey);
     return null;
   }
 };
 
-const isDraftMeaningful = (draft: SalesOrderDraft) => {
-  const info = draft.customerOrderInfo;
+const writeStorage = (
+  storageKey: string,
+  payload: {
+    activeOrderId: number | null;
+    orders: SalesOrderDraft[];
+  }
+) => {
+  if (typeof window === "undefined") return;
 
-  return Boolean(
-    draft.cartItems.length > 0 ||
-    draft.shippingFee > 0 ||
-    draft.taxPercent > 0 ||
-    draft.discount > 0 ||
-    draft.paidAmount > 0 ||
-    info.customerName?.trim() ||
-    info.customerPhone?.trim() ||
-    info.customerAddress?.trim() ||
-    info.note?.trim() ||
-    draft.otherExpenseDraft.description?.trim() ||
-    Number(draft.otherExpenseDraft.price) > 0 ||
-    Number(draft.otherExpenseDraft.length) > 0
-  );
+  try {
+    const nextState = buildPersistedState(storageKey, payload);
+
+    if (!nextState) {
+      window.localStorage.removeItem(storageKey);
+      return;
+    }
+
+    window.localStorage.setItem(storageKey, JSON.stringify(nextState));
+  } catch (error) {
+    console.error("Không thể lưu dữ liệu hóa đơn nháp", error);
+  }
 };
+
+
+
+
+export type SalesOrderDraft = {
+  id: number;
+  cartItems: CartLineItem[];
+  shippingFee: number;
+  taxPercent: number;
+  discount: number;
+  paidAmount: number;
+  customerOrderInfo: CustomerOrderInfo;
+  otherExpenseDraft: OtherExpenseDraft;
+  editingGroupKey: string | null;
+  selectedProduct: Product | null;
+  createdAt: string;
+};
+
+
+
 
 const moveArrayItem = <T,>(items: T[], fromIndex: number, toIndex: number) => {
   const next = [...items];
@@ -217,28 +359,27 @@ export function useSalesOrders(options?: UseSalesOrdersOptions) {
   const storageKey = options?.storageKey ?? DEFAULT_STORAGE_KEY;
 
   const storageRef = useRef<PersistedState | null>(readStorage(storageKey));
+  const fallbackDraftRef = useRef<SalesOrderDraft>(createEmptyDraft());
 
-const fallbackDraftRef = useRef<SalesOrderDraft>(createEmptyDraft());
+  const [orders, setOrders] = useState<SalesOrderDraft[]>(() => {
+    const savedOrders = normalizeOrdersFromStorage(storageRef.current?.orders);
+    return savedOrders.length > 0 ? savedOrders : [fallbackDraftRef.current];
+  });
 
-const [orders, setOrders] = useState<SalesOrderDraft[]>(() => {
-  const savedOrders = storageRef.current?.orders ?? [];
-  return savedOrders.length > 0 ? savedOrders : [fallbackDraftRef.current];
-});
+  const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
+    const savedOrders = normalizeOrdersFromStorage(storageRef.current?.orders);
+    const savedActiveId = storageRef.current?.activeOrderId;
 
-const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
-  const savedActiveId = storageRef.current?.activeOrderId;
-  const savedOrders = storageRef.current?.orders ?? [];
+    if (savedActiveId && savedOrders.some((item) => item.id === savedActiveId)) {
+      return savedActiveId;
+    }
 
-  if (savedActiveId && savedOrders.some((o) => o.id === savedActiveId)) {
-    return savedActiveId;
-  }
+    if (savedOrders.length > 0) {
+      return savedOrders[0].id;
+    }
 
-  if (savedOrders.length > 0) {
-    return savedOrders[0].id;
-  }
-
-  return fallbackDraftRef.current.id;
-});
+    return fallbackDraftRef.current.id;
+  });
 
   const activeOrder = useMemo(() => {
     return orders.find((order) => order.id === activeOrderId) ?? orders[0] ?? null;
@@ -669,16 +810,24 @@ const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
       const nextOrders = orders.filter((item: any) => item?.id !== orderId);
 
       const nextState: PersistedState = {
-        activeOrderId:
-          parsed.activeOrderId === orderId
-            ? nextOrders[0]?.id ?? null
-            : (parsed.activeOrderId as number | null) ?? nextOrders[0]?.id ?? null,
+        activeOrderId: parsed.activeOrderId === orderId
+          ? nextOrders[0]?.id ?? null
+          : (parsed.activeOrderId as number | null) ?? nextOrders[0]?.id ?? null,
         orders: nextOrders,
+        version: 0,
+        updatedAt: "",
+        expiresAt: ""
       };
 
       if (nextOrders.length === 0) {
         window.localStorage.removeItem(storageKey);
-        return { activeOrderId: null, orders: [] };
+        return {
+          activeOrderId: null, 
+          orders: [],
+          version: 0,
+          updatedAt: "",
+          expiresAt: "",
+        };
       }
 
       window.localStorage.setItem(storageKey, JSON.stringify(nextState));
@@ -696,44 +845,35 @@ const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
     setActiveOrderId(fallback.id);
   }, [storageKey]);
 
+  const clearCurrentDraftOnly = useCallback(() => {
+    if (!activeOrderId) return;
+
+    const nextState = removeOrderFromStorage(storageKey, activeOrderId);
+
+    if (!nextState || nextState.orders.length === 0) {
+      const fallback = createEmptyDraft();
+      setOrders([fallback]);
+      setActiveOrderId(fallback.id);
+      return;
+    }
+
+    const normalizedOrders = normalizeOrdersFromStorage(nextState.orders);
+    setOrders(normalizedOrders);
+    setActiveOrderId(nextState.activeOrderId ?? normalizedOrders[0]?.id ?? null);
+  }, [storageKey, activeOrderId]);
+
   const removePersistedOrderById = useCallback(
     (orderId: number) => {
       const nextState = removeOrderFromStorage(storageKey, orderId);
 
-      if (!nextState) {
+      if (!nextState || nextState.orders.length === 0) {
         const fallback = createEmptyDraft();
         setOrders([fallback]);
         setActiveOrderId(fallback.id);
         return;
       }
 
-      if (nextState.orders.length === 0) {
-        const fallback = createEmptyDraft();
-        setOrders([fallback]);
-        setActiveOrderId(fallback.id);
-        return;
-      }
-
-      const normalizedOrders = nextState.orders.map((item) => ({
-        id: item.id ?? createDraftId(),
-        cartItems: Array.isArray(item.cartItems) ? item.cartItems : [],
-        shippingFee: Number(item.shippingFee ?? 0),
-        taxPercent: Number(item.taxPercent ?? 0),
-        discount: Number(item.discount ?? 0),
-        paidAmount: Number(item.paidAmount ?? 0),
-        customerOrderInfo: {
-          ...createDefaultCustomerOrderInfo(),
-          ...(item.customerOrderInfo ?? {}),
-        },
-        otherExpenseDraft: {
-          ...createDefaultOtherExpenseDraft(),
-          ...(item.otherExpenseDraft ?? {}),
-        },
-        editingGroupKey: item.editingGroupKey ?? null,
-        selectedProduct: item.selectedProduct ?? null,
-        createdAt: item.createdAt ?? nowIso(),
-      }));
-
+      const normalizedOrders = normalizeOrdersFromStorage(nextState.orders);
       setOrders(normalizedOrders);
       setActiveOrderId(nextState.activeOrderId ?? normalizedOrders[0]?.id ?? null);
     },
@@ -953,16 +1093,13 @@ const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
     changeAmount,
   ]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (typeof window === "undefined") return;
 
-    window.localStorage.setItem(
-      storageKey,
-      JSON.stringify({
-        activeOrderId,
-        orders,
-      })
-    );
+    writeStorage(storageKey, {
+      activeOrderId,
+      orders,
+    });
   }, [storageKey, activeOrderId, orders]);
 
   useEffect(() => {
@@ -1070,5 +1207,6 @@ const [activeOrderId, setActiveOrderId] = useState<number | null>(() => {
 
     clearPersistedState,
     removePersistedOrderById,
+    clearCurrentDraftOnly,
   };
 }

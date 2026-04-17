@@ -1,10 +1,21 @@
 import { Outlet } from "react-router-dom";
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { cleanupExpiredOrderStorage } from "@/utils/order-storage-cleanup";
 
 export function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const result = cleanupExpiredOrderStorage();
+
+    if (result.removedKeys.length > 0) {
+      console.log(
+        "[order-storage] Đã xóa draft hết hạn:",
+        result.removedKeys
+      );
+    }
+  }, []);
   return (
     <div className="h-screen overflow-hidden bg-slate-50">
       <div className="flex h-full">

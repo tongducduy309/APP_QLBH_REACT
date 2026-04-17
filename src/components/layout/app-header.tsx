@@ -1,5 +1,5 @@
 import { Menu } from "antd";
-import { Bell, LogOut, MenuIcon, RefreshCcw, Search } from "lucide-react";
+import { LogOut, MenuIcon, RefreshCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
