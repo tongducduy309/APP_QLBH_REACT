@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Input, Table, Tag, Tooltip } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { Search } from "lucide-react";
+import { Search, ShoppingBasket } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -19,11 +19,13 @@ import { removeVietnameseTones } from "@/utils/string";
 type Props = {
   products: Product[];
   onOrderProduct: (product: Product) => void;
+  isMobile: boolean;
 };
 
 export function ProductSelectorCard({
   products,
   onOrderProduct,
+  isMobile
 }: Props) {
   const [search, setSearch] = useState("");
 
@@ -56,7 +58,7 @@ export function ProductSelectorCard({
     return result;
   }, [products, normalizedKeyword]);
 
-  const productColumns: ColumnsType<Product> = [
+  const productColumns: ColumnsType<Product> = !isMobile ? [
     { title: "Mã", dataIndex: "sku", key: "sku", width: 110 },
 
     {
@@ -151,6 +153,47 @@ export function ProductSelectorCard({
         </Button>
       ),
     },
+  ]:[
+
+
+    {
+      title: "Tên sản phẩm",
+      dataIndex: "name",
+      key: "name",
+      width: 200,
+      render: (value: string, record: Product) => (
+        <div className="flex items-center gap-2">
+          <span className="font-medium">
+            {value} ({record.variantCode})
+          </span>
+        </div>
+      ),
+    },
+
+    
+
+    {
+      title: "Tồn kho",
+      dataIndex: "stock",
+      key: "stock",
+      width: 100,
+    },
+
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 40,
+      fixed: "right",
+      render: (_, record) => (
+        <Button
+          size="sm"
+          onClick={() => onOrderProduct(record)}
+          // disabled={record.status === "Hết hàng"}
+        >
+          <ShoppingBasket />
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -181,13 +224,14 @@ export function ProductSelectorCard({
           rowKey={(record) => `${record.id}-${record.variantId}`}
           columns={productColumns}
           dataSource={filteredProducts}
-          pagination={{ pageSize: 5 }}
+          pagination={{ pageSize: 5 }} 
+          
           locale={{
             emptyText: search
               ? "Không tìm thấy sản phẩm"
               : "Chưa có sản phẩm",
           }}
-          scroll={{ x: 980 }}
+          scroll={{ x: isMobile ? undefined  : 980 }}
         />
       </CardContent>
     </Card>

@@ -48,6 +48,7 @@ import { copyElementAsImage } from "@/features/print/utils/copy-invoice-image";
 import { Card, CardContent } from "@/components/ui/card";
 import { sortOrderResDetails } from "@/utils/order.helper";
 import checkoutSuccessSound from "@/assets/sounds/checkout.mp3";
+import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -100,33 +101,35 @@ export function SalesPage({
 
   const checkoutSuccessAudioRef = useRef<HTMLAudioElement | null>(null);
 
-const successTimerRef = useRef<number | null>(null);
-const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+  const successTimerRef = useRef<number | null>(null);
+  const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false);
+
+  const isMobile = useIsMobile();
 
   const playCheckoutSuccessSound = () => {
-  if (!checkoutSuccessAudioRef.current) {
-    checkoutSuccessAudioRef.current = new Audio(checkoutSuccessSound);
-    checkoutSuccessAudioRef.current.preload = "auto";
-  }
+    if (!checkoutSuccessAudioRef.current) {
+      checkoutSuccessAudioRef.current = new Audio(checkoutSuccessSound);
+      checkoutSuccessAudioRef.current.preload = "auto";
+    }
 
-  checkoutSuccessAudioRef.current.currentTime = 0;
-  checkoutSuccessAudioRef.current.play().catch((error) => {
-    console.warn("Không phát được âm thanh checkout:", error);
-  });
-};
+    checkoutSuccessAudioRef.current.currentTime = 0;
+    checkoutSuccessAudioRef.current.play().catch((error) => {
+      console.warn("Không phát được âm thanh checkout:", error);
+    });
+  };
 
-const triggerCheckoutSuccessEffect = () => {
-  playCheckoutSuccessSound();
-  setShowCheckoutSuccess(true);
+  const triggerCheckoutSuccessEffect = () => {
+    playCheckoutSuccessSound();
+    setShowCheckoutSuccess(true);
 
-  if (successTimerRef.current) {
-    window.clearTimeout(successTimerRef.current);
-  }
+    if (successTimerRef.current) {
+      window.clearTimeout(successTimerRef.current);
+    }
 
-  successTimerRef.current = window.setTimeout(() => {
-    setShowCheckoutSuccess(false);
-  }, 1600);
-};
+    successTimerRef.current = window.setTimeout(() => {
+      setShowCheckoutSuccess(false);
+    }, 1600);
+  };
 
 
   const printableOrder = useMemo(() => {
@@ -232,12 +235,12 @@ const triggerCheckoutSuccessEffect = () => {
   }, [orderId]);
 
   useEffect(() => {
-  return () => {
-    if (successTimerRef.current) {
-      window.clearTimeout(successTimerRef.current);
-    }
-  };
-}, []);
+    return () => {
+      if (successTimerRef.current) {
+        window.clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
 
   const productsWithAvailableStock = useMemo(() => {
 
@@ -338,37 +341,37 @@ const triggerCheckoutSuccessEffect = () => {
   };
 
   const afterSubmitSuccess = async (
-  messageText: string,
-  finalOrderId?: string
-) => {
-  if (checkedPrintInvoice && printableOrder) {
-    printInvoice(printableOrder);
-  }
+    messageText: string,
+    finalOrderId?: string
+  ) => {
+    if (checkedPrintInvoice && printableOrder) {
+      printInvoice(printableOrder);
+    }
 
-  if (!isEditMode) triggerCheckoutSuccessEffect();
-  else toast.success(messageText);
+    if (!isEditMode) triggerCheckoutSuccessEffect();
+    else toast.success(messageText);
 
-  await fetchProducts();
-  setMissingCustomerDialogOpen(false);
-  setCustomerOrderDialogOpen(false);
-  setCustomerPickerOpen(false);
-  setDialogOpen(false);
-  setSelectedCustomerFromPicker(null);
+    await fetchProducts();
+    setMissingCustomerDialogOpen(false);
+    setCustomerOrderDialogOpen(false);
+    setCustomerPickerOpen(false);
+    setDialogOpen(false);
+    setSelectedCustomerFromPicker(null);
 
-  if (isEditMode) {
-    sales.clearPersistedState();
+    if (isEditMode) {
+      sales.clearPersistedState();
 
-    if (finalOrderId) {
-      navigate(`/transactions/${finalOrderId}`, { replace: true });
+      if (finalOrderId) {
+        navigate(`/transactions/${finalOrderId}`, { replace: true });
+        return;
+      }
+
+      navigate("/transactions", { replace: true });
       return;
     }
 
-    navigate("/transactions", { replace: true });
-    return;
-  }
-
-  sales.clearCurrentDraftOnly();
-};
+    sales.clearCurrentDraftOnly();
+  };
 
   const submitCheckout = async () => {
     if (isCartEmpty) {
@@ -450,7 +453,7 @@ const triggerCheckoutSuccessEffect = () => {
     downloadQuotation(printableOrder);
   }, [printableOrder]);
 
-  
+
 
   const handleCopyInvoiceImage = async () => {
     if (!printableOrder || !invoiceCopyRef.current) return;
@@ -464,7 +467,7 @@ const triggerCheckoutSuccessEffect = () => {
     }
   };
 
-  
+
 
   if (loadingEditOrder) {
     return (
@@ -571,6 +574,7 @@ const triggerCheckoutSuccessEffect = () => {
             <ProductSelectorCard
               products={productsWithAvailableStock}
               onOrderProduct={openOrderDialog}
+              isMobile={isMobile}
             />
 
             <OtherExpenseCard
@@ -783,28 +787,28 @@ const triggerCheckoutSuccessEffect = () => {
       </div>
 
       {showCheckoutSuccess && (
-  <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
-    <div className="animate-in fade-in zoom-in-95 duration-300">
-      <div className="flex min-w-[260px] flex-col items-center gap-3 rounded-2xl bg-white px-8 py-7 shadow-2xl">
-        <div className="relative">
-          <div className="absolute inset-0 animate-ping rounded-full bg-green-500/25" />
-          <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-            <CheckCircle2 className="h-9 w-9 text-green-600" />
+        <div className="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+          <div className="animate-in fade-in zoom-in-95 duration-300">
+            <div className="flex min-w-[260px] flex-col items-center gap-3 rounded-2xl bg-white px-8 py-7 shadow-2xl">
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping rounded-full bg-green-500/25" />
+                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                  <CheckCircle2 className="h-9 w-9 text-green-600" />
+                </div>
+              </div>
+
+              <div className="text-center">
+                <p className="text-lg font-semibold text-slate-900">
+                  Thanh toán thành công
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Hóa đơn đã được hoàn thành
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="text-center">
-          <p className="text-lg font-semibold text-slate-900">
-            Thanh toán thành công
-          </p>
-          <p className="mt-1 text-sm text-slate-500">
-            Hóa đơn đã được hoàn thành
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
+      )}
     </PageShell>
   );
 }

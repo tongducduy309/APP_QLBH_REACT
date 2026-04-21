@@ -1,39 +1,26 @@
-import { Menu } from "antd";
-import { LogOut, MenuIcon, RefreshCcw, Search } from "lucide-react";
+import { LogOut, Menu, RefreshCcw, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { navigationItems } from "@/routes/navigation";
 import { resolveSearchItemRoute } from "@/features/search/utils/search-route";
 import { GlobalSearchDropdown } from "@/features/search/components/global-search-dropdown";
-import { SearchSuggestion } from "@/types/search";
+import type { SearchSuggestion } from "@/types/search";
 import { searchGlobal } from "@/services/search-api";
 
-export function AppHeader() {
+type Props = {
+  onOpenMobileMenu?: () => void;
+};
+
+export function AppHeader({ onOpenMobileMenu }: Props) {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
 
   const navigate = useNavigate();
   const location = useLocation();
-
-
-  const title = useMemo(() => {
-    const found = navigationItems.find((item) =>
-      location.pathname.startsWith(item.path)
-    );
-
-    return found?.label ?? "Quản lý bán hàng";
-  }, [location.pathname]);
-
-  const subtitle = useMemo(() => {
-    const found = navigationItems.find((item) =>
-      location.pathname.startsWith(item.path)
-    );
-
-    return found?.subtitle ?? "";
-  }, [location.pathname]);
 
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -41,6 +28,20 @@ export function AppHeader() {
   const [results, setResults] = useState<SearchSuggestion[]>([]);
 
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const title = useMemo(() => {
+    const found = navigationItems.find((item) =>
+      location.pathname.startsWith(item.path)
+    );
+    return found?.label ?? "Quản lý bán hàng";
+  }, [location.pathname]);
+
+  const subtitle = useMemo(() => {
+    const found = navigationItems.find((item) =>
+      location.pathname.startsWith(item.path)
+    );
+    return found?.subtitle ?? "";
+  }, [location.pathname]);
 
   useEffect(() => {
     const trimmedKeyword = keyword.trim();
@@ -97,22 +98,40 @@ export function AppHeader() {
     navigate(resolveSearchItemRoute(item));
   }
 
+  function handleLogout() {
+    logout();
+    navigate("/login");
+  }
+
   return (
-    <header className="relative z-30 border-b bg-white/70 px-4 py-4 backdrop-blur">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="min-w-0">
-            <p className="truncate text-sm text-muted-foreground">
+    <header className="relative z-30 border-b bg-white/70 px-3 py-3 backdrop-blur sm:px-4 sm:py-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+        <div className="flex items-start gap-3 lg:items-center">
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0 lg:hidden"
+            onClick={onOpenMobileMenu}
+          >
+            <Menu className="h-4 w-4" />
+          </Button>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs text-muted-foreground sm:text-sm">
               Xin chào, {user?.fullName || user?.username || "người dùng"}
             </p>
-            <h1 className="truncate text-2xl font-semibold">{title}</h1>
-            <p className="truncate text-sm text-muted-foreground">
+
+            <h1 className="truncate text-lg font-semibold sm:text-2xl">
+              {title}
+            </h1>
+
+            <p className="truncate text-xs text-muted-foreground sm:text-sm">
               {subtitle}
             </p>
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col gap-3 lg:max-w-2xl lg:flex-row lg:items-center lg:justify-end">
+        <div className="flex flex-1 flex-col gap-2 lg:max-w-2xl lg:flex-row lg:items-center lg:justify-end lg:gap-3">
           <div
             ref={searchContainerRef}
             className="relative z-40 w-full lg:max-w-md"
@@ -130,7 +149,7 @@ export function AppHeader() {
                   setOpenDropdown(true);
                 }
               }}
-              className="pl-9"
+              className="h-10 pl-9 text-sm lg:h-10 lg:text-sm"
               placeholder="Tìm kiếm hóa đơn, sản phẩm, khách hàng..."
             />
 
@@ -145,37 +164,28 @@ export function AppHeader() {
             </div>
           </div>
 
-          <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.reload()}>
-            <RefreshCcw className="h-4 w-4" />
-            Tải lại trang
-          </Button>
+          <div className="hidden lg:flex lg:w-auto lg:items-center lg:gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => window.location.reload()}
+            >
+              <RefreshCcw className="h-4 w-4" />
+              <span className="truncate">Tải lại trang</span>
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2"
-            onClick={() => {
-              logout();
-              navigate("/login");
-            }}
-          >
-            <LogOut className="h-4 w-4" />
-            Đăng xuất
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-2"
+              onClick={handleLogout}
+            >
+              <LogOut className="h-4 w-4" />
+              <span className="truncate">Đăng xuất</span>
+            </Button>
+          </div>
         </div>
-      </div>
-
-      <div className="mt-3 rounded-2xl border bg-slate-50 p-2 lg:hidden">
-        <Menu
-          mode="horizontal"
-          overflowedIndicator={<MenuIcon className="h-4 w-4" />}
-          selectedKeys={[location.pathname]}
-          items={navigationItems.map((item) => ({
-            key: item.path,
-            label: item.label,
-          }))}
-          onClick={({ key }) => navigate(key)}
-        />
       </div>
     </header>
   );

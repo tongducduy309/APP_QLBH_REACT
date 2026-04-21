@@ -1,4 +1,4 @@
-import { BarChart3, Boxes, FileSpreadsheet, LayoutDashboard, LucideIcon, Receipt, Settings, ShoppingCart, Users } from "lucide-react";
+import { BarChart3, Boxes, FileSpreadsheet, LayoutDashboard, LucideIcon, Receipt, Settings, ShoppingCart, User, Users } from "lucide-react";
 import { paths } from "@/routes/paths";
 
 interface NavigationItem {
@@ -18,6 +18,7 @@ export const navigationItems: NavigationItem[] = [
   { label: "Bảng báo giá", path: paths.quoteReport, icon: FileSpreadsheet},
   { label: "Thống kê", path: paths.statistics, icon: BarChart3},
   // { label: "Quét mã vạch", path: paths.barcode, icon: ScanBarcode },
+  { label: "Nhân viên", path: paths.employees, icon: User},
   { label: "Phiếu nhập", path: paths.purchaseReceipts, icon: Receipt},
   { label: "Cài đặt", path: paths.settings, icon: Settings},
 ] as const;

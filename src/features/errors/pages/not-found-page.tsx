@@ -12,7 +12,7 @@ export function NotFoundPage() {
         </CardHeader>
         <CardContent>
           <Button asChild>
-            <Link to="/">Quay lại dashboard</Link>
+            <Link to="/">Quay lại bán hàng</Link>
           </Button>
         </CardContent>
       </Card>

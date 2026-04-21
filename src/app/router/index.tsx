@@ -50,6 +50,8 @@ export const router = (isElectron ? createHashRouter : createBrowserRouter)([
           { path: "/purchase-receipts", element: <PurchaseReceiptsPage /> },
           { path: "/purchase-receipts/:id", element: <PurchaseReceiptDetailPage /> },
           { path: "/settings", element: <SettingsPage /> },
+          { path: "/employees", element: <EmployeesPage /> },
+          { path: "/employees/:id", element: <EmployeeDetailPage /> },
         ],
       },
     ],

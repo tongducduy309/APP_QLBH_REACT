@@ -12,6 +12,8 @@ export const paths = {
   quoteReport: "/reports/quotes",
   statistics: "/statistics",
   // barcode: "/barcode",
+  employees: "/employees",
+  employeeDetail: "/employees/:id",
   purchaseReceipts: "/purchase-receipts",
   settings: "/settings",
   forbidden: "/forbidden",

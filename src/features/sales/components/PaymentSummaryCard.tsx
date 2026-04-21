@@ -151,7 +151,7 @@ export function PaymentSummaryCard(props: Props) {
         <span>{printInvoiceLabel}</span>
       </label>
 
-      <div className="flex w-full items-center gap-3">
+      <div className="flex w-full items-start gap-3">
         <div className={`grid w-full gap-3 ${props.editMode ? "md:grid-cols-1" : "md:grid-cols-2"}`}>
           {
             !props.editMode && (
