@@ -19,6 +19,8 @@ import { OrderEditPage } from "@/features/transactions/pages/EditOrderPage";
 import { ProductDetailPage } from "@/features/inventory/pages/product-detail-page";
 import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-page";
 import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/purchase-receipt-detail-page";
+import { EmployeesPage } from "@/features/employees/pages/employees-page";
+import { EmployeeDetailPage } from "@/features/employees/pages/employee-detail-page";
 
 const isElectron = window.location.protocol === "file:";
 
