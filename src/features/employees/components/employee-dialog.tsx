@@ -1,9 +1,11 @@
-import { DatePicker, Input, InputNumber, Modal, Select } from "antd";
+import { DatePicker, Modal } from "antd";
 import dayjs from "dayjs";
-import type {
-  EmployeeCreateReq,
-} from "../types/employee.types";
+import type { EmployeeCreateReq } from "../types/employee.types";
 import { Role } from "@/types/user";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { NumberInput } from "@/components/ui/number-input";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Props = {
   open: boolean;
@@ -39,82 +41,131 @@ export function EmployeeDialog({
       okText="Lưu"
       cancelText="Đóng"
       width={760}
+      destroyOnHidden
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input
-          placeholder="Mã nhân viên"
-          value={value.code}
-          onChange={(e) => onChange({ ...value, code: e.target.value })}
-        />
-
-        <Input
-          placeholder="Họ và tên"
-          value={value.fullName}
-          onChange={(e) => onChange({ ...value, fullName: e.target.value })}
-        />
-
-        <Input
-          placeholder="Số điện thoại"
-          value={value.phone}
-          onChange={(e) => onChange({ ...value, phone: e.target.value })}
-        />
-
-        <Input
-          placeholder="Chức vụ"
-          value={value.position}
-          onChange={(e) => onChange({ ...value, position: e.target.value })}
-        />
-
-        <Input
-          placeholder="Địa chỉ"
-          value={value.address}
-          onChange={(e) => onChange({ ...value, address: e.target.value })}
-        />
-
-        <DatePicker
-          className="w-full"
-          placeholder="Ngày vào làm"
-          value={value.hireDate ? dayjs(value.hireDate) : null}
-          onChange={(date) =>
-            onChange({
-              ...value,
-              hireDate: date ? date.format("YYYY-MM-DD") : "",
-            })
-          }
-        />
-
-        <InputNumber
-          className="w-full"
-          min={0}
-          placeholder="Lương tháng"
-          value={value.baseSalary}
-          onChange={(val) =>
-            onChange({ ...value, baseSalary: Number(val ?? 0) })
-          }
-        />
-
-        <Select
-          placeholder="Phân quyền"
-          options={roleOptions}
-          value={value.role}
-          onChange={(role) => onChange({ ...value, role })}
-        />
-
-        <Input
-          placeholder="Tên đăng nhập"
-          value={value.username}
-          onChange={(e) => onChange({ ...value, username: e.target.value })}
-        />
-
-        <Input.Password
-          placeholder="Mật khẩu"
-          value={value.password}
-          onChange={(e) => onChange({ ...value, password: e.target.value })}
-        />
-
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 gap-4 py-2 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="employee-code">Mã nhân viên</Label>
           <Input
-            placeholder="Email"
+            id="employee-code"
+            placeholder="Nhập mã nhân viên"
+            value={value.code}
+            onChange={(e) => onChange({ ...value, code: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-fullname">Họ và tên</Label>
+          <Input
+            id="employee-fullname"
+            placeholder="Nhập họ và tên"
+            value={value.fullName}
+            onChange={(e) => onChange({ ...value, fullName: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-phone">Số điện thoại</Label>
+          <Input
+            id="employee-phone"
+            placeholder="Nhập số điện thoại"
+            value={value.phone}
+            onChange={(e) => onChange({ ...value, phone: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-position">Chức vụ</Label>
+          <Input
+            id="employee-position"
+            placeholder="Nhập chức vụ"
+            value={value.position}
+            onChange={(e) => onChange({ ...value, position: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-address">Địa chỉ</Label>
+          <Input
+            id="employee-address"
+            placeholder="Nhập địa chỉ"
+            value={value.address}
+            onChange={(e) => onChange({ ...value, address: e.target.value })}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Ngày vào làm</Label>
+          <DatePicker
+            className="h-10 w-full"
+            placeholder="Chọn ngày vào làm"
+            value={value.hireDate ? dayjs(value.hireDate) : null}
+            format="DD/MM/YYYY"
+            onChange={(date) =>
+              onChange({
+                ...value,
+                hireDate: date ? date.format("YYYY-MM-DD") : "",
+              })
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-salary">Lương tháng</Label>
+          <NumberInput
+            id="employee-salary"
+            placeholder="Nhập lương tháng"
+            value={Number(value.baseSalary ?? 0)}
+            onValueChange={(nextValue) =>
+              onChange({
+                ...value,
+                baseSalary: Number.isFinite(nextValue) ? nextValue : 0,
+              })
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Phân quyền</Label>
+          <Select
+            value={value.role}
+            onValueChange={(role: Role) =>
+              onChange({ ...value, role: role as Role })
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Chọn phân quyền" />
+            </SelectTrigger>
+            <SelectContent className="z-[2000]">
+              <SelectGroup>
+                <SelectLabel>Phân quyền</SelectLabel>
+              {roleOptions.map((role) => (
+                <SelectItem key={role.value} value={role.value}>  
+                  {role.label}
+                </SelectItem>
+              ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-username">Tên đăng nhập</Label>
+          <Input
+            id="employee-username"
+            placeholder="Nhập tên đăng nhập"
+            value={value.username}
+            onChange={(e) => onChange({ ...value, username: e.target.value })}
+          />
+        </div>
+
+        
+
+        <div className="space-y-2">
+          <Label htmlFor="employee-email">Email</Label>
+          <Input
+            id="employee-email"
+            placeholder="Nhập email"
             value={value.email}
             onChange={(e) => onChange({ ...value, email: e.target.value })}
           />

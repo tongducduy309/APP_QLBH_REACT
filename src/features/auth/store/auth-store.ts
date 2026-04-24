@@ -50,7 +50,7 @@ function persistAuth(payload: AuthRes) {
         id: payload.user.id,
         username: payload.user.username,
         fullName: payload.user.fullName,
-        role: payload.user.role,
+        roles: payload.user.roles,
       }
     : null;
 

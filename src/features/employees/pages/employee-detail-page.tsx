@@ -1,24 +1,25 @@
-import { useEffect, useState } from "react";
-import { Tag } from "antd";
-import { ArrowLeft, UserRound } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Table, Tag, Popconfirm, Button as AntdButton } from "antd";
 import { toast } from "sonner";
-
-import { PageShell } from "@/components/layout/page-shell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { paths } from "@/routes/paths";
-import { formatCurrency } from "@/lib/utils";
-import { getEmployeeById } from "@/services/employee-api";
-import type { EmployeeItem } from "../types/employee.types";
+import {
+  deleteEmployeeLeave,
+  getEmployeeById,
+  markEmployeeLeave,
+} from "@/services/employee-api";
+import { EmployeeLeaveDialog } from "../components/employee-leave-dialog";
+import type {
+  EmployeeItem,
+  EmployeeLeaveCreateReq,
+  EmployeeLeaveItem,
+} from "../types/employee.types";
+import { useAuthStore } from "@/features/auth/store/auth-store";
+import { formatDateToDDMMYYYY } from "@/utils/date";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 
-function DetailRow({
+function InfoRow({
   label,
   value,
 }: {
@@ -26,113 +27,267 @@ function DetailRow({
   value: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-1 border-b py-3 md:grid-cols-[180px_1fr] md:gap-4">
-      <div className="text-sm font-medium text-muted-foreground">{label}</div>
-      <div className="text-sm text-slate-900">{value || "-"}</div>
+    <div className="grid grid-cols-[180px_1fr] gap-3 border-b py-3 text-sm">
+      <div className="font-medium text-slate-500">{label}</div>
+      <div>{value ?? "-"}</div>
     </div>
   );
 }
 
+
+
 export function EmployeeDetailPage() {
-  const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   const [employee, setEmployee] = useState<EmployeeItem | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
+  const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
+  const [leaveLoading, setLeaveLoading] = useState(false);
+  
+
+  const canManageLeave = useMemo(() => {
+    console.log(user);
+    const roles = Array.isArray((user as any)?.roles)
+      ? (user as any).roles
+      : [(user as any)?.role].filter(Boolean);
+
+    return roles.includes("ADMIN") || roles.includes("STORE_MANAGER");
+  }, [user]);
+
+  const loadEmployee = async () => {
     if (!id) return;
 
-    const fetchEmployee = async () => {
-      try {
-        setLoading(true);
-        const res = await getEmployeeById(id);
-        setEmployee(res);
-      } catch (error) {
-        console.error(error);
-        toast.error("Không thể tải chi tiết nhân viên.");
-      } finally {
-        setLoading(false);
-      }
-    };
+    try {
+      setLoading(true);
+      const data = await getEmployeeById(id);
+      setEmployee(data);
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể tải chi tiết nhân viên.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchEmployee();
+  useEffect(() => {
+    loadEmployee();
   }, [id]);
 
+  const handleOpenLeaveDialog = () => {
+    
+    setLeaveDialogOpen(true);
+  };
+
+  const handleSubmitLeave = async (data: EmployeeLeaveCreateReq) => {
+    if (!id) return;
+
+    // console.log(data);
+
+    if (!data.leaveDate) {
+      toast.info("Vui lòng chọn ngày nghỉ.");
+      return;
+    }
+
+    try {
+      setLeaveLoading(true);
+      await markEmployeeLeave(id, data);
+      toast.success("Đánh dấu ngày nghỉ thành công.");
+      setLeaveDialogOpen(false);
+      await loadEmployee();
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể đánh dấu ngày nghỉ.");
+    } finally {
+      setLeaveLoading(false);
+    }
+  };
+
+  const handleDeleteLeave = async (leaveDate: string) => {
+    if (!id) return;
+
+    try {
+      await deleteEmployeeLeave(id, leaveDate);
+      toast.success("Xoá ngày nghỉ thành công.");
+      await loadEmployee();
+    } catch (error) {
+      console.error(error);
+      toast.error("Không thể xoá ngày nghỉ.");
+    }
+  };
+
+  const leaveColumns = [
+    {
+      title: "Ngày nghỉ",
+      dataIndex: "leaveDate",
+      key: "leaveDate",
+      render: (value: string) =>formatDateToDDMMYYYY(value) || "-",
+    },
+    {
+      title: "Loại nghỉ",
+      dataIndex: "leaveType",
+      key: "leaveType",
+      render: (value: EmployeeLeaveItem["leaveType"]) => (
+        <Tag color={value === "FULL_DAY" ? "red" : "orange"}>
+          {value === "FULL_DAY" ? "Cả ngày" : "Nửa ngày"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Lý do",
+      dataIndex: "reason",
+      key: "reason",
+      render: (value?: string) => value || "-",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 120,
+      render: (_: unknown, record: EmployeeLeaveItem) =>
+        canManageLeave ? (
+          <Popconfirm
+            title="Xoá ngày nghỉ?"
+            description="Bạn có chắc muốn xoá ngày nghỉ này không?"
+            okText="Xoá"
+            cancelText="Huỷ"
+            onConfirm={() => handleDeleteLeave(record.leaveDate)}
+          >
+            <AntdButton danger>
+              Xoá
+            </AntdButton>
+          </Popconfirm>
+        ) : null,
+    },
+  ];
+
+  if (loading) {
+    return <div className="p-6">Đang tải...</div>;
+  }
+
+  if (!employee) {
+    return (
+      <div className="space-y-6 p-6">
+        {/* nút quay lại */}
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft size={16} />
+            Quay lại
+          </Button>
+        </div>
+
+        <div className="flex h-[50vh] flex-col items-center justify-center gap-4">
+          <div className="text-lg font-semibold">
+            Không tìm thấy nhân viên
+          </div>
+
+          <Button onClick={() => navigate("/employees")}>
+            Quay về danh sách
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <PageShell>
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <Button variant="outline" onClick={() => navigate(paths.employees)}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
+    
+    <div className="space-y-6 p-6">
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2"
+        >
+          <ArrowLeft size={16} />
           Quay lại
         </Button>
       </div>
+      <div className="rounded-xl border bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">{employee.fullName}</h1>
+            <p className="text-sm text-slate-500">Mã nhân viên: {employee.code}</p>
+          </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-1">
-          <CardContent className="flex flex-col items-center justify-center gap-3 p-6">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100">
-              <UserRound className="h-10 w-10 text-slate-500" />
-            </div>
+          {canManageLeave ? (
+            <Button onClick={handleOpenLeaveDialog}>Đánh dấu nghỉ</Button>
+          ) : null}
+        </div>
 
-            <div className="text-center">
-              <div className="text-lg font-semibold">
-                {loading ? "Đang tải..." : employee?.fullName || "-"}
-              </div>
-              <div className="text-sm text-muted-foreground">
-                {employee?.position || "Chưa cập nhật chức vụ"}
-              </div>
-            </div>
-
-            <Tag color={employee?.active ? "green" : "default"}>
-              {employee?.active ? "Đang làm" : "Ngưng làm"}
-            </Tag>
-          </CardContent>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Chi tiết nhân viên</CardTitle>
-            <CardDescription>
-              Thông tin hồ sơ và tài khoản đăng nhập
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <DetailRow label="Mã nhân viên" value={employee?.code} />
-            <DetailRow label="Họ và tên" value={employee?.fullName} />
-            <DetailRow label="Số điện thoại" value={employee?.phone} />
-            <DetailRow label="Địa chỉ" value={employee?.address} />
-            <DetailRow label="Chức vụ" value={employee?.position} />
-            <DetailRow label="Ngày vào làm" value={employee?.hireDate} />
-            <DetailRow
-              label="Lương tháng"
-              value={
-                employee?.baseSalary != null
-                  ? formatCurrency(employee.baseSalary)
-                  : "-"
-              }
-            />
-            <DetailRow label="Tên đăng nhập" value={employee?.user?.username} />
-            <DetailRow label="Email" value={employee?.user?.email} />
-            <DetailRow
-              label="Vai trò"
-              value={
-                employee?.user?.roles?.length ? (
-                  <div className="flex flex-wrap gap-2">
-                    {employee?.user?.roles.map((role) => (
-                      <Tag key={role}>{role}</Tag>
-                    ))}
-                  </div>
-                ) : (
-                  "-"
-                )
-              }
-            />
-            <DetailRow label="Ngày tạo" value={employee?.createdAt} />
-          </CardContent>
-        </Card>
+        <div>
+          <InfoRow label="Họ và tên" value={employee.fullName} />
+          <InfoRow label="Số điện thoại" value={employee.phone || "-"} />
+          <InfoRow label="Địa chỉ" value={employee.address || "-"} />
+          <InfoRow label="Chức vụ" value={employee.position || "-"} />
+          <InfoRow label="Ngày vào làm" value={employee.hireDate || "-"} />
+          <InfoRow
+            label="Lương cơ bản"
+            value={
+              typeof employee.baseSalary === "number"
+                ? employee.baseSalary.toLocaleString("vi-VN")
+                : "-"
+            }
+          />
+          <InfoRow
+            label="Trạng thái"
+            value={
+              employee.active ? (
+                <Tag color="green">Đang làm việc</Tag>
+              ) : (
+                <Tag color="red">Ngưng làm việc</Tag>
+              )
+            }
+          />
+          <InfoRow
+            label="Nghỉ hôm nay"
+            value={
+              employee.onLeaveToday ? (
+                <Tag color="red">Đang nghỉ</Tag>
+              ) : (
+                <Tag color="green">Đi làm</Tag>
+              )
+            }
+          />
+          <InfoRow
+            label="Ngày nghỉ tháng này"
+            value={employee.leaveDaysThisMonth ?? 0}
+          />
+          <InfoRow label="Tài khoản" value={employee.user?.username || "-"} />
+          <InfoRow label="Email" value={employee.user?.email || "-"} />
+        </div>
       </div>
-    </PageShell>
+
+      <div className="rounded-xl border bg-white p-5 shadow-sm">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold">Danh sách ngày nghỉ</h2>
+          <p className="text-sm text-slate-500">
+            Quản lý các ngày nghỉ của nhân viên
+          </p>
+        </div>
+
+        <Table
+          rowKey="id"
+          columns={leaveColumns}
+          dataSource={employee.leaves ?? []}
+          pagination={false}
+          locale={{ emptyText: "Chưa có ngày nghỉ" }}
+        />
+      </div>
+
+      <EmployeeLeaveDialog
+        open={leaveDialogOpen}
+        
+        loading={leaveLoading}
+        onClose={() => setLeaveDialogOpen(false)}
+        onSubmit={handleSubmitLeave}
+      />
+    </div>
   );
 }
