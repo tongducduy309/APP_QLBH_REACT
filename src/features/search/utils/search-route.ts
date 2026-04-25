@@ -15,6 +15,9 @@ export function resolveSearchItemRoute(item: SearchSuggestion) {
     case "PURCHASE_RECEIPT":
       return `/purchase-receipts/${item.entityId}`;
 
+    case "EMPLOYEE":
+      return `/employees/${item.entityId}`;
+
     default:
       return "/";
   }

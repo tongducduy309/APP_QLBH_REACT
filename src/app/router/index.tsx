@@ -21,6 +21,7 @@ import { CustomerDetailPage } from "@/features/customers/pages/customer-detail-p
 import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/purchase-receipt-detail-page";
 import { EmployeesPage } from "@/features/employees/pages/employees-page";
 import { EmployeeDetailPage } from "@/features/employees/pages/employee-detail-page";
+import { RoleGuard } from "@/routes/role-guard";
 
 const isElectron = window.location.protocol === "file:";
 
@@ -36,31 +37,34 @@ export const router = (isElectron ? createHashRouter : createBrowserRouter)([
       {
         element: <MainLayout />,
         children: [
-          { path: "/dashboard", element: <DashboardPage /> },
-          { path: "/sales", element: <SalesPage /> },
-          { path: "/inventory", element: <InventoryPage /> },
-          { path: "/inventory/:id", element: <ProductDetailPage /> },
-          { path: "/customers", element: <CustomersPage /> },
-          { path: "/customers/:id", element: <CustomerDetailPage /> },
-          { path: "/transactions", element: <TransactionsPage /> },
-          { path: "/transactions/:id", element: <OrderDetailPage /> },
-          { path: "/transactions/edit/:id", element: <OrderEditPage /> },
-          // { path: "/reports/tax", element: <TaxReportPage /> },
-          { path: "/reports/quotes", element: <QuoteReportPage /> },
-          { path: "/statistics", element: <StatisticsPage /> },
-          { path: "/barcode", element: <BarcodePage /> },
-          { path: "/purchase-receipts", element: <PurchaseReceiptsPage /> },
-          { path: "/purchase-receipts/:id", element: <PurchaseReceiptDetailPage /> },
-          { path: "/settings", element: <SettingsPage /> },
-          { path: "/employees", element: <EmployeesPage /> },
-          { path: "/employees/:id", element: <EmployeeDetailPage /> },
+          {
+          element: <RoleGuard />,
+          children: [
+            { path: "/dashboard", element: <DashboardPage /> },
+            { path: "/sales", element: <SalesPage /> },
+            { path: "/inventory", element: <InventoryPage /> },
+            { path: "/inventory/:id", element: <ProductDetailPage /> },
+            { path: "/customers", element: <CustomersPage /> },
+            { path: "/customers/:id", element: <CustomerDetailPage /> },
+            { path: "/transactions", element: <TransactionsPage /> },
+            { path: "/transactions/:id", element: <OrderDetailPage /> },
+            { path: "/transactions/edit/:id", element: <OrderEditPage /> },
+            { path: "/reports/quotes", element: <QuoteReportPage /> },
+            { path: "/statistics", element: <StatisticsPage /> },
+            { path: "/purchase-receipts", element: <PurchaseReceiptsPage /> },
+            { path: "/purchase-receipts/:id", element: <PurchaseReceiptDetailPage /> },
+            { path: "/settings", element: <SettingsPage /> },
+            { path: "/employees", element: <EmployeesPage /> },
+            { path: "/employees/:id", element: <EmployeeDetailPage /> },
+          ],
+        },
         ],
       },
     ],
   },
   {
     path: "/",
-    element: <Navigate to="/sales" replace />,
+    element: <Navigate to="/dashboard" replace />,
   },
   { path: "/forbidden", element: <ForbiddenPage /> },
   { path: "*", element: <NotFoundPage /> },

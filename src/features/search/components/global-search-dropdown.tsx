@@ -4,6 +4,7 @@ import {
   Package,
   Receipt,
   Search,
+  User,
   Users,
 } from "lucide-react";
 import { useMemo } from "react";
@@ -31,6 +32,9 @@ function getEntityIcon(entityType: SearchEntityType) {
 
     case "PURCHASE_RECEIPT":
       return <FileText className="h-4 w-4 text-amber-500" />;
+
+    case "EMPLOYEE":
+      return <User className="h-4 w-4 text-amber-500" />;
 
     default:
       return <Search className="h-4 w-4 text-slate-500" />;

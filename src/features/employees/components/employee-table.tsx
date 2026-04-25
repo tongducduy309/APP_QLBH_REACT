@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import type { EmployeeItem } from "../types/employee.types";
 import { formatCurrency } from "@/lib/utils";
 import { ColumnsType } from "antd/es/table";
+import { RestrictedIcon } from "@/components/common/restricted-icon";
 
 type Props = {
   items: EmployeeItem[];
@@ -13,10 +14,9 @@ type Props = {
   total: number;
   onPageChange: (page: number) => void;
   onCreate: () => void;
-  onEdit: (employee: EmployeeItem) => void;
   onViewDetail: (employee: EmployeeItem) => void;
-  onDelete: (employee: EmployeeItem) => void;
-  onActivate: (employee: EmployeeItem) => void;
+  canViewSalary: boolean;
+  canAddEmployee: boolean;
 };
 
 export function EmployeeTable({
@@ -28,10 +28,9 @@ export function EmployeeTable({
   total,
   onPageChange,
   onCreate,
-  onEdit,
   onViewDetail,
-  onDelete,
-  onActivate,
+  canViewSalary,
+  canAddEmployee,
 }: Props) {
   const columns: ColumnsType<EmployeeItem> = [
       {
@@ -90,8 +89,8 @@ export function EmployeeTable({
         title: "Lương tháng",
         dataIndex: "baseSalary",
         key: "baseSalary",
-        align: "right",
-        render: (value: number) => formatCurrency(value || 0),
+        align: canViewSalary?"right":"center",
+        render: (value: number) => canViewSalary?formatCurrency(value || 0):(<RestrictedIcon/>),
       },
       {
     title: "Nghỉ hôm nay",
@@ -145,7 +144,9 @@ export function EmployeeTable({
           className="max-w-md"
         />
 
-        <Button onClick={onCreate}>Thêm nhân viên</Button>
+        {canAddEmployee && (
+          <Button onClick={onCreate}>Thêm nhân viên</Button>
+        )}
       </div>
 
       <Table

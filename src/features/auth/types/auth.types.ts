@@ -10,6 +10,9 @@ export interface AuthUserRes {
   username: string;
   fullName?: string;
   roles?: Role[];
+  code?: string;
+  email?: string;
+  position?: string;
 }
 
 export interface AuthRes {

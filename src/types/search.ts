@@ -2,7 +2,8 @@ export type SearchEntityType =
   | "ORDER"
   | "PRODUCT"
   | "CUSTOMER"
-  | "PURCHASE_RECEIPT";
+  | "PURCHASE_RECEIPT"
+  | "EMPLOYEE";
 
 export type SearchSuggestion = {
   entityId: string;

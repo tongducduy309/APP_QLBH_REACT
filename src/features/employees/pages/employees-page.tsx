@@ -2,9 +2,14 @@ import { PageShell } from "@/components/layout/page-shell";
 import { EmployeeTable } from "../components/employee-table";
 import { EmployeeDialog } from "../components/employee-dialog";
 import { useEmployeePage } from "../hooks/useEmployeePage";
+import { usePermission } from "@/app/hooks/usePermission";
 
 export function EmployeesPage() {
   const employee = useEmployeePage();
+  const { hasRole } = usePermission();
+  
+  const canViewSalary = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canAddEmployee = hasRole(["ADMIN", "STORE_MANAGER"]);
 
   return (
     <PageShell>
@@ -17,10 +22,9 @@ export function EmployeesPage() {
         total={employee.total}
         onPageChange={employee.setPage}
         onCreate={employee.openCreateDialog}
-        onEdit={employee.openEditDialog}
         onViewDetail={employee.openDetail}
-        onDelete={employee.handleDeleteEmployee}
-        onActivate={employee.handleActivateEmployee}
+        canViewSalary={canViewSalary}
+        canAddEmployee={canAddEmployee}
       />
 
       <EmployeeDialog

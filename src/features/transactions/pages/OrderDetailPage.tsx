@@ -45,6 +45,7 @@ import { sortOrderResDetails } from "@/utils/order.helper";
 import { SendInvoiceEmailDialog } from "../components/SendInvoiceEmailDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDateToDDMMYYYY } from "@/utils/date";
+import { usePermission } from "@/app/hooks/usePermission";
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -62,6 +63,13 @@ export function OrderDetailPage() {
   const [paymentAmount, setPaymentAmount] = useState<number>(0);
   const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
+
+  const { hasRole } = usePermission();
+  
+  const canEditOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
+  const canCancelOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
+  const canSendEmail = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
+   const canPayOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
 
   const fetchOrder = async () => {
     if (!id) return;
@@ -315,7 +323,8 @@ export function OrderDetailPage() {
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuGroup>
               {order.status === OrderStatus.CONFIRMED &&
-                (order.remainingAmount ?? 0) > 0 && (
+                (order.remainingAmount ?? 0) > 0 && 
+                canPayOrder && (
                   <DropdownMenuItem
                     onClick={() => setPaymentDialogOpen(true)}
                   >
@@ -324,22 +333,30 @@ export function OrderDetailPage() {
                   </DropdownMenuItem>
                 )}
 
-              <DropdownMenuItem onClick={() => setSendEmailOpen(true)}>
-                <Mail className="mr-2 h-4 w-4" />
-                Gửi email
-              </DropdownMenuItem>
+              {
+                canSendEmail && (
+                  <DropdownMenuItem onClick={() => setSendEmailOpen(true)}>
+                    <Mail className="mr-2 h-4 w-4" />
+                    Gửi email
+                  </DropdownMenuItem>
+                )
+              }
 
               <DropdownMenuItem onClick={handleDownloadOrder}>
                 <FileDown className="mr-2 h-4 w-4" />
                 Tải hóa đơn
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                onClick={() => navigate(`/transactions/edit/${order.id}`, { replace: true })}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Chỉnh sửa
-              </DropdownMenuItem>
+              {
+                canEditOrder && (
+                  <DropdownMenuItem
+                    onClick={() => navigate(`/transactions/edit/${order.id}`, { replace: true })}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Chỉnh sửa
+                  </DropdownMenuItem>
+                )
+              }
 
               <DropdownMenuItem onClick={handleViewOrder}>
                 <Eye className="mr-2 h-4 w-4" />
@@ -351,15 +368,23 @@ export function OrderDetailPage() {
                 In hóa đơn
               </DropdownMenuItem>
 
-              <DropdownMenuSeparator />
+              {
+                canCancelOrder && (
+                  <DropdownMenuSeparator />
+                )
+              }
 
-              <DropdownMenuItem
-                onClick={openCancelDialog}
-                variant="destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Hủy hóa đơn
-              </DropdownMenuItem>
+              {
+                canCancelOrder && (
+                  <DropdownMenuItem
+                    onClick={openCancelDialog}
+                    variant="destructive"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Hủy hóa đơn
+                  </DropdownMenuItem>
+                )
+              }
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>

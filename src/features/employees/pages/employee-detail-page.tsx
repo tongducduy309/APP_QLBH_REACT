@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Table, Tag, Popconfirm, Button as AntdButton } from "antd";
 import { toast } from "sonner";
@@ -18,18 +18,22 @@ import { useAuthStore } from "@/features/auth/store/auth-store";
 import { formatDateToDDMMYYYY } from "@/utils/date";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { usePermission } from "@/app/hooks/usePermission";
+import { RestrictedIcon } from "@/components/common/restricted-icon";
 
 function InfoRow({
   label,
   value,
+  visible = true,
 }: {
   label: string;
   value: React.ReactNode;
+  visible?: boolean;
 }) {
   return (
     <div className="grid grid-cols-[180px_1fr] gap-3 border-b py-3 text-sm">
       <div className="font-medium text-slate-500">{label}</div>
-      <div>{value ?? "-"}</div>
+      <div>{visible?value:<RestrictedIcon/>}</div>
     </div>
   );
 }
@@ -46,16 +50,23 @@ export function EmployeeDetailPage() {
 
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
-  
 
-  const canManageLeave = useMemo(() => {
-    console.log(user);
-    const roles = Array.isArray((user as any)?.roles)
-      ? (user as any).roles
-      : [(user as any)?.role].filter(Boolean);
+  const { hasRole } = usePermission();
 
-    return roles.includes("ADMIN") || roles.includes("STORE_MANAGER");
-  }, [user]);
+  const canViewSalary = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canManageLeave = hasRole(["ADMIN", "STORE_MANAGER","OFFICE_STAFF"]);
+  const canViewUsername = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canViewAddress = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canCancelLeave = hasRole(["ADMIN", "STORE_MANAGER"]);
+
+  // const canManageLeave = useMemo(() => {
+  //   console.log(user);
+  //   const roles = Array.isArray((user as any)?.roles)
+  //     ? (user as any).roles
+  //     : [(user as any)?.role].filter(Boolean);
+
+  //   return roles.includes("ADMIN") || roles.includes("STORE_MANAGER");
+  // }, [user]);
 
   const loadEmployee = async () => {
     if (!id) return;
@@ -146,7 +157,7 @@ export function EmployeeDetailPage() {
       key: "action",
       width: 120,
       render: (_: unknown, record: EmployeeLeaveItem) =>
-        canManageLeave ? (
+        canCancelLeave ? (
           <Popconfirm
             title="Xoá ngày nghỉ?"
             description="Bạn có chắc muốn xoá ngày nghỉ này không?"
@@ -158,7 +169,7 @@ export function EmployeeDetailPage() {
               Xoá
             </AntdButton>
           </Popconfirm>
-        ) : null,
+        ) : <RestrictedIcon message="Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ quản lý."/>,
     },
   ];
 
@@ -224,9 +235,9 @@ export function EmployeeDetailPage() {
         <div>
           <InfoRow label="Họ và tên" value={employee.fullName} />
           <InfoRow label="Số điện thoại" value={employee.phone || "-"} />
-          <InfoRow label="Địa chỉ" value={employee.address || "-"} />
+          <InfoRow label="Địa chỉ" value={employee.address || "-"} visible={canViewAddress}/>
           <InfoRow label="Chức vụ" value={employee.position || "-"} />
-          <InfoRow label="Ngày vào làm" value={employee.hireDate || "-"} />
+          <InfoRow label="Ngày vào làm" value={formatDateToDDMMYYYY(employee.hireDate) || "-"} />
           <InfoRow
             label="Lương cơ bản"
             value={
@@ -234,6 +245,7 @@ export function EmployeeDetailPage() {
                 ? employee.baseSalary.toLocaleString("vi-VN")
                 : "-"
             }
+            visible={canViewSalary}
           />
           <InfoRow
             label="Trạng thái"
@@ -259,7 +271,7 @@ export function EmployeeDetailPage() {
             label="Ngày nghỉ tháng này"
             value={employee.leaveDaysThisMonth ?? 0}
           />
-          <InfoRow label="Tài khoản" value={employee.user?.username || "-"} />
+          <InfoRow label="Tài khoản" value={employee.user?.username || "-"} visible={canViewUsername}/>
           <InfoRow label="Email" value={employee.user?.email || "-"} />
         </div>
       </div>

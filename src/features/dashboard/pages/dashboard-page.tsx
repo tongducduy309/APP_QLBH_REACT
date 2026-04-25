@@ -5,6 +5,11 @@ import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recha
 import { useDashboard } from "../hooks/useDashboard";
 import type { OrderRecentRes } from "@/types/order";
 import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "@/features/auth/store/auth-store";
+import { hasPermission } from "@/routes/role-guard";
+import { EyeOff } from "lucide-react";
+import { RestrictedIcon } from "@/components/common/restricted-icon";
+import { usePermission } from "@/app/hooks/usePermission";
 
 
 export function DashboardPage() {
@@ -44,12 +49,16 @@ export function DashboardPage() {
     },
   ];
 
+  const { hasRole } = usePermission();
+
+  const canViewDashboard = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
+
   return (
     <PageShell
     >
       <div className="space-y-6">
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {dashboardStats.map((item) => (
+          {dashboardStats.map((item, index) => (
             <Card
               key={item.label}
               className={`border shadow-sm ${item.cardClassName}`}
@@ -59,7 +68,10 @@ export function DashboardPage() {
                   {item.label}
                 </CardDescription>
                 <CardTitle className={item.valueClassName}>
-                  {dashboard.isLoading ? "..." : item.value}
+                  {
+                    canViewDashboard||index===0?(<span>{dashboard.isLoading ? "..." : item.value}</span>):
+                    (<RestrictedIcon/>)
+                  }
                 </CardTitle>
               </CardHeader>
             </Card>
@@ -78,9 +90,9 @@ export function DashboardPage() {
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   Đang tải dữ liệu...
                 </div>
-              ) : dashboard.revenueTrend.length === 0 ? (
+              ) : dashboard.revenueTrend.length === 0 || !canViewDashboard ? (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  Chưa có dữ liệu doanh thu
+                  {dashboard.revenueTrend.length === 0 ? "Chưa có dữ liệu doanh thu" : "Bạn không có quyền xem biểu đồ này"}
                 </div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%">

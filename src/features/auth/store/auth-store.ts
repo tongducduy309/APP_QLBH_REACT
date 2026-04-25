@@ -51,6 +51,9 @@ function persistAuth(payload: AuthRes) {
         username: payload.user.username,
         fullName: payload.user.fullName,
         roles: payload.user.roles,
+        code: payload.user.code,
+        email: payload.user.email,
+        position: payload.user.position,
       }
     : null;
 

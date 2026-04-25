@@ -1,4 +1,4 @@
-import { LogOut, Menu, RefreshCcw, Search } from "lucide-react";
+import { LogOut, Menu, RefreshCcw, ScanBarcode, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
@@ -10,6 +10,7 @@ import { resolveSearchItemRoute } from "@/features/search/utils/search-route";
 import { GlobalSearchDropdown } from "@/features/search/components/global-search-dropdown";
 import type { SearchSuggestion } from "@/types/search";
 import { searchGlobal } from "@/services/search-api";
+import { BarcodeScanDialog } from "../common/barcode-scan-dialog";
 
 type Props = {
   onOpenMobileMenu?: () => void;
@@ -26,6 +27,7 @@ export function AppHeader({ onOpenMobileMenu }: Props) {
   const [loading, setLoading] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(false);
   const [results, setResults] = useState<SearchSuggestion[]>([]);
+  const [openBarcodeDialog, setOpenBarcodeDialog] = useState(false);
 
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -149,9 +151,38 @@ export function AppHeader({ onOpenMobileMenu }: Props) {
                   setOpenDropdown(true);
                 }
               }}
-              className="h-10 pl-9 text-sm lg:h-10 lg:text-sm"
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && keyword.trim()) {
+                  setOpenDropdown(true);
+                }
+              }}
+              className="h-10 pl-9 pr-16 text-sm lg:h-10 lg:text-sm"
               placeholder="Tìm kiếm hóa đơn, sản phẩm, khách hàng..."
             />
+
+            {/* Nút clear */}
+            {keyword && (
+              <button
+                type="button"
+                onClick={() => {
+                  setKeyword("");
+                  setOpenDropdown(false);
+                }}
+                className="absolute right-9 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-slate-100 hover:text-slate-900"
+              >
+                ✕
+              </button>
+            )}
+
+            {/* Nút barcode */}
+            <button
+              type="button"
+              onClick={() => setOpenBarcodeDialog(true)}
+              className="absolute right-2 top-1/2 z-10 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-slate-100 hover:text-slate-900"
+              title="Quét mã vạch"
+            >
+              <ScanBarcode className="h-4 w-4" />
+            </button>
 
             <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50">
               <GlobalSearchDropdown
@@ -164,7 +195,7 @@ export function AppHeader({ onOpenMobileMenu }: Props) {
             </div>
           </div>
 
-          <div className="hidden lg:flex lg:w-auto lg:items-center lg:gap-3">
+          {/* <div className="hidden lg:flex lg:w-auto lg:items-center lg:gap-3">
             <Button
               variant="outline"
               size="sm"
@@ -184,9 +215,17 @@ export function AppHeader({ onOpenMobileMenu }: Props) {
               <LogOut className="h-4 w-4" />
               <span className="truncate">Đăng xuất</span>
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
+      <BarcodeScanDialog
+        open={openBarcodeDialog}
+        onOpenChange={setOpenBarcodeDialog}
+        onScan={(barcode) => {
+          setKeyword(barcode);
+          setOpenDropdown(true);
+        }}
+      />
     </header>
   );
 }

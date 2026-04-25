@@ -112,7 +112,7 @@ apiClient.interceptors.response.use(
 
       if (!refreshToken) {
         clearAuthStorage();
-        showErrorToast("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại", skipErrorToast);
+        showErrorToast(getErrorMessage(error), skipErrorToast);
         return Promise.reject(error);
       }
 
