@@ -20,6 +20,7 @@ export interface EmployeeItem {
   active: boolean;
   baseSalary: number;
   createdAt?: string;
+  dateOfBirth?: string;
   user?: UserItem;
 
   leaves?: EmployeeLeaveItem[];

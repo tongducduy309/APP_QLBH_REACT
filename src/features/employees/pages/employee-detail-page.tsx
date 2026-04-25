@@ -235,6 +235,7 @@ export function EmployeeDetailPage() {
         <div>
           <InfoRow label="Họ và tên" value={employee.fullName} />
           <InfoRow label="Số điện thoại" value={employee.phone || "-"} />
+          <InfoRow label="Ngày sinh" value={formatDateToDDMMYYYY(employee.dateOfBirth) || "-"} />
           <InfoRow label="Địa chỉ" value={employee.address || "-"} visible={canViewAddress}/>
           <InfoRow label="Chức vụ" value={employee.position || "-"} />
           <InfoRow label="Ngày vào làm" value={formatDateToDDMMYYYY(employee.hireDate) || "-"} />
