@@ -4,6 +4,7 @@ import type { EmployeeItem } from "../types/employee.types";
 import { formatCurrency } from "@/lib/utils";
 import { ColumnsType } from "antd/es/table";
 import { RestrictedIcon } from "@/components/common/restricted-icon";
+import { Search } from "lucide-react";
 
 type Props = {
   items: EmployeeItem[];
@@ -141,6 +142,7 @@ export function EmployeeTable({
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           allowClear
+          prefix={<Search className="h-4 w-4" />}
           className="max-w-md"
         />
 
