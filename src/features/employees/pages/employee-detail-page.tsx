@@ -4,9 +4,12 @@ import { Table, Tag, Popconfirm, Button as AntdButton } from "antd";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
+  deleteEmployee,
   deleteEmployeeLeave,
   getEmployeeById,
   markEmployeeLeave,
+  resetPassword,
+  updateEmployeeStatus,
 } from "@/services/employee-api";
 import { EmployeeLeaveDialog } from "../components/employee-leave-dialog";
 import type {
@@ -17,9 +20,15 @@ import type {
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { formatDateToDDMMYYYY } from "@/utils/date";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CircleDollarSign, CircleUserRound, EllipsisVertical, Eye, FileDown, KeyRound, Mail, Pencil, Printer, RotateCcw, Trash2, UserLock } from "lucide-react";
 import { usePermission } from "@/app/hooks/usePermission";
 import { RestrictedIcon } from "@/components/common/restricted-icon";
+import { getPayroll, getPayrollById } from "@/services/payroll-api";
+import { printPayrollPdf } from "@/features/payroll/utils/payroll-pdf";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useConfirmPassword } from "@/app/providers/confirm-password-provider";
+import { useConfirmAction } from "@/app/providers/confirm-action-provider";
+
 
 function InfoRow({
   label,
@@ -33,7 +42,7 @@ function InfoRow({
   return (
     <div className="grid grid-cols-[180px_1fr] gap-3 border-b py-3 text-sm">
       <div className="font-medium text-slate-500">{label}</div>
-      <div>{visible?value:<RestrictedIcon/>}</div>
+      <div>{visible ? value : <RestrictedIcon />}</div>
     </div>
   );
 }
@@ -42,7 +51,7 @@ function InfoRow({
 
 export function EmployeeDetailPage() {
   const { id } = useParams();
-  const { user } = useAuthStore();
+
   const navigate = useNavigate();
 
   const [employee, setEmployee] = useState<EmployeeItem | null>(null);
@@ -52,12 +61,109 @@ export function EmployeeDetailPage() {
   const [leaveLoading, setLeaveLoading] = useState(false);
 
   const { hasRole } = usePermission();
+  const { confirm } = useConfirmAction();
+  const { confirmPassword } = useConfirmPassword();
 
   const canViewSalary = hasRole(["ADMIN", "STORE_MANAGER"]);
-  const canManageLeave = hasRole(["ADMIN", "STORE_MANAGER","OFFICE_STAFF"]);
+  const canManageLeave = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
   const canViewUsername = hasRole(["ADMIN", "STORE_MANAGER"]);
   const canViewAddress = hasRole(["ADMIN", "STORE_MANAGER"]);
-  const canCancelLeave = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canPrintPayroll = hasRole(["ADMIN", "STORE_MANAGER"]);
+  const canManageEmployee = hasRole(["ADMIN", "STORE_MANAGER"]);
+
+  
+
+  const toggleEmployeeStatus = async () => {
+  if (!id) return;
+
+  const ok = await confirm({
+      title: employee?.active ? "Tạm khóa tài khoản" : "Mở khóa tài khoản",
+      description: employee?.active ? "Bạn có chắc chắn muốn tạm khóa tài khoản này không?" : "Bạn có chắc chắn muốn mở khóa tài khoản này không?",
+      confirmText: employee?.active ? "Tạm khóa" : "Mở khóa",
+      cancelText: "Không",
+      variant: "destructive",
+    });
+  if (!ok) return;
+
+  const password = await confirmPassword({
+    title: employee?.active ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+    description: employee?.active ? "Nhập mật khẩu để xác nhận thao tác khóa tài khoản." : "Nhập mật khẩu để xác nhận thao tác mở khóa tài khoản.",
+  
+  });
+
+  if (!password || !id) return;
+
+  try {
+    setLoading(true);
+
+    const newStatus = !(employee?.active??true);
+
+    await updateEmployeeStatus(Number(id), newStatus);
+
+    toast.success(newStatus ? "Mở khóa tài khoản thành công" : "Khóa tài khoản thành công");
+
+    if (employee) {
+      setEmployee((prev) => (prev ? { ...prev, active: newStatus } : null));
+    }
+  } catch (error) {
+    console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const handleRestPassword = async () => {
+  if (!id) return;
+
+  const password = await confirmPassword({
+    title: "Xác nhận mật khẩu",
+    description: "Nhập mật khẩu để xác nhận thao tác.",
+  
+  });
+
+  if (!password || !id) return;
+
+  try {
+    setLoading(true);
+
+    await resetPassword(Number(id));
+
+    toast.success( "Đặt lại mật khẩu thành công");
+
+  } catch (error) {
+    console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
+  } finally {
+    setLoading(false);
+  }
+}
+
+  const handleDeleteEmployee = async () => {
+    const ok = await confirm({
+      title: "Xóa nhân viên",
+      description: "Bạn có chắc chắn muốn xóa nhân viên này không?",
+      confirmText: "Xóa",
+      cancelText: "Không",
+      variant: "destructive",
+    });
+
+    if (!ok) return;
+    const password = await confirmPassword({
+      title: "Xác nhận xóa nhân viên",
+      description: "Nhập mật khẩu để xác nhận thao tác xóa nhân viên.",
+      confirmText: "Xóa",
+    });
+
+    if (!password || !id) return;
+
+    try {
+      await deleteEmployee(id);
+      toast.success("Xoá nhân viên thành công.");
+      navigate("/employees");
+    } catch (error) {
+      console.error(error);
+      // toast.error("Không thể xoá nhân viên.");
+    }
+  };
 
   // const canManageLeave = useMemo(() => {
   //   console.log(user);
@@ -83,12 +189,26 @@ export function EmployeeDetailPage() {
     }
   };
 
+  const handlePrintPayroll = async () => {
+    try {
+      const now = new Date();
+
+      const salaryDate = now.toISOString().slice(0, 10);
+
+      const payrollData = await getPayrollById(salaryDate, Number(id));
+
+      printPayrollPdf([payrollData]);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     loadEmployee();
   }, [id]);
 
   const handleOpenLeaveDialog = () => {
-    
+
     setLeaveDialogOpen(true);
   };
 
@@ -134,7 +254,7 @@ export function EmployeeDetailPage() {
       title: "Ngày nghỉ",
       dataIndex: "leaveDate",
       key: "leaveDate",
-      render: (value: string) =>formatDateToDDMMYYYY(value) || "-",
+      render: (value: string) => formatDateToDDMMYYYY(value) || "-",
     },
     {
       title: "Loại nghỉ",
@@ -157,7 +277,7 @@ export function EmployeeDetailPage() {
       key: "action",
       width: 120,
       render: (_: unknown, record: EmployeeLeaveItem) =>
-        canCancelLeave ? (
+        canManageEmployee ? (
           <Popconfirm
             title="Xoá ngày nghỉ?"
             description="Bạn có chắc muốn xoá ngày nghỉ này không?"
@@ -169,7 +289,7 @@ export function EmployeeDetailPage() {
               Xoá
             </AntdButton>
           </Popconfirm>
-        ) : <RestrictedIcon message="Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ quản lý."/>,
+        ) : <RestrictedIcon message="Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ quản lý." />,
     },
   ];
 
@@ -207,7 +327,7 @@ export function EmployeeDetailPage() {
   }
 
   return (
-    
+
     <div className="space-y-6 p-6">
       <div>
         <Button
@@ -226,17 +346,95 @@ export function EmployeeDetailPage() {
             <h1 className="text-xl font-semibold">{employee.fullName}</h1>
             <p className="text-sm text-slate-500">Mã nhân viên: {employee.code}</p>
           </div>
+          <div className="flex items-center gap-2">
+            {canManageLeave ? (
+              <Button onClick={handleOpenLeaveDialog}>Đánh dấu nghỉ</Button>
+            ) : null}
+            
+            {
+              (canManageEmployee || canPrintPayroll) && (
+                <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  aria-label="Thao tác nhân viên"
+                >
+                  <EllipsisVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
 
-          {canManageLeave ? (
-            <Button onClick={handleOpenLeaveDialog}>Đánh dấu nghỉ</Button>
-          ) : null}
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuGroup>
+                  {canPrintPayroll && (
+                    <DropdownMenuItem onClick={handlePrintPayroll}>
+                      <Printer className="mr-2 h-4 w-4" />
+                      In bảng lương
+                    </DropdownMenuItem>
+                  )}
+
+                  {canManageEmployee&& employee.active && (
+                    <DropdownMenuItem onClick={toggleEmployeeStatus}>
+                      <UserLock className="mr-2 h-4 w-4" />
+                      Tạm khóa tài khoản
+                    </DropdownMenuItem>
+                  )}
+
+                  {canManageEmployee&& !employee.active && (
+                    <DropdownMenuItem onClick={toggleEmployeeStatus}>
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      Mở khóa tài khoản
+                    </DropdownMenuItem>
+                  )}
+
+                  {canManageEmployee && (
+                    <DropdownMenuItem onClick={handlePrintPayroll}>
+                      <CircleUserRound className="mr-2 h-4 w-4" />
+                      Chỉnh sửa thông tin
+                    </DropdownMenuItem>
+                  )}
+
+                  {canManageEmployee && (
+                    <DropdownMenuItem onClick={handleRestPassword}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Đặt lại mật khẩu
+                    </DropdownMenuItem>
+                  )}
+
+                  {
+                    canManageEmployee && (
+                      <DropdownMenuSeparator />
+                    )
+                  }
+
+
+                  {
+                    canManageEmployee && (
+                      <DropdownMenuItem
+                        variant="destructive"
+                        
+                        onClick={handleDeleteEmployee}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Xoá nhân viên
+                      </DropdownMenuItem>
+                    )
+                  }
+
+                  
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>)
+            }
+          </div>
+
         </div>
 
         <div>
           <InfoRow label="Họ và tên" value={employee.fullName} />
           <InfoRow label="Số điện thoại" value={employee.phone || "-"} />
           <InfoRow label="Ngày sinh" value={formatDateToDDMMYYYY(employee.dateOfBirth) || "-"} />
-          <InfoRow label="Địa chỉ" value={employee.address || "-"} visible={canViewAddress}/>
+          <InfoRow label="Địa chỉ" value={employee.address || "-"} visible={canViewAddress} />
           <InfoRow label="Chức vụ" value={employee.position || "-"} />
           <InfoRow label="Ngày vào làm" value={formatDateToDDMMYYYY(employee.hireDate) || "-"} />
           <InfoRow
@@ -272,7 +470,7 @@ export function EmployeeDetailPage() {
             label="Ngày nghỉ tháng này"
             value={employee.leaveDaysThisMonth ?? 0}
           />
-          <InfoRow label="Tài khoản" value={employee.user?.username || "-"} visible={canViewUsername}/>
+          <InfoRow label="Tài khoản" value={employee.user?.username || "-"} visible={canViewUsername} />
           <InfoRow label="Email" value={employee.user?.email || "-"} />
         </div>
       </div>
@@ -296,7 +494,7 @@ export function EmployeeDetailPage() {
 
       <EmployeeLeaveDialog
         open={leaveDialogOpen}
-        
+
         loading={leaveLoading}
         onClose={() => setLeaveDialogOpen(false)}
         onSubmit={handleSubmitLeave}

@@ -101,13 +101,6 @@ export function EmployeeTable({
     render: (value?: boolean) =>
       value ? <Tag color="red">Nghỉ</Tag> : <Tag color="green">Đi làm</Tag>,
   },
-  {
-    title: "Nghỉ tháng này",
-    dataIndex: "leaveDaysThisMonth",
-    key: "leaveDaysThisMonth",
-    width: 140,
-    render: (value?: number) => value ?? 0,
-  },
       {
         title: "Trạng thái",
         dataIndex: "active",

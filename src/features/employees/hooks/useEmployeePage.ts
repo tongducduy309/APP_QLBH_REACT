@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import {
-  activateEmployee,
   createEmployee,
   deleteEmployee,
   getEmployees,
@@ -184,16 +183,6 @@ export function useEmployeePage() {
     }
   };
 
-  const handleActivateEmployee = async (employee: EmployeeItem) => {
-    try {
-      await activateEmployee(employee.id);
-      toast.success("Kích hoạt nhân viên thành công.");
-      await loadEmployees();
-    } catch (error) {
-      console.error(error);
-      toast.error("Không thể kích hoạt nhân viên.");
-    }
-  };
 
   return {
     employees,
@@ -219,6 +208,5 @@ export function useEmployeePage() {
     openDetail,
     handleSubmit,
     handleDeleteEmployee,
-    handleActivateEmployee,
   };
 }

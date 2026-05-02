@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import { NumberInput } from "@/components/ui/number-input";
 
 type Props = {
   shippingFee: number;
@@ -42,7 +43,7 @@ type Props = {
   printInvoiceLabel?: string;
 
   onCopyInvoiceImage: () => void;
-  
+
 };
 
 export function PaymentSummaryCard(props: Props) {
@@ -63,34 +64,44 @@ export function PaymentSummaryCard(props: Props) {
 
   return (
     <>
+
       <div className="my-4 grid gap-4 border-t pt-2 md:grid-cols-2">
         <div className="space-y-2">
           <label className="text-sm font-medium">Phí vận chuyển</label>
-          <Input
-            type="number"
-            min={0}
+          <NumberInput
+            className="w-full"
             value={props.shippingFee}
-            onChange={(e) => props.onChangeShippingFee(Number(e.target.value) || 0)}
+            onValueChange={(val) => props.onChangeShippingFee(val || 0)}
+            min={0}
+            textAlign="right"
+            integerOnly
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Thuế GTGT (%)</label>
-          <Input
-            type="number"
-            min={0}
+          <NumberInput
+            className="w-full"
             value={props.taxPercent}
-            onChange={(e) => props.onChangeTaxPercent(Number(e.target.value) || 0)}
+            onValueChange={(val) => props.onChangeTaxPercent(val || 0)}
+            min={0}
+            max={100}
+            step={1}
+            integerOnly
+            textAlign="right"
+            addonAfter="%"
           />
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium">Tiền khách thanh toán</label>
-          <Input
-            type="number"
-            min={0}
+          <NumberInput
+            className="w-full"
             value={props.paidAmount}
-            onChange={(e) => props.onChangePaidAmount(Number(e.target.value) || 0)}
+            onValueChange={(val) => props.onChangePaidAmount(val || 0)}
+            min={0}
+            textAlign="right"
+            integerOnly
           />
         </div>
       </div>

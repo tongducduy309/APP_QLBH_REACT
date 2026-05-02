@@ -45,6 +45,9 @@ export interface PurchaseReceiptDetailRes {
   productId?: number;
   productName?: string;
 
+  createdByEmployeeCode?: string;
+  createdByEmployeeName?: string;
+
   productVariantId?: number;
   productVariantCode?: string;
   productVariantSKU?: string;

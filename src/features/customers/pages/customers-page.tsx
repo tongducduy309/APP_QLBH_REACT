@@ -26,6 +26,7 @@ import type {
 import { CustomerDialog } from "../components/CustomerDialog";
 import { removeVietnameseTones } from "@/utils/string";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useConfirmAction } from "@/app/providers/confirm-action-provider";
 
 const PAGE_SIZE = 10;
 
@@ -73,6 +74,8 @@ export function CustomersPage() {
 
   const [keyword, setKeyword] = useState(keywordParam);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const { confirm } = useConfirmAction();
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -197,6 +200,15 @@ export function CustomersPage() {
       toast.info("Không tìm thấy khách hàng để xóa.");
       return;
     }
+
+    const result = await confirm({
+      title: "Xác nhận xóa khách hàng",
+      description: `Bạn có chắc chắn muốn xóa khách hàng ${customers.find((customer) => customer.id === id)?.name || "này"} vĩnh viễn không?`,
+      requireCheckbox: true,
+      checkboxText: `Tôi xác nhận xóa khách hàng này vĩnh viễn`,
+    });
+
+    if (!result) return;
 
     try {
       setDeletingId(id);
@@ -374,25 +386,14 @@ export function CustomersPage() {
               Sửa
             </Button>
 
-            <Popconfirm
-              title="Xóa khách hàng"
-              description={`Bạn có chắc muốn xóa "${customer.name || "khách hàng này"}" không?`}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{
-                danger: true,
-                loading: deletingId === customer.id,
-              }}
-              onConfirm={() => handleDeleteCustomer(customer.id??null)}
-            >
-              <Button
+            <Button
                 variant="outline"
                 size="sm"
+                onClick={() => handleDeleteCustomer(customer.id??null)}
                 disabled={deletingId === customer.id}
               >
                 Xóa
               </Button>
-            </Popconfirm>
           </div>
         );
       },

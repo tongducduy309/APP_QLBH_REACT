@@ -13,3 +13,7 @@ export async function introspect(token: string): Promise<AuthRes> {
 
   return data.data;
 }
+
+export async function confirmPassword(password: string): Promise<void> {
+  await apiClient.post("/auth/confirm-password", {password});
+}

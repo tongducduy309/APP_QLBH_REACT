@@ -40,8 +40,8 @@ export async function deleteEmployee(id: number | string): Promise<void> {
   await apiClient.delete(`/employees/${id}`);
 }
 
-export async function activateEmployee(id: number | string): Promise<EmployeeItem> {
-  const { data } = await apiClient.put<ApiResponse<EmployeeItem>>(`/employees/${id}/activate`);
+export async function updateEmployeeStatus(id: number | string, status: boolean): Promise<EmployeeItem> {
+  const { data } = await apiClient.put<ApiResponse<EmployeeItem>>(`/employees/${id}/active?status=${status}`);
   return data.data;
 }
 
@@ -80,3 +80,8 @@ export async function deleteEmployeeLeave(
     params: { leaveDate },
   });
 }
+
+export async function resetPassword(userId: number | string): Promise<void> {
+  await apiClient.post(`/users/reset-password/${userId}`);
+}
+

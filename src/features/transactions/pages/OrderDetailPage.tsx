@@ -304,7 +304,14 @@ export function OrderDetailPage() {
           <div>
             <h1 className="text-xl font-semibold">Chi tiết hóa đơn</h1>
             <p className="text-sm text-muted-foreground">
-              Theo dõi thông tin đầy đủ của hóa đơn {order.code}
+              {
+                order.createdByEmployeeName&&order.createdByEmployeeCode ?
+                <>
+                  Hóa đơn được tạo bởi <span className="font-semibold">{order.createdByEmployeeName} ({order.createdByEmployeeCode})</span>
+                </>
+                : 
+                "Theo dõi thông tin phiếu nhập, biến thể sản phẩm và lô tồn kho liên kết."
+              }
             </p>
           </div>
         </div>

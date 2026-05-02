@@ -3,6 +3,8 @@ import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { useEffect, useState } from "react";
 import { cleanupExpiredOrderStorage } from "@/utils/order-storage-cleanup";
+import { ConfirmPasswordProvider } from "@/app/providers/confirm-password-provider";
+import { ConfirmActionProvider } from "@/app/providers/confirm-action-provider";
 
 export function MainLayout() {
   const [collapsed, setCollapsed] = useState(false);
@@ -16,30 +18,36 @@ export function MainLayout() {
     }
   }, []);
 
-  
+
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-50">
-      <div className="flex h-full">
-        <div className="shrink-0">
-          <AppSidebar
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((prev) => !prev)}
-            mobileOpen={mobileOpen}
-            onMobileClose={() => setMobileOpen(false)}
-          />
-        </div>
+    <ConfirmActionProvider>
+      <ConfirmPasswordProvider>
+        <div className="h-screen overflow-hidden bg-slate-50">
+          <div className="flex h-full">
+            <div className="shrink-0">
+              <AppSidebar
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((prev) => !prev)}
+                mobileOpen={mobileOpen}
+                onMobileClose={() => setMobileOpen(false)}
+              />
+            </div>
 
-        <div className="flex h-full min-w-0 flex-1 flex-col">
-          <div className="shrink-0">
-            <AppHeader onOpenMobileMenu={() => setMobileOpen(true)} />
+            <div className="flex h-full min-w-0 flex-1 flex-col">
+              <div className="shrink-0">
+                <AppHeader onOpenMobileMenu={() => setMobileOpen(true)} />
+              </div>
+
+              <main className="min-h-0 flex-1 overflow-y-auto">
+                <Outlet />
+              </main>
+            </div>
           </div>
-
-          <main className="min-h-0 flex-1 overflow-y-auto">
-            <Outlet />
-          </main>
         </div>
-      </div>
-    </div>
+      </ConfirmPasswordProvider>
+    </ConfirmActionProvider>
+
+
   );
 }

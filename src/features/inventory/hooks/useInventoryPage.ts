@@ -46,6 +46,7 @@ import type {
 
 import { DEFAULT_INVENTORY_EXPORT_COLUMNS } from "../constants/inventory-export-columns";
 import type { InventoryUpdateReq, ProductImportRes } from "@/types/product";
+import { useConfirmAction } from "@/app/providers/confirm-action-provider";
 
 function createInitialPurchaseReceiptForm(): PurchaseReceiptForm {
   return {
@@ -90,6 +91,8 @@ export function useInventoryPage() {
     createInitialPurchaseReceiptForm()
   );
   const [isSubmittingPurchaseReceipt, setIsSubmittingPurchaseReceipt] = useState(false);
+
+  const { confirm } = useConfirmAction();
 
   const isEditingProduct = editingProductId !== null;
 
@@ -228,7 +231,16 @@ export function useInventoryPage() {
 
   const handleSubmit = async () => {
     const isValid = validateProductForm(form);
-    if (!isValid) return;
+    if (!isValid) return false;
+
+    const result = await confirm({
+      title: isEditingProduct ? "Xác nhận cập nhật" : "Xác nhận tạo mới",
+      description: isEditingProduct ? "Bạn có chắc chắn muốn cập nhật sản phẩm này?" : "Bạn có chắc chắn muốn tạo mới sản phẩm này?",
+      confirmText: isEditingProduct ? "Cập nhật" : "Tạo mới",
+      cancelText: "Không",
+    });
+
+    if (!result) return false;
 
     try {
       if (isEditingProduct && editingProductId !== null) {
@@ -243,12 +255,14 @@ export function useInventoryPage() {
 
       setIsProductDialogOpen(false);
       resetForm();
-      await fetchInventory();
+      return true;
+
     } catch (error) {
       console.error(error);
       toast.error(
         isEditingProduct ? "Cập nhật sản phẩm thất bại." : "Thêm mới sản phẩm thất bại."
       );
+      return false;
     }
   };
 

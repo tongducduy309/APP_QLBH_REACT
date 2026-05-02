@@ -43,7 +43,12 @@ export function InventoryPage() {
         onAddVariant={inventory.addVariant}
         onRemoveVariant={inventory.removeVariant}
         onUpdateVariant={inventory.updateVariant}
-        onSubmit={inventory.handleSubmit}
+        onSubmit={async () => {
+          const result = await inventory.handleSubmit();
+          if (result) {
+            await inventory.fetchInventory();
+          }
+        }}
       />
 
       <InventoryEditDialog

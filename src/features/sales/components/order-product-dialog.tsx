@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getEffectiveQuantity } from "../utils/sales-calculations";
 import { LineKind, OrderedProduct } from "../types/sales.types";
+import { Select } from "antd";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -141,7 +142,7 @@ export function OrderProductDialog({
 
   const lengthRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  
+
 
   useEffect(() => {
     if (!open) return;
@@ -156,8 +157,8 @@ export function OrderProductDialog({
       setSizeLines(
         editValue.sizeLines.length > 0
           ? editValue.sizeLines.map((item) =>
-              createSizeLine(item.length || 0, item.quantity || 1)
-            )
+            createSizeLine(item.length || 0, item.quantity || 1)
+          )
           : [createSizeLine()]
       );
       setProductName(editValue.name || "");
@@ -184,7 +185,7 @@ export function OrderProductDialog({
     setIsProductNameManuallyEdited(false);
     setAllowOutsideStock(false);
     setIsOverStockDialogOpen(false);
-    
+
     setTimeout(() => {
       lengthRefs.current[firstLine.id]?.focus();
     }, 0);
@@ -203,9 +204,8 @@ export function OrderProductDialog({
   }, [priceMode, product?.retailPrice, product?.storePrice, editValue]);
 
   const defaultComputedName = useMemo(() => {
-    let name = `${product?.name ?? ""}${
-      product?.variantCode ? ` (${product.variantCode})` : ""
-    }`;
+    let name = `${product?.name ?? ""}${product?.variantCode ? ` (${product.variantCode})` : ""
+      }`;
 
     if (form.type === "B") name += " Sóng Vuông";
     if (form.type === "C") name += " Sóng La Phông";
@@ -249,28 +249,28 @@ export function OrderProductDialog({
   }, [computedUnitPrice, product?.cost]);
 
   const subtotal = useMemo(() => {
-  return sizeLines.reduce((sum, line) => {
-    const lineTotal =
-      getEffectiveQuantity({
-        quantity: line.quantity,
-        length: line.length,
-      }) * Number(computedUnitPrice || 0);
+    return sizeLines.reduce((sum, line) => {
+      const lineTotal =
+        getEffectiveQuantity({
+          quantity: line.quantity,
+          length: line.length,
+        }) * Number(computedUnitPrice || 0);
 
-    return sum + lineTotal;
-  }, 0);
-}, [sizeLines, computedUnitPrice]);
+      return sum + lineTotal;
+    }, 0);
+  }, [sizeLines, computedUnitPrice]);
 
   const totalQuantity = useMemo(() => {
-  return sizeLines.reduce(
-    (sum, line) =>
-      sum +
-      getEffectiveQuantity({
-        quantity: line.quantity,
-        length: line.length,
-      }),
-    0
-  );
-}, [sizeLines]);
+    return sizeLines.reduce(
+      (sum, line) =>
+        sum +
+        getEffectiveQuantity({
+          quantity: line.quantity,
+          length: line.length,
+        }),
+      0
+    );
+  }, [sizeLines]);
 
   const exceededQuantity = useMemo(() => {
     return Math.max(0, totalQuantity - availableStock);
@@ -448,7 +448,7 @@ export function OrderProductDialog({
 
   const submitOrders = () => {
     const orders: OrderedProduct[] = sizeLines.map((line) => ({
-      kind: allowOutsideStock?"NON_INVENTORY":"INVENTORY",
+      kind: allowOutsideStock ? "NON_INVENTORY" : "INVENTORY",
       name: productName.trim(),
       unit: unit || "",
       price: computedUnitPrice,
@@ -459,7 +459,7 @@ export function OrderProductDialog({
       inventoryId: product?.inventoryId ?? editValue?.inventoryId ?? null,
     }));
 
-    
+
 
     if ((form.type === "B" || form.type === "C") && form.curving.enabled) {
       const totalCurvingQty = sizeLines.reduce(
@@ -468,7 +468,7 @@ export function OrderProductDialog({
       );
 
       orders.push({
-        
+
         kind: "EXPENSE",
         name: "Công Uốn Vòm",
         unit: "tấm",
@@ -488,8 +488,8 @@ export function OrderProductDialog({
 
   const handleSubmit = () => {
     if (!validateForm()) return;
-    console.log(allowOutsideStock,isOverStock)
-    if (!allowOutsideStock&&isOverStock) {
+    console.log(allowOutsideStock, isOverStock)
+    if (!allowOutsideStock && isOverStock) {
       setIsOverStockDialogOpen(true);
       return;
     }
@@ -531,157 +531,166 @@ export function OrderProductDialog({
                       setIsProductNameManuallyEdited(true);
                     }}
                   />
-            
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setProductName(defaultComputedName);
-                        setIsProductNameManuallyEdited(false);
-                      }}
-                    >
-                      Tự động
-                    </Button>
-                
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setProductName(defaultComputedName);
+                      setIsProductNameManuallyEdited(false);
+                    }}
+                  >
+                    Tự động
+                  </Button>
+
                 </div>
               </div>
 
-           
-                <>
-                  <div className="space-y-3">
-                    <Label>Loại sản phẩm</Label>
-                    <RadioGroup
-                      value={form.type}
-                      onValueChange={(value) => setProductType(value as ProductType)}
-                      className="grid grid-cols-2 gap-2 md:grid-cols-4"
-                    >
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="A" id="type-a" />
-                        <span>Không</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="B" id="type-b" />
-                        <span>Sóng Vuông</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="C" id="type-c" />
-                        <span>Sóng La Phông</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="D" id="type-d" />
-                        <span>Phẳng</span>
-                      </label>
-                    </RadioGroup>
-                  </div>
 
-                  {(form.type === "B" || form.type === "C") && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          id="curving"
-                          checked={form.curving.enabled}
-                          onCheckedChange={(checked) =>
-                            setCurvingEnabled(Boolean(checked))
-                          }
-                        />
-                        <Label htmlFor="curving">Uốn vòm</Label>
-                      </div>
+              <>
+                <div className="space-y-3">
+                  <Label>Loại sản phẩm</Label>
+                  <RadioGroup
+                    value={form.type}
+                    onValueChange={(value) => setProductType(value as ProductType)}
+                    className="grid grid-cols-2 gap-2 md:grid-cols-4"
+                  >
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="A" id="type-a" />
+                      <span>Không</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="B" id="type-b" />
+                      <span>Sóng Vuông</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="C" id="type-c" />
+                      <span>Sóng La Phông</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="D" id="type-d" />
+                      <span>Phẳng</span>
+                    </label>
+                  </RadioGroup>
+                </div>
 
-                      {form.curving.enabled && (
-                        <div className="space-y-2">
-                          <Label htmlFor="curving-price">Đơn giá uốn vòm</Label>
-                          <NumberInput
-                            id="curving-price"
-                            value={form.curving.price}
-                            onValueChange={setCurvingPrice}
-                          />
-                        </div>
-                      )}
+                {(form.type === "B" || form.type === "C") && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="curving"
+                        checked={form.curving.enabled}
+                        onCheckedChange={(checked) =>
+                          setCurvingEnabled(Boolean(checked))
+                        }
+                      />
+                      <Label htmlFor="curving">Uốn vòm</Label>
                     </div>
-                  )}
 
-                  {form.type === "D" && (
-                    <div className="space-y-4 rounded-lg border p-4">
-                      <div className="flex items-center gap-3">
-                        <Checkbox
-                          id="has-groove"
-                          checked={form.flatSheet.hasGroove}
-                          onCheckedChange={(checked) =>
-                            setFlatSheetGroove(Boolean(checked))
-                          }
+                    {form.curving.enabled && (
+                      <div className="space-y-2">
+                        <Label htmlFor="curving-price">Đơn giá uốn vòm</Label>
+                        <NumberInput
+                          id="curving-price"
+                          value={form.curving.price}
+                          onValueChange={setCurvingPrice}
+                          addonAfter="VND"
+                          textAlign="right"
+                          min={0}
+                          integerOnly
                         />
-                        <Label htmlFor="has-groove">Nhấn máng</Label>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {form.type === "D" && (
+                  <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex items-center gap-3">
+                      <Checkbox
+                        id="has-groove"
+                        checked={form.flatSheet.hasGroove}
+                        onCheckedChange={(checked) =>
+                          setFlatSheetGroove(Boolean(checked))
+                        }
+                      />
+                      <Label htmlFor="has-groove">Nhấn máng</Label>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label>Khổ / 120 cm</Label>
+                        <NumberInput
+                          value={form.flatSheet.width}
+                          onValueChange={setFlatSheetWidth}
+                          addonAfter="cm"
+                          textAlign="right"
+                        />
                       </div>
 
-                      <div className="grid gap-4 md:grid-cols-3">
-                        <div className="space-y-2">
-                          <Label>Khổ / 120 cm</Label>
-                          <NumberInput
-                            value={form.flatSheet.width}
-                            onValueChange={setFlatSheetWidth}
-                          />
-                        </div>
+                      <div className="space-y-2">
+                        <Label>Số tấm</Label>
+                        <Select
+                          className="w-full"
+                          size="large"
+                          value={form.flatSheet.panelCount}
+                          onChange={(value) => setFlatSheetPanelCount(Number(value))}
+                          getPopupContainer={(triggerNode) => triggerNode.parentElement}
+                          popupMatchSelectWidth={false}
+                          options={[
+                            { value: 1, label: "1" },
+                            { value: 2, label: "2" },
+                            { value: 3, label: "3" },
+                          ]}
+                        />
+                      </div>
 
-                        <div className="space-y-2">
-                          <Label>Số tấm</Label>
-                          <select
-                            className="h-10 w-full rounded-md border bg-background px-3"
-                            value={form.flatSheet.panelCount}
-                            onChange={(e) =>
-                              setFlatSheetPanelCount(Number(e.target.value))
-                            }
-                          >
-                            <option value={1}>1</option>
-                            <option value={2}>2</option>
-                            <option value={3}>3</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2 md:col-span-3">
-                          <Label>Kích thước từng tấm (cm)</Label>
-                          <div
-                            className={`grid gap-2 ${
-                              form.flatSheet.panelCount === 1
-                                ? "grid-cols-1"
-                                : form.flatSheet.panelCount === 2
+                      <div className="space-y-2 md:col-span-3">
+                        <Label>Kích thước từng tấm</Label>
+                        <div
+                          className={`grid gap-2 ${form.flatSheet.panelCount === 1
+                              ? "grid-cols-1"
+                              : form.flatSheet.panelCount === 2
                                 ? "grid-cols-2"
                                 : "grid-cols-3"
                             }`}
-                          >
-                            {form.flatSheet.panelSizes.map((panelSize, index) => (
-                              <NumberInput
-                                key={index}
-                                value={panelSize}
-                                onValueChange={(value) =>
-                                  setFlatSheetPanelSizeAt(index, value)
-                                }
-                              />
-                            ))}
-                          </div>
+                        >
+                          {form.flatSheet.panelSizes.map((panelSize, index) => (
+                            <NumberInput
+                              key={index}
+                              value={panelSize}
+                              onValueChange={(value) =>
+                                setFlatSheetPanelSizeAt(index, value)
+                              }
+                              addonAfter="cm"
+                              textAlign="right"
+                            />
+                          ))}
                         </div>
                       </div>
                     </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <Label>Loại giá</Label>
-                    <RadioGroup
-                      value={priceMode}
-                      onValueChange={(value) => setPriceMode(value as PriceMode)}
-                      className="grid grid-cols-2 gap-2"
-                    >
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="A" id="price-a" />
-                        <span>Giá bán lẻ</span>
-                      </label>
-                      <label className="flex items-center gap-2 rounded-md border p-3">
-                        <RadioGroupItem value="B" id="price-b" />
-                        <span>Giá cửa hàng</span>
-                      </label>
-                    </RadioGroup>
                   </div>
-                </>
-          
+                )}
+
+                <div className="space-y-3">
+                  <Label>Loại giá</Label>
+                  <RadioGroup
+                    value={priceMode}
+                    onValueChange={(value) => setPriceMode(value as PriceMode)}
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="A" id="price-a" />
+                      <span>Giá bán lẻ</span>
+                    </label>
+                    <label className="flex items-center gap-2 rounded-md border p-3">
+                      <RadioGroupItem value="B" id="price-b" />
+                      <span>Giá cửa hàng</span>
+                    </label>
+                  </RadioGroup>
+                </div>
+              </>
+
 
               <div className="grid gap-4 md:grid-cols-[1fr_140px]">
                 <div className="space-y-2">
@@ -695,6 +704,9 @@ export function OrderProductDialog({
                         price: value,
                       }))
                     }
+                    addonAfter="VND"
+                    textAlign="right"
+                    integerOnly
                   />
                 </div>
 
@@ -748,6 +760,7 @@ export function OrderProductDialog({
                                   length: value,
                                 })
                               }
+                              addonAfter="m"
                             />
                           </div>
 
@@ -807,8 +820,8 @@ export function OrderProductDialog({
 
               <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Tổng số lượng</span>
-                <span className={isOverStock&&!allowOutsideStock ? "font-medium text-red-600" : "font-medium"}>
-                  {totalQuantity} {isOverStock&&!allowOutsideStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
+                <span className={isOverStock && !allowOutsideStock ? "font-medium text-red-600" : "font-medium"}>
+                  {totalQuantity} {isOverStock && !allowOutsideStock ? `(+${exceededQuantity} Vượt tồn kho)` : ""}
                 </span>
               </div>
 
@@ -886,11 +899,10 @@ export function OrderProductDialog({
 
             <label
               htmlFor="allow-outside-stock"
-              className={`inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all ${
-                allowOutsideStock
+              className={`inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all ${allowOutsideStock
                   ? "border-primary bg-primary/10 text-primary"
                   : "border-border bg-background hover:bg-muted"
-              }`}
+                }`}
             >
               <Checkbox
                 id="allow-outside-stock"

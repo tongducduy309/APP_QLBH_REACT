@@ -24,6 +24,7 @@ import type {
 import { useInventoryPage } from "../hooks/useInventoryPage";
 import { ProductDialog } from "../components/ProductDialog";
 import { PurchaseReceiptRes } from "@/features/purchase-receipts/types/purchase-receipt.types";
+import { useConfirmAction } from "@/app/providers/confirm-action-provider";
 
 export function ProductDetailPage() {
     const navigate = useNavigate();
@@ -33,13 +34,15 @@ export function ProductDetailPage() {
 
     const [product, setProduct] = useState<ProductInventoryRes | null>(null);
     const [loading, setLoading] = useState(true);
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [deleting, setDeleting] = useState(false);
+
 
     const [importHistoryData, setImportHistoryData] = useState<
         PurchaseReceiptRes[]
     >([]);
     const [importHistoryLoading, setImportHistoryLoading] = useState(false);
+
+    const { confirm } = useConfirmAction();
 
     const productId = Number(id);
 
@@ -239,23 +242,22 @@ export function ProductDetailPage() {
         inventory.openEditDialog(product);
     };
 
-    const handleOpenDeleteDialog = () => {
-        if (!product) return;
-        setDeleteModalOpen(true);
-    };
 
-    const handleCloseDeleteDialog = () => {
-        if (deleting) return;
-        setDeleteModalOpen(false);
-    };
-
-    const handleConfirmDelete = async () => {
+    const handleDeleteProduct = async () => {
         if (!productId || deleting) return;
+
+        const result = await confirm({
+            title: "Xác nhận xóa sản phẩm",
+            description: `Bạn có chắc chắn muốn xóa sản phẩm ${product?.name} vĩnh viễn không?`,
+            requireCheckbox: true,
+            checkboxText: `Tôi xác nhận xóa sản phẩm này vĩnh viễn`,
+        });
+
+        if (!result) return;
 
         try {
             setDeleting(true);
             await deleteProduct(productId);
-            setDeleteModalOpen(false);
             navigate("/products");
         } catch (error) {
             console.error("Failed to delete product:", error);
@@ -270,8 +272,10 @@ export function ProductDetailPage() {
     };
 
     const handleSubmitProductDialog = async () => {
-        await inventory.handleSubmit();
-        await fetchAllData();
+        const result = await inventory.handleSubmit();
+        if (result) {
+            await fetchAllData();
+        }
     };
 
     if (loading) {
@@ -327,7 +331,7 @@ export function ProductDetailPage() {
                         <Button
                             danger
                             icon={<Trash2 size={16} />}
-                            onClick={handleOpenDeleteDialog}
+                            onClick={handleDeleteProduct}
                         >
                             Xóa sản phẩm
                         </Button>
@@ -438,7 +442,7 @@ export function ProductDetailPage() {
                 onSubmit={handleSubmitProductDialog}
             />
 
-            <Modal
+            {/* <Modal
                 title="Xác nhận xóa sản phẩm"
                 open={deleteModalOpen}
                 onCancel={handleCloseDeleteDialog}
@@ -463,7 +467,7 @@ export function ProductDetailPage() {
                         Hành động này không thể hoàn tác.
                     </p>
                 </div>
-            </Modal>
+            </Modal> */}
         </PageShell>
     );
 }

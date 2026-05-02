@@ -111,7 +111,7 @@ apiClient.interceptors.response.use(
       const refreshToken = getRefreshToken();
 
       if (!refreshToken) {
-        clearAuthStorage();
+        // clearAuthStorage();
         showErrorToast(getErrorMessage(error), skipErrorToast);
         return Promise.reject(error);
       }

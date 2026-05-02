@@ -17,4 +17,5 @@ export const paths = {
   purchaseReceipts: "/purchase-receipts",
   settings: "/settings",
   forbidden: "/forbidden",
+  database: "/database",
 };

@@ -122,6 +122,10 @@ export function EmployeeDialog({
                 baseSalary: Number.isFinite(nextValue) ? nextValue : 0,
               })
             }
+            min={0}
+            integerOnly
+            textAlign="right"
+            addonAfter="VND"
           />
         </div>
 
