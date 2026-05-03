@@ -9,7 +9,6 @@ import { CustomersPage } from "@/features/customers/pages/customers-page";
 import { TransactionsPage } from "@/features/transactions/pages/transactions-page";
 import { QuoteReportPage } from "@/features/reports/pages/quote-report-page";
 import { StatisticsPage } from "@/features/statistics/pages/statistics-page";
-import { BarcodePage } from "@/features/barcode/pages/barcode-page";
 import { PurchaseReceiptsPage } from "@/features/purchase-receipts/pages/purchase-receipts-page";
 import { SettingsPage } from "@/features/settings/pages/settings-page";
 import { ForbiddenPage } from "@/features/errors/pages/forbidden-page";
@@ -22,6 +21,7 @@ import { PurchaseReceiptDetailPage } from "@/features/purchase-receipts/pages/pu
 import { EmployeesPage } from "@/features/employees/pages/employees-page";
 import { EmployeeDetailPage } from "@/features/employees/pages/employee-detail-page";
 import { RoleGuard } from "@/routes/role-guard";
+import DatabaseChangeLogPage from "@/features/database/pages/database-change-log-page";
 
 const isElectron = window.location.protocol === "file:";
 
@@ -56,6 +56,7 @@ export const router = (isElectron ? createHashRouter : createBrowserRouter)([
             { path: "/settings", element: <SettingsPage /> },
             { path: "/employees", element: <EmployeesPage /> },
             { path: "/employees/:id", element: <EmployeeDetailPage /> },
+            { path: "/database", element: <DatabaseChangeLogPage /> },
           ],
         },
         ],
