@@ -1,45 +1,42 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Eye,
-  FileClock,
-  RefreshCcw,
-  Search,
-  PlusCircle,
-  Pencil,
-  Trash2,
-} from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
+  Button,
+  Card,
+  DatePicker,
+  Descriptions,
+  Drawer,
+  Empty,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
+} from "antd";
+import type { ColumnsType } from "antd/es/table";
+import {
+  EyeOutlined,
+  FileSearchOutlined,
+  ReloadOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
 
 import type {
   DatabaseAction,
   DatabaseChangeLog,
 } from "../types/database-change-log.types";
 import { getDatabaseChangeLogs } from "@/services/database-api";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { formatDateTimeDDMMYYYY_HHMMSS } from "@/utils/date";
+import { renderChangeLog } from "@/utils/format";
+import { useNavigate } from "react-router-dom";
+
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const PAGE_SIZE = 20;
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("vi-VN");
-}
 
 function prettyJson(value?: string | null) {
   if (!value) return "Không có dữ liệu";
@@ -51,42 +48,46 @@ function prettyJson(value?: string | null) {
   }
 }
 
+function getLink(entityName: string, entityId: string|null) {
+  switch (entityName) {
+    case "ORDER":
+      return `/transactions/${entityId}`;
+    case "CUSTOMER":
+      return `/customers/${entityId}`;
+    case "PRODUCT":
+      return `/inventory/${entityId}`;
+    case "EMPLOYEE":
+      return `/employees/${entityId}`;
+    case "PURCHASE_RECEIPT":
+      return `/purchase-receipts/${entityId}`;
+    default:
+      return undefined;
+  }
+}
+
 function getActionLabel(action: DatabaseAction) {
   switch (action) {
     case "CREATE":
-      return "Tạo mới";
+      return "TẠO MỚI";
     case "UPDATE":
-      return "Cập nhật";
+      return "CẬP NHẬT";
     case "DELETE":
-      return "Xóa";
+      return "XÓA";
     default:
       return action;
   }
 }
 
-function getActionIcon(action: DatabaseAction) {
+function getActionColor(action: DatabaseAction) {
   switch (action) {
     case "CREATE":
-      return <PlusCircle className="h-4 w-4 text-green-600" />;
+      return "green";
     case "UPDATE":
-      return <Pencil className="h-4 w-4 text-blue-600" />;
+      return "blue";
     case "DELETE":
-      return <Trash2 className="h-4 w-4 text-red-600" />;
+      return "red";
     default:
-      return null;
-  }
-}
-
-function getActionClass(action: DatabaseAction) {
-  switch (action) {
-    case "CREATE":
-      return "border-green-200 bg-green-50 text-green-700";
-    case "UPDATE":
-      return "border-blue-200 bg-blue-50 text-blue-700";
-    case "DELETE":
-      return "border-red-200 bg-red-50 text-red-700";
-    default:
-      return "border-slate-200 bg-slate-50 text-slate-700";
+      return "default";
   }
 }
 
@@ -95,44 +96,53 @@ export default function DatabaseChangeLogPage() {
   const [selectedLog, setSelectedLog] = useState<DatabaseChangeLog | null>(null);
 
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
   const [totalElements, setTotalElements] = useState(0);
 
-  const [entityName, setEntityName] = useState("");
-  const [action, setAction] = useState<DatabaseAction | "">("");
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
+
+  const [action, setAction] = useState<DatabaseAction | "ALL">("ALL");
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs, dayjs.Dayjs] | null>(
+    null,
+  );
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPage(0);
+      setDebouncedKeyword(keyword.trim());
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [keyword]);
 
   const fetchLogs = useCallback(async () => {
     try {
       setLoading(true);
-      setError("");
 
       const res = await getDatabaseChangeLogs({
         page,
         size: PAGE_SIZE,
-        entityName: entityName.trim(),
-        action: action === "" ? undefined : action,
-        fromDate: fromDate.trim(),
-        toDate: toDate.trim(),
+        keyword: debouncedKeyword || undefined,
+        action: action === "ALL" ? undefined : action,
+        fromDate: dateRange ? dateRange[0].format("YYYY-MM-DD") : undefined,
+        toDate: dateRange ? dateRange[1].format("YYYY-MM-DD") : undefined,
       });
 
-      setLogs(res.content ?? []);
-      setTotalPages(res.totalPages ?? 0);
+      setLogs(Array.isArray(res.content) ? res.content : []);
       setTotalElements(res.totalElements ?? 0);
-    } catch (err) {
-      console.error(err);
-      setError("Không thể tải lịch sử thay đổi dữ liệu.");
+    } catch (error) {
+      console.error(error);
+      message.error("Không thể tải lịch sử thay đổi dữ liệu");
       setLogs([]);
-      setTotalPages(0);
       setTotalElements(0);
     } finally {
       setLoading(false);
     }
-  }, [page, entityName, action, fromDate, toDate]);
+  }, [page, debouncedKeyword, action, dateRange]);
 
   useEffect(() => {
     fetchLogs();
@@ -140,290 +150,241 @@ export default function DatabaseChangeLogPage() {
 
   function resetFilter() {
     setPage(0);
-    setEntityName("");
-    setAction("");
-    setFromDate("");
-    setToDate("");
+    setKeyword("");
+    setDebouncedKeyword("");
+    setAction("ALL");
+    setDateRange(null);
   }
 
+  const columns = useMemo<ColumnsType<DatabaseChangeLog>>(
+    () => [
+      {
+        title: "Thời gian",
+        dataIndex: "createdAt",
+        width: 180,
+        render: (value) => formatDateTimeDDMMYYYY_HHMMSS(value),
+      },
+      {
+        title: "Bảng dữ liệu",
+        width: 180,
+        render: (_, record) => {
+          const link = getLink(record.entityName, record.entityId??null);
+          return link ? (
+            <>
+            <div className="font-medium cursor-pointer hover:underline" onClick={() => {navigate(link)}}>{record.entityName}</div>
+            <Text type="secondary" className="text-xs">
+                ID: {record.entityId || "-"}
+              </Text>
+            </>
+          ) : (
+            <>
+              <div className="font-medium">{record.entityName}</div>
+              
+            </>
+          );
+        },
+      },
+      {
+        title: "Thao tác",
+        dataIndex: "action",
+        width: 130,
+        render: (value: DatabaseAction) => (
+          <Tag color={getActionColor(value)}>{getActionLabel(value)}</Tag>
+        ),
+      },
+      {
+        title: "Người thực hiện",
+        width: 210,
+        render: (_, record) => (
+          <div>
+            <div className="font-medium">{record.actorName || "SYSTEM"}</div>
+            <Text type="secondary" className="text-xs">
+              {record.employeeCode || record.actorUsername || "-"}
+            </Text>
+          </div>
+        ),
+      },
+      {
+        title: "Nội dung",
+        dataIndex: "content",
+        render: (_, record) => (
+          <Tooltip placement="topLeft" title="Nhấn để xem chi tiết">
+            <div
+              className="line-clamp-2 cursor-pointer whitespace-normal"
+              onClick={() => setSelectedLog(record)}
+            >
+              {renderChangeLog(record.content)}
+            </div>
+          </Tooltip>
+        ),
+      },
+      {
+        title: "IP",
+        dataIndex: "ipAddress",
+        width: 140,
+        render: (value) => value || "-",
+      },
+      {
+        title: "",
+        width: 90,
+        align: "right",
+        fixed: "right",
+        render: (_, record) => (
+          <Button icon={<EyeOutlined />} onClick={() => setSelectedLog(record)}>
+            Xem
+          </Button>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
-    <div className="space-y-5 p-4 md:p-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <FileClock className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold">
+    <div className="flex flex-col gap-5 p-4 md:p-6">
+      <Card>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Title level={4} className="!mb-1 flex items-center gap-2">
+              <FileSearchOutlined />
               Lịch sử thay đổi dữ liệu
-            </h1>
+            </Title>
+
+            <Text type="secondary">
+              Theo dõi thao tác tạo mới, cập nhật và xóa dữ liệu trong hệ thống.
+            </Text>
           </div>
 
-          <p className="mt-1 text-sm text-muted-foreground">
-            Theo dõi thao tác tạo mới, cập nhật và xóa dữ liệu trong hệ thống.
-          </p>
+          <Button icon={<ReloadOutlined />} onClick={fetchLogs} loading={loading}>
+            Làm mới
+          </Button>
         </div>
+      </Card>
 
-        <Button
-          variant="outline"
-          onClick={fetchLogs}
-          disabled={loading}
-          className="gap-2"
-        >
-          <RefreshCcw className="h-4 w-4" />
-          Làm mới
-        </Button>
-      </div>
-
-      <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-5">
-          <div className="relative md:col-span-2">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
-            <Input
-              value={entityName}
-              onChange={(e) => {
-                setPage(0);
-                setEntityName(e.target.value);
-              }}
-              placeholder="Tìm entity: Product, Order, Customer..."
-              className="pl-9"
-            />
-          </div>
+      <Card>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder="Tìm bảng(ORDER,...), nội dung"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onPressEnter={() => {
+              setPage(0);
+              setDebouncedKeyword(keyword.trim());
+            }}
+          />
 
           <Select
-            value={action || "ALL"}
-            onValueChange={(value) => {
+            value={action}
+            onChange={(value) => {
               setPage(0);
-              setAction(value === "ALL" ? "" : (value as DatabaseAction));
+              setAction(value);
             }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Loại thao tác" />
-            </SelectTrigger>
-
-            <SelectContent>
-              <SelectItem value="ALL">Tất cả thao tác</SelectItem>
-              <SelectItem value="CREATE">Tạo mới</SelectItem>
-              <SelectItem value="UPDATE">Cập nhật</SelectItem>
-              <SelectItem value="DELETE">Xóa</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Input
-            type="date"
-            value={fromDate}
-            onChange={(e) => {
-              setPage(0);
-              setFromDate(e.target.value);
-            }}
+            options={[
+              { label: "Tất cả thao tác", value: "ALL" },
+              { label: "Tạo mới", value: "CREATE" },
+              { label: "Cập nhật", value: "UPDATE" },
+              { label: "Xóa", value: "DELETE" },
+            ]}
           />
 
-          <Input
-            type="date"
-            value={toDate}
-            onChange={(e) => {
+          <RangePicker
+            className="w-full xl:col-span-2"
+            format="DD/MM/YYYY"
+            value={dateRange}
+            onChange={(value) => {
               setPage(0);
-              setToDate(e.target.value);
+              setDateRange(value as [dayjs.Dayjs, dayjs.Dayjs] | null);
             }}
           />
         </div>
 
-        <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
-            Tổng cộng: {totalElements} lịch sử
-          </p>
-
-          <Button variant="ghost" onClick={resetFilter}>
-            Xóa bộ lọc
-          </Button>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Thời gian</TableHead>
-              <TableHead>Entity</TableHead>
-              <TableHead>Thao tác</TableHead>
-              <TableHead>Người thực hiện</TableHead>
-              <TableHead>Nội dung</TableHead>
-              <TableHead className="text-right">Chi tiết</TableHead>
-            </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  Đang tải dữ liệu...
-                </TableCell>
-              </TableRow>
-            ) : logs.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
-                >
-                  Không có lịch sử thay đổi
-                </TableCell>
-              </TableRow>
-            ) : (
-              logs.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="whitespace-nowrap">
-                    {formatDateTime(log.createdAt)}
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="font-medium">{log.entityName}</div>
-                    <div className="text-xs text-muted-foreground">
-                      ID: {log.entityId || "-"}
-                    </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-medium ${getActionClass(
-                        log.action
-                      )}`}
-                    >
-                      {getActionIcon(log.action)}
-                      {getActionLabel(log.action)}
-                    </span>
-                  </TableCell>
-
-                  <TableCell>
-                    <div className="font-medium">
-                      {log.actorName || "SYSTEM"}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {log.employeeCode || log.actorUsername || "-"}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="max-w-[380px]">
-                    <p className="line-clamp-2 text-sm">{log.content}</p>
-                  </TableCell>
-
-                  <TableCell className="text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedLog(log)}
-                      className="gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Xem
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Trang {page + 1} / {Math.max(totalPages, 1)}
-        </p>
-
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={page <= 0 || loading}
-            onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-          >
-            Trước
+        <Space className="mt-4">
+          <Button type="primary" onClick={fetchLogs} loading={loading}>
+            Lọc dữ liệu
           </Button>
 
-          <Button
-            variant="outline"
-            disabled={page + 1 >= totalPages || loading}
-            onClick={() => setPage((prev) => prev + 1)}
-          >
-            Sau
-          </Button>
-        </div>
-      </div>
+          <Button onClick={resetFilter}>Xóa bộ lọc</Button>
+        </Space>
+      </Card>
 
-      <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
-        <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Chi tiết thay đổi dữ liệu</DialogTitle>
-          </DialogHeader>
+      <Card>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={Array.isArray(logs) ? logs : []}
+          loading={loading}
+          pagination={{
+            current: page + 1,
+            pageSize: PAGE_SIZE,
+            total: totalElements,
+            showSizeChanger: false,
+            showTotal: (total) => `Tổng ${total} lịch sử`,
+            onChange: (nextPage) => setPage(nextPage - 1),
+          }}
+          locale={{
+            emptyText: <Empty description="Không có lịch sử thay đổi dữ liệu" />,
+          }}
+        />
+      </Card>
 
-          {selectedLog && (
-            <div className="space-y-5">
-              <div className="grid gap-3 rounded-lg border p-4 md:grid-cols-2">
-                <Info label="Entity">
-                  {selectedLog.entityName} #{selectedLog.entityId || "-"}
-                </Info>
+      <Drawer
+        title="Chi tiết thay đổi dữ liệu"
+        open={!!selectedLog}
+        onClose={() => setSelectedLog(null)}
+        width={760}
+      >
+        {selectedLog && (
+          <div className="space-y-5">
+            <Descriptions bordered className="!mb-5" size="small" column={1}>
+              <Descriptions.Item label="Thời gian">
+                {formatDateTimeDDMMYYYY_HHMMSS(selectedLog.createdAt)}
+              </Descriptions.Item>
 
-                <Info label="Thao tác">
+              <Descriptions.Item label="Bảng dữ liệu">
+                {selectedLog.entityName}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Mã dữ liệu">
+                {selectedLog.entityId || "-"}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Thao tác">
+                <Tag color={getActionColor(selectedLog.action)}>
                   {getActionLabel(selectedLog.action)}
-                </Info>
+                </Tag>
+              </Descriptions.Item>
 
-                <Info label="Người thực hiện">
-                  {selectedLog.actorName || "SYSTEM"}
-                </Info>
+              <Descriptions.Item label="Người thực hiện">
+                {selectedLog.actorName || "SYSTEM"}
+              </Descriptions.Item>
 
-                <Info label="Mã nhân viên / Username">
-                  {selectedLog.employeeCode || selectedLog.actorUsername || "-"}
-                </Info>
+              <Descriptions.Item label="Mã nhân viên / Username">
+                {selectedLog.employeeCode || selectedLog.actorUsername || "-"}
+              </Descriptions.Item>
 
-                <Info label="Thời gian">
-                  {formatDateTime(selectedLog.createdAt)}
-                </Info>
+              <Descriptions.Item label="IP">
+                {selectedLog.ipAddress || "-"}
+              </Descriptions.Item>
 
-                <Info label="IP">
-                  {selectedLog.ipAddress || "-"}
-                </Info>
+              <Descriptions.Item label="User Agent">
+                <span className="break-all">
+                  {selectedLog.userAgent || "-"}
+                </span>
+              </Descriptions.Item>
 
-                <div className="md:col-span-2">
-                  <p className="text-xs text-muted-foreground">User Agent</p>
-                  <p className="break-all text-sm">
-                    {selectedLog.userAgent || "-"}
-                  </p>
+              <Descriptions.Item label="Nội dung">
+                <div style={{ whiteSpace: "pre-line" }}>
+                  {renderChangeLog(selectedLog.content)}
                 </div>
-              </div>
+              </Descriptions.Item>
+            </Descriptions>
 
-              <div>
-                <p className="mb-2 text-sm font-medium">Nội dung thay đổi</p>
-                <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-                  {selectedLog.content}
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <JsonBlock title="Dữ liệu cũ" value={selectedLog.oldValue} />
-                <JsonBlock title="Dữ liệu mới" value={selectedLog.newValue} />
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
-
-function Info({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="font-medium">{children}</p>
+            <JsonBlock title="Dữ liệu cũ" value={selectedLog.oldValue} />
+            <JsonBlock title="Dữ liệu mới" value={selectedLog.newValue} />
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }
@@ -437,8 +398,8 @@ function JsonBlock({
 }) {
   return (
     <div>
-      <p className="mb-2 text-sm font-medium">{title}</p>
-      <pre className="max-h-[420px] overflow-auto rounded-lg border bg-slate-950 p-4 text-xs text-slate-100">
+      <div className="mb-2 font-medium">{title}</div>
+      <pre className="max-h-[420px] overflow-auto rounded-lg bg-slate-950 p-4 text-xs text-slate-100">
         {prettyJson(value)}
       </pre>
     </div>

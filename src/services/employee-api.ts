@@ -85,3 +85,7 @@ export async function resetPassword(userId: number | string): Promise<void> {
   await apiClient.post(`/users/reset-password/${userId}`);
 }
 
+export async function getNextEmployeeCode(): Promise<string> {
+  const { data } = await apiClient.get("/employees/next-code");
+  return data.data as string;
+}

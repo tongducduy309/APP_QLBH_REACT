@@ -53,7 +53,7 @@ export function LoginPage() {
       setLoading(true);
       await login(values);
       toast.success("Đăng nhập thành công");
-      navigate("/sales");
+      navigate("/dashboard");
     } catch (error) {
     } finally {
       setLoading(false);

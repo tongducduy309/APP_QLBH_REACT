@@ -5,7 +5,7 @@ import { DatabaseAction } from "@/features/database/types/database-change-log.ty
 export async function getDatabaseChangeLogs(params?: {
   page?: number;
   size?: number;
-  entityName?: string;
+  keyword?: string;
   action?: DatabaseAction;
   fromDate?: string;
   toDate?: string;

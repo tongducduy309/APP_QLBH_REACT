@@ -104,7 +104,18 @@ export function PaymentSummaryCard(props: Props) {
             integerOnly
           />
         </div>
+
       </div>
+
+      <div className="mb-4">
+        <Button className="w-full" variant="outline" onClick={() => props.onChangePaidAmount(props.grandTotal)} disabled={props.grandTotal === 0 || props.grandTotal < props.paidAmount}>
+          Trả hết tiền
+        </Button>
+      </div>
+
+
+
+
 
       <div className="rounded-2xl bg-slate-50 p-4">
         <div className="mb-2 flex items-center justify-between">

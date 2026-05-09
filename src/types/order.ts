@@ -39,8 +39,6 @@ export interface OrderRes {
   details: OrderDetailRes[];    
   createdAt: string;
   status: OrderStatus;
-  createdByEmployeeCode: string;
-  createdByEmployeeName: string;
 }
 
 export interface OrderRecentRes {

@@ -23,7 +23,7 @@ import {
 import { getCustomerById } from "@/services/customer-api";
 import type { CustomerDetailRes } from "../types/customer.types";
 import { formatCurrency } from "@/lib/utils";
-import { formatDateTime } from "@/utils/date";
+import { formatDateTimeDDMMYYYY_HHMMSS } from "@/utils/date";
 
 export function CustomerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -74,7 +74,7 @@ export function CustomerDetailPage() {
                 className="inline-flex items-center gap-1 hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Quay lại danh sách khách hàng
+                Quay lại
               </AntdButton>
             </div>
 
@@ -135,7 +135,7 @@ export function CustomerDetailPage() {
                 <InfoItem
                   icon={<CalendarDays className="h-4 w-4" />}
                   label="Ngày tạo"
-                  value={customer?.createdAt ? formatDateTime(customer.createdAt) : "-"}
+                  value={customer?.createdAt ? formatDateTimeDDMMYYYY_HHMMSS(customer.createdAt) : "-"}
                 />
 
                 <InfoItem

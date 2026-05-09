@@ -63,7 +63,7 @@ const createDefaultCustomerOrderInfo = (): CustomerOrderInfo => ({
 const createDefaultOtherExpenseDraft = (): OtherExpenseDraft => ({
   description: "",
   price: 0,
-  length: 1,
+  length: 0,
   quantity: 0,
   unit: ""
 });

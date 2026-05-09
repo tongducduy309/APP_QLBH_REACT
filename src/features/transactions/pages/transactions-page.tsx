@@ -21,13 +21,14 @@ import { formatCurrency } from "@/lib/utils";
 import { removeVietnameseTones } from "@/utils/string";
 import { OrderRes, OrderStatus } from "@/types/order";
 import { formatDateToDDMMYYYY } from "@/utils/date";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 dayjs.extend(isBetween);
 
 const { RangePicker } = DatePicker;
 const PAGE_SIZE = 6;
 
-export function TransactionsPage() {
+export function OrderHistoryTable() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -191,7 +192,7 @@ export function TransactionsPage() {
       dataIndex: "code",
       key: "code",
       width: 140,
-      render: (value: string) => value || "-",
+      render: (value: string, record: OrderRes) => <div onClick={() => navigate(`/transactions/${record.id}`)} className="font-medium cursor-pointer hover:underline">{value}</div>,
     },
     {
       title: "Khách hàng",
@@ -199,7 +200,14 @@ export function TransactionsPage() {
       width: 220,
       render: (_, record) => (
         <div>
-          <div className="font-medium">{record.customer?.name || "Khách lẻ"}</div>
+          {
+            record.customer?.id ? (
+              <div className="font-medium cursor-pointer hover:underline" onClick={() => navigate(`/customers/${record.customer?.id}`)}>{record.customer?.name || "Khách lẻ"}</div>
+            ) : (
+              <div className="font-medium">{record.customer?.name || "Khách lẻ"}</div>
+            )
+          }
+
           <div className="text-xs text-muted-foreground">
             {record.customer?.phone || "-"}
           </div>
@@ -294,127 +302,148 @@ export function TransactionsPage() {
   };
 
   return (
-    <PageShell>
-      <Card>
-        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <CardTitle>Lịch sử giao dịch</CardTitle>
-            <CardDescription>
-              Theo dõi các hóa đơn đã tạo từ hệ thống
-            </CardDescription>
-          </div>
+    <Card>
+      <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <CardTitle>Lịch sử giao dịch</CardTitle>
+          <CardDescription>
+            Theo dõi các hóa đơn đã tạo từ hệ thống
+          </CardDescription>
+        </div>
 
-          <Space wrap>
-            <Input
-              allowClear
-              value={keyword}
-              onChange={(e) => handleKeywordChange(e.target.value)}
-              placeholder="Tìm mã đơn, khách hàng, SĐT, sản phẩm..."
-              prefix={<Search className="h-4 w-4" />}
-              className="w-[280px]"
-            />
-
-            <RangePicker
-              format="DD/MM/YYYY"
-              value={dateRange}
-              onChange={handleDateRangeChange}
-            />
-          </Space>
-        </CardHeader>
-
-        <CardContent>
-          <Table<OrderRes>
-            rowKey="id"
-            columns={columns}
-            dataSource={filteredOrders}
-            loading={loading}
-            onChange={handleTableChange}
-            pagination={{
-              current: currentPage,
-              pageSize: PAGE_SIZE,
-              total: filteredOrders.length,
-              showSizeChanger: false,
-            }}
-            scroll={{ x: 1300 }}
-            expandable={{
-              expandedRowRender: (record) => (
-                <Table
-                  rowKey={(detail) => detail.id}
-                  pagination={false}
-                  size="small"
-                  dataSource={record.details ?? []}
-                  columns={[
-                    {
-                      title: "Tên sản phẩm",
-                      dataIndex: "name",
-                      key: "name",
-                      render: (value: string, detail) => (
-                        <div>
-                          <div className="font-medium">{value || "-"}</div>
-                          <div className="text-xs text-muted-foreground">
-                            SKU: {detail.sku || "-"}
-                          </div>
-                        </div>
-                      ),
-                    },
-                    {
-                      title: "Mã kho",
-                      dataIndex: "inventoryCode",
-                      key: "inventoryCode",
-                      render: (value: string | null) => value ?? "-",
-                    },
-                    {
-                      title: "Chiều dài",
-                      dataIndex: "length",
-                      key: "length",
-                      render: (value: number) => value ?? 0,
-                    },
-                    {
-                      title: "Số lượng",
-                      dataIndex: "quantity",
-                      key: "quantity",
-                      render: (value: number) => value ?? 0,
-                    },
-                    {
-                      title: "Tổng số lượng",
-                      dataIndex: "totalQuantity",
-                      key: "totalQuantity",
-                      render: (_: number, detail) =>
-                        (detail.quantity ?? 0) * (detail.length || 1),
-                    },
-                    {
-                      title: "Đơn vị",
-                      dataIndex: "baseUnit",
-                      key: "baseUnit",
-                      render: (value: string) => value || "-",
-                    },
-                    {
-                      title: "Đơn giá",
-                      dataIndex: "price",
-                      key: "price",
-                      render: (value: number) => formatCurrency(value ?? 0),
-                    },
-                    {
-                      title: "Thành tiền",
-                      key: "lineTotal",
-                      render: (_, detail) =>
-                        formatCurrency(
-                          (detail.price ?? 0) *
-                          (detail.quantity ?? 0) *
-                          (detail.length || 1)
-                        ),
-                    },
-                  ]}
-                />
-              ),
-              rowExpandable: (record) => (record.details?.length ?? 0) > 0,
-            }}
-            locale={{
-              emptyText: "Chưa có giao dịch",
-            }}
+        <Space wrap>
+          <Input
+            allowClear
+            value={keyword}
+            onChange={(e) => handleKeywordChange(e.target.value)}
+            placeholder="Tìm mã đơn, khách hàng, SĐT, sản phẩm..."
+            prefix={<Search className="h-4 w-4" />}
+            className="w-[280px]"
           />
-        </CardContent>
-      </Card>
+
+          <RangePicker
+            format="DD/MM/YYYY"
+            value={dateRange}
+            onChange={handleDateRangeChange}
+          />
+        </Space>
+      </CardHeader>
+
+      <CardContent>
+        <Table<OrderRes>
+          rowKey="id"
+          columns={columns}
+          dataSource={filteredOrders}
+          loading={loading}
+          onChange={handleTableChange}
+          pagination={{
+            current: currentPage,
+            pageSize: PAGE_SIZE,
+            total: filteredOrders.length,
+            showSizeChanger: false,
+          }}
+          scroll={{ x: 1300 }}
+          expandable={{
+            expandedRowRender: (record) => (
+              <Table
+                rowKey={(detail) => detail.id}
+                pagination={false}
+                size="small"
+                dataSource={record.details ?? []}
+                columns={[
+                  {
+                    title: "Tên sản phẩm",
+                    dataIndex: "name",
+                    key: "name",
+                    render: (value: string, detail) => (
+                      <div>
+                        <div className="font-medium">{value || "-"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          SKU: {detail.sku || "-"}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: "Mã kho",
+                    dataIndex: "inventoryCode",
+                    key: "inventoryCode",
+                    render: (value: string | null) => value ?? "-",
+                  },
+                  {
+                    title: "Chiều dài",
+                    dataIndex: "length",
+                    key: "length",
+                    render: (value: number) => value ?? 0,
+                  },
+                  {
+                    title: "Số lượng",
+                    dataIndex: "quantity",
+                    key: "quantity",
+                    render: (value: number) => value ?? 0,
+                  },
+                  {
+                    title: "Tổng số lượng",
+                    dataIndex: "totalQuantity",
+                    key: "totalQuantity",
+                    render: (_: number, detail) =>
+                      (detail.quantity ?? 0) * (detail.length || 1),
+                  },
+                  {
+                    title: "Đơn vị",
+                    dataIndex: "baseUnit",
+                    key: "baseUnit",
+                    render: (value: string) => value || "-",
+                  },
+                  {
+                    title: "Đơn giá",
+                    dataIndex: "price",
+                    key: "price",
+                    render: (value: number) => formatCurrency(value ?? 0),
+                  },
+                  {
+                    title: "Thành tiền",
+                    key: "lineTotal",
+                    render: (_, detail) =>
+                      formatCurrency(
+                        (detail.price ?? 0) *
+                        (detail.quantity ?? 0) *
+                        (detail.length || 1)
+                      ),
+                  },
+                ]}
+              />
+            ),
+            rowExpandable: (record) => (record.details?.length ?? 0) > 0,
+          }}
+          locale={{
+            emptyText: "Chưa có giao dịch",
+          }}
+        />
+      </CardContent>
+    </Card>
+
+  );
+}
+
+export function TransactionsPage() {
+
+
+  return (
+    <PageShell>
+      <Tabs defaultValue="orders" >
+      <TabsList>
+        <TabsTrigger value="orders">Lịch sử giao dịch</TabsTrigger>
+        <TabsTrigger value="bank">Ngân hàng</TabsTrigger>
+      </TabsList>
+      <TabsContent value="orders">
+        <OrderHistoryTable />
+      </TabsContent>
+
+      <TabsContent value="bank">
+        
+      </TabsContent>
+    </Tabs>
     </PageShell>
   );
 }

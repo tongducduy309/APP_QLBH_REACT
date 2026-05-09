@@ -11,6 +11,7 @@ import {
   Mail,
   Pencil,
   Printer,
+  QrCode,
   Trash2,
 } from "lucide-react";
 
@@ -46,12 +47,14 @@ import { SendInvoiceEmailDialog } from "../components/SendInvoiceEmailDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatDateToDDMMYYYY } from "@/utils/date";
 import { usePermission } from "@/app/hooks/usePermission";
+import { InvoiceQrPaymentDialog } from "../components/InvoiceQrPaymentDialog";
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [order, setOrder] = useState<OrderRes | null>(null);
+  const [openQr, setOpenQr] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -304,14 +307,7 @@ export function OrderDetailPage() {
           <div>
             <h1 className="text-xl font-semibold">Chi tiết hóa đơn</h1>
             <p className="text-sm text-muted-foreground">
-              {
-                order.createdByEmployeeName&&order.createdByEmployeeCode ?
-                <>
-                  Hóa đơn được tạo bởi <span className="font-semibold">{order.createdByEmployeeName} ({order.createdByEmployeeCode})</span>
-                </>
-                : 
-                "Theo dõi thông tin phiếu nhập, biến thể sản phẩm và lô tồn kho liên kết."
-              }
+              Theo dõi thông tin phiếu nhập, biến thể sản phẩm và lô tồn kho liên kết.
             </p>
           </div>
         </div>
@@ -373,6 +369,11 @@ export function OrderDetailPage() {
               <DropdownMenuItem onClick={handlePrintOrder}>
                 <Printer className="mr-2 h-4 w-4" />
                 In hóa đơn
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onClick={() => setOpenQr(true)}>
+                <QrCode className="mr-2 h-4 w-4" />
+                Tạo mã QR thanh toán
               </DropdownMenuItem>
 
               {
@@ -717,6 +718,17 @@ export function OrderDetailPage() {
         customerEmail={order.customer?.email ?? ""}
         onOpenChange={setSendEmailOpen}
         order={order}
+      />
+
+      <InvoiceQrPaymentDialog
+        open={openQr}
+        onOpenChange={setOpenQr}
+        bankCode="STB"
+        bankName="Sacombank"
+        bankAccount="060280886699"
+        accountName="TONG DUC DUY"
+        amount={order.remainingAmount}
+        invoiceCode={order.code}
       />
 
       <div

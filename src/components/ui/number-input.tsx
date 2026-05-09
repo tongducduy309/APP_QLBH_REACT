@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function parseNumberInput(value: string) {
-  const normalized = value.replace(/,/g, "");
+  // đổi dấu . thành rỗng và , thành .
+  const normalized = value.replace(/\./g, "").replace(",", ".");
   const parsed = Number(normalized);
 
   return Number.isNaN(parsed) ? 0 : parsed;
@@ -14,18 +15,18 @@ function parseNumberInput(value: string) {
 function formatNumberInput(value: number | string) {
   if (value === "" || value === null || value === undefined) return "";
 
-  const text = String(value).replace(/,/g, "");
+  const text = String(value).replace(/\./g, "").replace(",", ".");
 
-  if (text.endsWith(".")) {
+  if (text.endsWith(",")) {
     const intPart = text.slice(0, -1);
-    return `${Number(intPart || 0).toLocaleString("en-US")}.`;
+    return `${Number(intPart || 0).toLocaleString("vi-VN")},`;
   }
 
   const [integerPart, decimalPart] = text.split(".");
-  const formattedInteger = Number(integerPart || 0).toLocaleString("en-US");
+  const formattedInteger = Number(integerPart || 0).toLocaleString("vi-VN");
 
   return decimalPart !== undefined
-    ? `${formattedInteger}.${decimalPart}`
+    ? `${formattedInteger},${decimalPart}`
     : formattedInteger;
 }
 
@@ -95,7 +96,9 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = event.target.value;
+      const input = event.target;
+      const cursor = input.selectionStart ?? 0;
+      const rawValue = input.value;
 
       let sanitized = rawValue.replace(/,/g, "");
 
@@ -124,8 +127,29 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
       const parsedValue = parseNumberInput(sanitized);
       const nextValue = clampValue(parsedValue);
 
-      setDisplayValue(formatNumberInput(sanitized));
+      const formatted = formatNumberInput(sanitized);
+
+      setDisplayValue(formatted);
       onValueChange(nextValue);
+
+      requestAnimationFrame(() => {
+        const rawBeforeCursor = rawValue
+          .slice(0, cursor)
+          .replace(/\./g, "")
+          .replace(/,/g, "");
+
+        let newCursor = 0;
+        let rawCount = 0;
+
+        while (newCursor < formatted.length && rawCount < rawBeforeCursor.length) {
+          if (formatted[newCursor] !== "." && formatted[newCursor] !== ",") {
+            rawCount++;
+          }
+          newCursor++;
+        }
+
+        input.setSelectionRange(newCursor, newCursor);
+      });
     };
 
     const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {

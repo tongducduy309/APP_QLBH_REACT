@@ -392,7 +392,7 @@ export function ProductDetailPage() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Danh sách biến thể</CardTitle>
+                        <CardTitle>Danh sách tồn kho</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <Table<ProductVariantInventoryRes>

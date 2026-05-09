@@ -13,9 +13,9 @@ export function formatDateToDDMMYYYY(date?: string | null): string {
 }
 
 /**
- * Format ISO string → dd/MM/yyyy HH:mm
+ * Format ISO string → dd/MM/yyyy HH:mm:ss
  */
-export function formatDateTime(date?: string | null): string {
+export function formatDateTimeDDMMYYYY_HHMMSS(date?: string | null): string {
   if (!date) return "";
 
   const d = dayjs(date);

@@ -5,15 +5,31 @@ import { Role } from "@/types/user";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NumberInput } from "@/components/ui/number-input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useEffect, useState } from "react";
+import { getNextEmployeeCode } from "@/services/employee-api";
+import ValidatedInput, {
+  type ValidatedInputStatus,
+} from "@/components/ui/validated-input";
+import { checkUsernameNotExists } from "@/services/auth-api";
+import type { EmployeeUpdateReq } from "../types/employee.types";
 
 type Props = {
   open: boolean;
-  value: EmployeeCreateReq;
+  value: EmployeeCreateReq | EmployeeUpdateReq;
   loading?: boolean;
   onClose: () => void;
-  onChange: (next: EmployeeCreateReq) => void;
+  onChange: (next: EmployeeCreateReq | EmployeeUpdateReq) => void;
   onSubmit: () => void;
+  isEditing?: boolean;
 };
 
 const roleOptions: { label: string; value: Role }[] = [
@@ -30,11 +46,61 @@ export function EmployeeDialog({
   onClose,
   onChange,
   onSubmit,
+  isEditing,
 }: Props) {
+  const [usernameStatus, setUsernameStatus] =
+    useState<ValidatedInputStatus>("neutral");
+
+  const [checkingUsername, setCheckingUsername] = useState(false);
+
+  useEffect(() => {
+    if (open && !isEditing) {
+      getNextEmployeeCode().then((code) => {
+        onChange({ ...value, code });
+      });
+    }
+  }, [open]);
+
+  useEffect(() => {
+    const username = value.username?.trim() ?? "";
+
+    if (!username) {
+      setUsernameStatus("neutral");
+      setCheckingUsername(false);
+      return;
+    }
+
+    setUsernameStatus("neutral");
+    setCheckingUsername(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        if (username.length < 5) {
+          setUsernameStatus("invalid");
+          return;
+        }
+        const notExists = await checkUsernameNotExists(username);
+        // const exists = false;
+
+        setUsernameStatus(notExists ? "valid" : "invalid");
+      } catch (error) {
+        console.error(error);
+        setUsernameStatus("invalid");
+      } finally {
+        setCheckingUsername(false);
+      }
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+      setCheckingUsername(false);
+    };
+  }, [value.username]);
+
   return (
     <Modal
       open={open}
-      title="Tạo nhân viên"
+      title={isEditing ? "Cập nhật nhân viên" : "Tạo nhân viên"}
       onCancel={onClose}
       onOk={onSubmit}
       confirmLoading={loading}
@@ -51,6 +117,7 @@ export function EmployeeDialog({
             placeholder="Nhập mã nhân viên"
             value={value.code}
             onChange={(e) => onChange({ ...value, code: e.target.value })}
+            disabled={true}
           />
         </div>
 
@@ -143,11 +210,11 @@ export function EmployeeDialog({
             <SelectContent className="z-[2000]">
               <SelectGroup>
                 <SelectLabel>Phân quyền</SelectLabel>
-              {roleOptions.map((role) => (
-                <SelectItem key={role.value} value={role.value}>  
-                  {role.label}
-                </SelectItem>
-              ))}
+                {roleOptions.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -155,15 +222,17 @@ export function EmployeeDialog({
 
         <div className="space-y-2">
           <Label htmlFor="employee-username">Tên đăng nhập</Label>
-          <Input
+          <ValidatedInput
             id="employee-username"
             placeholder="Nhập tên đăng nhập"
             value={value.username}
+            validateStatus={isEditing ? "neutral" : usernameStatus}
+            loading={checkingUsername}
+            errorMessage="Tên đăng nhập phải có ít nhất 5 ký tự hoặc đã tồn tại"
             onChange={(e) => onChange({ ...value, username: e.target.value })}
+            disabled={isEditing}
           />
         </div>
-
-        
 
         <div className="space-y-2">
           <Label htmlFor="employee-email">Email</Label>

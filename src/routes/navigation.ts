@@ -22,6 +22,6 @@ export const navigationItems: NavigationItem[] = [
   // { label: "Quét mã vạch", path: paths.barcode, icon: ScanBarcode },
   { label: "Nhân viên", path: paths.employees, icon: User, roles: ["ADMIN", "STORE_MANAGER" , "OFFICE_STAFF"]},
   { label: "Phiếu nhập", path: paths.purchaseReceipts, icon: Receipt, roles: ["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]},
-  { label: "Cơ sở dữ liệu", path: paths.database, icon: Database, roles: ["ADMIN"]},
+  { label: "Cơ sở dữ liệu", path: paths.database, icon: Database, roles: ["ADMIN", "STORE_MANAGER", "OFFICE_STAFF", "OPERATOR_DELIVERY"]},
   { label: "Cài đặt", path: paths.settings, icon: Settings, roles: ["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]},
 ] as const;

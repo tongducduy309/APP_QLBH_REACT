@@ -17,3 +17,8 @@ export async function introspect(token: string): Promise<AuthRes> {
 export async function confirmPassword(password: string): Promise<void> {
   await apiClient.post("/auth/confirm-password", {password});
 }
+
+export async function checkUsernameNotExists(username: string): Promise<boolean> {
+  const response = await apiClient.get<{ data: boolean }>(`/users/check-username?username=${encodeURIComponent(username)}`);
+  return response.data.data;
+}

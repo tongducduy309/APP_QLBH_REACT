@@ -1,4 +1,4 @@
-import type { UserItem } from "@/types/user";
+import type { Role, UserItem } from "@/types/user";
 
 export type LeaveType = "FULL_DAY" | "HALF_DAY";
 
@@ -22,6 +22,7 @@ export interface EmployeeItem {
   createdAt?: string;
   dateOfBirth?: string;
   user?: UserItem;
+  role?: Role;
 
   leaves?: EmployeeLeaveItem[];
   leaveDaysThisMonth?: number;
@@ -29,7 +30,7 @@ export interface EmployeeItem {
 }
 
 export interface EmployeeCreateReq {
-  code: string;
+  code?: string;
   fullName: string;
   phone?: string;
   address?: string;
@@ -43,7 +44,7 @@ export interface EmployeeCreateReq {
 }
 
 export interface EmployeeUpdateReq {
-  code: string;
+  code?: string;
   fullName: string;
   phone?: string;
   address?: string;
@@ -51,7 +52,7 @@ export interface EmployeeUpdateReq {
   hireDate?: string;
   baseSalary: number;
   username: string;
-  password?: string;
+  password: string;
   email?: string;
   role: string;
 }

@@ -19,6 +19,15 @@ type Props = {
   selectedCustomer?: CustomerItem | null;
 };
 
+const quickNoteTemplates = [
+  "Giao hàng buổi sáng",
+  "Giao hàng buổi trưa",
+  "Giao hàng buổi chiều",
+  "Giao hàng vào ngày mai",
+  "Giao hàng khi có người liên hệ",
+  "Giao hàng bằng xe tải"
+]
+
 const MAX_NOTE_LENGTH = 250;
 
 const createDraft = (value: CustomerOrderInfo): CustomerOrderInfo => ({
@@ -71,6 +80,17 @@ export function CustomerOrderInfoDialog({
       saveAsNewCustomer: false,
     }));
   }, [selectedCustomer, open]);
+
+  useEffect(()=>{
+    if(draft.note.length > MAX_NOTE_LENGTH){
+      setDraft((prev)=>{
+        return {
+          ...prev,
+          note: prev.note.slice(0, MAX_NOTE_LENGTH),
+        }
+      })
+    }
+  },[draft.note])
 
   const hasCustomerId = Boolean(draft.customerId);
 
@@ -206,8 +226,8 @@ export function CustomerOrderInfoDialog({
             <label
               htmlFor="save-new-customer"
               className={`inline-flex w-full items-center gap-3 rounded-md border px-3 py-3 text-sm transition-all ${hasCustomerId
-                  ? "cursor-not-allowed border-muted bg-muted/40 text-muted-foreground"
-                  : "cursor-pointer bg-background hover:bg-muted"
+                ? "cursor-not-allowed border-muted bg-muted/40 text-muted-foreground"
+                : "cursor-pointer bg-background hover:bg-muted"
                 }`}
             >
               <Checkbox
@@ -274,13 +294,38 @@ export function CustomerOrderInfoDialog({
                 <Label className="text-sm font-medium">Ghi chú</Label>
                 <span
                   className={`text-xs ${draft.note.length >= MAX_NOTE_LENGTH
-                      ? "text-red-500"
-                      : "text-muted-foreground"
+                    ? "text-red-500"
+                    : "text-muted-foreground"
                     }`}
                 >
                   {draft.note.length}/{MAX_NOTE_LENGTH}
                 </span>
               </div>
+
+              {quickNoteTemplates.map((item, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  className="rounded-full border px-3 py-1 text-sm transition hover:bg-muted"
+                  onClick={() => {
+                    if (draft.note) {
+                      setDraft((prev) => ({
+                        ...prev,
+                        note: prev.note + "\n" + item,
+                      }))
+                    } else {
+                      setDraft((prev) => ({
+                        ...prev,
+                        note: item,
+                      }))
+                    }
+                  }
+
+                  }
+                >
+                  {item}
+                </button>
+              ))}
 
               <textarea
                 className="min-h-[100px] w-full rounded-md border bg-background px-3 py-2 text-sm outline-none"

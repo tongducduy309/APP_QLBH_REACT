@@ -9,13 +9,16 @@ import {
   getEmployeeById,
   markEmployeeLeave,
   resetPassword,
+  updateEmployee,
   updateEmployeeStatus,
 } from "@/services/employee-api";
 import { EmployeeLeaveDialog } from "../components/employee-leave-dialog";
 import type {
+  EmployeeCreateReq,
   EmployeeItem,
   EmployeeLeaveCreateReq,
   EmployeeLeaveItem,
+  EmployeeUpdateReq,
 } from "../types/employee.types";
 import { useAuthStore } from "@/features/auth/store/auth-store";
 import { formatDateToDDMMYYYY } from "@/utils/date";
@@ -28,7 +31,22 @@ import { printPayrollPdf } from "@/features/payroll/utils/payroll-pdf";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useConfirmPassword } from "@/app/providers/confirm-password-provider";
 import { useConfirmAction } from "@/app/providers/confirm-action-provider";
+import { EmployeeDialog } from "../components/employee-dialog";
+import { buildEmployeeUpdateReq } from "../utils/employee.help";
 
+const initialForm: EmployeeUpdateReq = {
+  code: "",
+  fullName: "",
+  phone: "",
+  address: "",
+  position: "",
+  hireDate: "",
+  baseSalary: 0,
+  username: "",
+  password: "",
+  email: "",
+  role: "OFFICE_STAFF",
+};
 
 function InfoRow({
   label,
@@ -60,6 +78,12 @@ export function EmployeeDetailPage() {
   const [leaveDialogOpen, setLeaveDialogOpen] = useState(false);
   const [leaveLoading, setLeaveLoading] = useState(false);
 
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+
+  const [form, setForm] = useState<EmployeeCreateReq | EmployeeUpdateReq>(initialForm);
+
+
   const { hasRole } = usePermission();
   const { confirm } = useConfirmAction();
   const { confirmPassword } = useConfirmPassword();
@@ -71,71 +95,73 @@ export function EmployeeDetailPage() {
   const canPrintPayroll = hasRole(["ADMIN", "STORE_MANAGER"]);
   const canManageEmployee = hasRole(["ADMIN", "STORE_MANAGER"]);
 
-  
+
+
+
 
   const toggleEmployeeStatus = async () => {
-  if (!id) return;
+    if (!id) return;
 
-  const ok = await confirm({
+    const ok = await confirm({
       title: employee?.active ? "Tạm khóa tài khoản" : "Mở khóa tài khoản",
       description: employee?.active ? "Bạn có chắc chắn muốn tạm khóa tài khoản này không?" : "Bạn có chắc chắn muốn mở khóa tài khoản này không?",
       confirmText: employee?.active ? "Tạm khóa" : "Mở khóa",
       cancelText: "Không",
       variant: "destructive",
     });
-  if (!ok) return;
+    if (!ok) return;
 
-  const password = await confirmPassword({
-    title: employee?.active ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
-    description: employee?.active ? "Nhập mật khẩu để xác nhận thao tác khóa tài khoản." : "Nhập mật khẩu để xác nhận thao tác mở khóa tài khoản.",
-  
-  });
+    const password = await confirmPassword({
+      title: employee?.active ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+      description: employee?.active ? "Nhập mật khẩu để xác nhận thao tác khóa tài khoản." : "Nhập mật khẩu để xác nhận thao tác mở khóa tài khoản.",
 
-  if (!password || !id) return;
+    });
 
-  try {
-    setLoading(true);
+    if (!password || !id) return;
 
-    const newStatus = !(employee?.active??true);
+    try {
+      setLoading(true);
 
-    await updateEmployeeStatus(Number(id), newStatus);
+      const newStatus = !(employee?.active ?? true);
 
-    toast.success(newStatus ? "Mở khóa tài khoản thành công" : "Khóa tài khoản thành công");
+      await updateEmployeeStatus(Number(id), newStatus);
 
-    if (employee) {
-      setEmployee((prev) => (prev ? { ...prev, active: newStatus } : null));
+      toast.success(newStatus ? "Mở khóa tài khoản thành công" : "Khóa tài khoản thành công");
+
+      if (employee) {
+        setEmployee((prev) => (prev ? { ...prev, active: newStatus } : null));
+      }
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
-  } finally {
-    setLoading(false);
+  };
+
+  const handleRestPassword = async () => {
+    if (!id) return;
+
+    const password = await confirmPassword({
+      title: "Xác nhận mật khẩu",
+      description: "Nhập mật khẩu để xác nhận thao tác.",
+
+    });
+
+    if (!password || !id) return;
+
+    try {
+      setLoading(true);
+
+      await resetPassword(Number(id));
+
+      toast.success("Đặt lại mật khẩu thành công");
+
+    } catch (error) {
+      console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
+    } finally {
+      setLoading(false);
+    }
   }
-};
-
-const handleRestPassword = async () => {
-  if (!id) return;
-
-  const password = await confirmPassword({
-    title: "Xác nhận mật khẩu",
-    description: "Nhập mật khẩu để xác nhận thao tác.",
-  
-  });
-
-  if (!password || !id) return;
-
-  try {
-    setLoading(true);
-
-    await resetPassword(Number(id));
-
-    toast.success( "Đặt lại mật khẩu thành công");
-
-  } catch (error) {
-    console.error("Lỗi khi cập nhật trạng thái nhân viên:", error);
-  } finally {
-    setLoading(false);
-  }
-}
 
   const handleDeleteEmployee = async () => {
     const ok = await confirm({
@@ -164,6 +190,29 @@ const handleRestPassword = async () => {
       // toast.error("Không thể xoá nhân viên.");
     }
   };
+
+  const handleSubmit = async () => {
+    if (!id) return;
+
+    try {
+      setLoading(true);
+
+      if (employee?.id) {
+        await updateEmployee(Number(employee.id), form);
+        toast.success("Cập nhật thông tin nhân viên thành công.");
+      }
+
+      setIsEditDialogOpen(false);
+      await loadEmployee();
+    } catch (error) {
+      console.error("Lỗi khi lưu thông tin nhân viên:", error);
+
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
 
   // const canManageLeave = useMemo(() => {
   //   console.log(user);
@@ -239,6 +288,23 @@ const handleRestPassword = async () => {
   const handleDeleteLeave = async (leaveDate: string) => {
     if (!id) return;
 
+    const ok = await confirm({
+      title: "Xóa ngày nghỉ",
+      description: "Bạn có chắc chắn muốn xóa ngày nghỉ này không?",
+      confirmText: "Xóa",
+      cancelText: "Không",
+      variant: "destructive",
+    });
+
+    if (!ok) return;
+    const password = await confirmPassword({
+      title: "Xác nhận xóa ngày nghỉ",
+      description: "Nhập mật khẩu để xác nhận thao tác xóa ngày nghỉ.",
+      confirmText: "Xóa",
+    });
+
+    if (!password || !id) return;
+
     try {
       await deleteEmployeeLeave(id, leaveDate);
       toast.success("Xoá ngày nghỉ thành công.");
@@ -248,6 +314,12 @@ const handleRestPassword = async () => {
       toast.error("Không thể xoá ngày nghỉ.");
     }
   };
+
+  const handleEdit = () => {
+    if (!employee) return;
+    setForm(buildEmployeeUpdateReq(employee))
+    setIsEditDialogOpen(true);
+  }
 
   const leaveColumns = [
     {
@@ -278,17 +350,9 @@ const handleRestPassword = async () => {
       width: 120,
       render: (_: unknown, record: EmployeeLeaveItem) =>
         canManageEmployee ? (
-          <Popconfirm
-            title="Xoá ngày nghỉ?"
-            description="Bạn có chắc muốn xoá ngày nghỉ này không?"
-            okText="Xoá"
-            cancelText="Huỷ"
-            onConfirm={() => handleDeleteLeave(record.leaveDate)}
-          >
-            <AntdButton danger>
-              Xoá
-            </AntdButton>
-          </Popconfirm>
+          <AntdButton danger onClick={() => handleDeleteLeave(record.leaveDate)}>
+            Xoá
+          </AntdButton>
         ) : <RestrictedIcon message="Bạn không có quyền truy cập chức năng này. Vui lòng liên hệ quản lý." />,
     },
   ];
@@ -350,81 +414,81 @@ const handleRestPassword = async () => {
             {canManageLeave ? (
               <Button onClick={handleOpenLeaveDialog}>Đánh dấu nghỉ</Button>
             ) : null}
-            
+
             {
               (canManageEmployee || canPrintPayroll) && (
                 <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  aria-label="Thao tác nhân viên"
-                >
-                  <EllipsisVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Thao tác nhân viên"
+                    >
+                      <EllipsisVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
 
-              <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuGroup>
-                  {canPrintPayroll && (
-                    <DropdownMenuItem onClick={handlePrintPayroll}>
-                      <Printer className="mr-2 h-4 w-4" />
-                      In bảng lương
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuGroup>
+                      {canPrintPayroll && (
+                        <DropdownMenuItem onClick={handlePrintPayroll}>
+                          <Printer className="mr-2 h-4 w-4" />
+                          In bảng lương
+                        </DropdownMenuItem>
+                      )}
 
-                  {canManageEmployee&& employee.active && (
-                    <DropdownMenuItem onClick={toggleEmployeeStatus}>
-                      <UserLock className="mr-2 h-4 w-4" />
-                      Tạm khóa tài khoản
-                    </DropdownMenuItem>
-                  )}
+                      {canManageEmployee && employee.active && (
+                        <DropdownMenuItem onClick={toggleEmployeeStatus}>
+                          <UserLock className="mr-2 h-4 w-4" />
+                          Tạm khóa tài khoản
+                        </DropdownMenuItem>
+                      )}
 
-                  {canManageEmployee&& !employee.active && (
-                    <DropdownMenuItem onClick={toggleEmployeeStatus}>
-                      <KeyRound className="mr-2 h-4 w-4" />
-                      Mở khóa tài khoản
-                    </DropdownMenuItem>
-                  )}
+                      {canManageEmployee && !employee.active && (
+                        <DropdownMenuItem onClick={toggleEmployeeStatus}>
+                          <KeyRound className="mr-2 h-4 w-4" />
+                          Mở khóa tài khoản
+                        </DropdownMenuItem>
+                      )}
 
-                  {canManageEmployee && (
-                    <DropdownMenuItem onClick={handlePrintPayroll}>
-                      <CircleUserRound className="mr-2 h-4 w-4" />
-                      Chỉnh sửa thông tin
-                    </DropdownMenuItem>
-                  )}
+                      {canManageEmployee && (
+                        <DropdownMenuItem onClick={handleEdit}>
+                          <CircleUserRound className="mr-2 h-4 w-4" />
+                          Chỉnh sửa thông tin
+                        </DropdownMenuItem>
+                      )}
 
-                  {canManageEmployee && (
-                    <DropdownMenuItem onClick={handleRestPassword}>
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      Đặt lại mật khẩu
-                    </DropdownMenuItem>
-                  )}
+                      {canManageEmployee && (
+                        <DropdownMenuItem onClick={handleRestPassword}>
+                          <RotateCcw className="mr-2 h-4 w-4" />
+                          Đặt lại mật khẩu
+                        </DropdownMenuItem>
+                      )}
 
-                  {
-                    canManageEmployee && (
-                      <DropdownMenuSeparator />
-                    )
-                  }
+                      {
+                        canManageEmployee && (
+                          <DropdownMenuSeparator />
+                        )
+                      }
 
 
-                  {
-                    canManageEmployee && (
-                      <DropdownMenuItem
-                        variant="destructive"
-                        
-                        onClick={handleDeleteEmployee}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Xoá nhân viên
-                      </DropdownMenuItem>
-                    )
-                  }
+                      {
+                        canManageEmployee && (
+                          <DropdownMenuItem
+                            variant="destructive"
 
-                  
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>)
+                            onClick={handleDeleteEmployee}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Xoá nhân viên
+                          </DropdownMenuItem>
+                        )
+                      }
+
+
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>)
             }
           </div>
 
@@ -498,6 +562,16 @@ const handleRestPassword = async () => {
         loading={leaveLoading}
         onClose={() => setLeaveDialogOpen(false)}
         onSubmit={handleSubmitLeave}
+      />
+
+      <EmployeeDialog
+        open={isEditDialogOpen}
+        value={form}
+        isEditing={true}
+        loading={editLoading}
+        onClose={() => setIsEditDialogOpen(false)}
+        onChange={setForm}
+        onSubmit={handleSubmit}
       />
     </div>
   );

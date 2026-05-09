@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NumberInput } from "@/components/ui/number-input";
 import type { OtherExpenseDraft } from "../types/sales.types";
+import { Label } from "@/components/ui/label";
 
 type Props = {
   value: OtherExpenseDraft;
@@ -58,10 +59,11 @@ export function OtherExpenseCard({
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Chiều dài</label>
+            <Label>Chiều dài</Label>
             <NumberInput
               value={value.length}
               onValueChange={(next) => onChange({ ...value, length: next })}
+              addonAfter="m"
             />
           </div>
 
@@ -73,11 +75,16 @@ export function OtherExpenseCard({
             />
           </div>
 
+
           <div className="space-y-2">
-            <label className="text-sm font-medium">Đơn giá</label>
+            <Label htmlFor="price">Đơn giá</Label>
             <NumberInput
+              id="price"
               value={value.price}
               onValueChange={(next) => onChange({ ...value, price: next })}
+              addonAfter="VND"
+              textAlign="right"
+              integerOnly
             />
           </div>
 
