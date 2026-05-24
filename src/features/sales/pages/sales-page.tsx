@@ -401,7 +401,7 @@ export function SalesPage({
       setCheckoutLoading(true);
 
       if (isEditMode && orderId) {
-        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.CONFIRMED)).then(async (order) => {
+        await updateOrderApi(Number(orderId), buildUpdatePayload(OrderStatus.CONFIRMED)).then(async (order) => {
           await afterSubmitSuccess("Cập nhật hóa đơn thành công.", orderId,order as OrderRes);
         });
         
@@ -435,7 +435,7 @@ export function SalesPage({
       setCheckoutLoading(true);
 
       if (isEditMode && orderId) {
-        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.DRAFT)).then(async (order) => {
+        await updateOrderApi(Number(orderId), buildUpdatePayload(OrderStatus.DRAFT)).then(async (order) => {
           await afterSubmitSuccess("Cập nhật bản nháp thành công.");
         });
       } else {

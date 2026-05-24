@@ -1,145 +1,195 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+﻿import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { BankAccountCreateReq } from "../types/bank.types";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+
+import { ChevronsUpDown, Check } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+export interface BankAccount {
+    id: string;
+    bankCode: string;
+    accountNumber: string;
+    bankName: string;
+    active: boolean;
+    isDefault: boolean;
+    bankAccountName: string;
+}
 
 type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAddBankAccount: (payload: BankAccountCreateReq) => void;
-  loading?: boolean;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onAddBankAccount: (bankAccount: BankAccount) => void;
 };
 
-const initialFormValue: BankAccountCreateReq = {
-  bankCode: "",
-  accountNumber: "",
-  bankName: "",
-  bankAccountName: "",
-};
+const BANKS = [
+    { code: "VCB", name: "Vietcombank" },
+    { code: "TCB", name: "Techcombank" },
+    { code: "ACB", name: "ACB" },
+    { code: "MB", name: "MB Bank" },
+    { code: "BIDV", name: "BIDV" },
+    { code: "VPB", name: "VPBank" },
+];
 
 export function AddBankAccountDialog({
-  open,
-  onOpenChange,
-  onAddBankAccount,
-  loading = false,
+    open,
+    onOpenChange,
+    onAddBankAccount,
 }: Props) {
-  const [formValue, setFormValue] = useState<BankAccountCreateReq>(initialFormValue);
+    const [bankCode, setBankCode] = useState("");
+    const [accountNumber, setAccountNumber] = useState("");
+    const [bankAccountName, setBankAccountName] = useState("");
+    const [submitted, setSubmitted] = useState(false);
+    const [bankOpen, setBankOpen] = useState(false);
+    const [bankSearch, setBankSearch] = useState("");
 
-  useEffect(() => {
-    if (!open) setFormValue(initialFormValue);
-  }, [open]);
+    if (!open) return null;
 
-  const bankCodeError = useMemo(() => {
-    if (!formValue.bankCode.trim()) return "Vui lòng nhập mã ngân hàng.";
-    return "";
-  }, [formValue.bankCode]);
+    const selectedBank = BANKS.find((bank) => bank.code === bankCode);
 
-  const bankNameError = useMemo(() => {
-    if (!formValue.bankName.trim()) return "Vui lòng nhập tên ngân hàng.";
-    return "";
-  }, [formValue.bankName]);
+    const bankError = submitted && !bankCode;
+    const accountNumberError = submitted && !accountNumber.trim();
+    const bankAccountNameError = submitted && !bankAccountName.trim();
 
-  const accountNumberError = useMemo(() => {
-    const v = formValue.accountNumber.trim();
-    if (!v) return "Vui lòng nhập số tài khoản.";
-    if (!/^[0-9]{6,20}$/.test(v)) return "Số tài khoản phải là dãy số (6–20 chữ số).";
-    return "";
-  }, [formValue.accountNumber]);
+    const handleClose = () => {
+        setBankCode("");
+        setAccountNumber("");
+        setBankAccountName("");
+        setSubmitted(false);
+        onOpenChange(false);
+    };
 
-  const bankAccountNameError = useMemo(() => {
-    if (!formValue.bankAccountName.trim()) return "Vui lòng nhập tên chủ tài khoản.";
-    return "";
-  }, [formValue.bankAccountName]);
+    const handleSubmit = () => {
+        setSubmitted(true);
 
-  if (!open) return null;
+        if (!selectedBank || !accountNumber.trim() || !bankAccountName.trim()) {
+            return;
+        }
 
-  const handleClose = () => onOpenChange(false);
+        const newBankAccount: BankAccount = {
+            id: crypto.randomUUID(),
+            bankCode: selectedBank.code,
+            bankName: selectedBank.name,
+            accountNumber: accountNumber.trim(),
+            bankAccountName: bankAccountName.trim(),
+            active: true,
+            isDefault: false,
+        };
 
-  const handleSubmit = () => {
-    if (bankCodeError || bankNameError || accountNumberError || bankAccountNameError) {
-      toast.error(bankCodeError || bankNameError || accountNumberError || bankAccountNameError);
-      return;
-    }
+        onAddBankAccount(newBankAccount);
+        handleClose();
+    };
 
-    onAddBankAccount({
-      bankCode: formValue.bankCode.trim(),
-      bankName: formValue.bankName.trim(),
-      accountNumber: formValue.accountNumber.trim(),
-      bankAccountName: formValue.bankAccountName.trim(),
-    });
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-background shadow-xl">
+                <div className="border-b px-6 py-4">
+                    <h3 className="text-lg font-semibold">
+                        Thêm tài khoản ngân hàng
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        Các thông tin bên dưới đều bắt buộc nhập.
+                    </p>
+                </div>
 
-    handleClose();
-  };
+                <div className="space-y-4 p-6">
+                    <div className="space-y-2">
+                        <Label>Ngân hàng *</Label>
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-2xl rounded-2xl bg-background shadow-xl">
-        <div className="flex items-center justify-between border-b px-6 py-4">
-          <div>
-            <h3 className="text-lg font-semibold">Thêm tài khoản ngân hàng</h3>
-            <p className="text-sm text-muted-foreground">Nhập thông tin để thêm tài khoản mới.</p>
-          </div>
+                        <Popover open={bankOpen} onOpenChange={setBankOpen}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    role="combobox"
+                                    className="w-full justify-between"
+                                >
+                                    {selectedBank
+                                        ? `${selectedBank.name} - ${selectedBank.code}`
+                                        : "Chọn hoặc nhập tên ngân hàng"}
 
-          <Button variant="ghost" size="sm" onClick={handleClose}>
-            Đóng
-          </Button>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+
+                            <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                                <Command>
+                                    <CommandInput
+                                        placeholder="Nhập tên ngân hàng..."
+                                        value={bankSearch}
+                                        onValueChange={setBankSearch}
+                                    />
+
+                                    <CommandList>
+                                        <CommandEmpty>Không tìm thấy ngân hàng.</CommandEmpty>
+
+                                        <CommandGroup>
+                                            {BANKS.map((bank) => (
+                                                <CommandItem
+                                                    key={bank.code}
+                                                    value={`${bank.name} ${bank.code}`}
+                                                    onSelect={() => {
+                                                        setBankCode(bank.code);
+                                                        setBankSearch(bank.name);
+                                                        setBankOpen(false);
+                                                    }}
+                                                >
+                                                    {bank.name} - {bank.code}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+
+                        {bankError && (
+                            <p className="text-sm text-red-500">Vui lòng chọn ngân hàng.</p>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Số tài khoản *</Label>
+
+                        <Input
+                            value={accountNumber}
+                            onChange={(e) => setAccountNumber(e.target.value)}
+                            placeholder="Nhập số tài khoản"
+                        />
+
+                        {accountNumberError && (
+                            <p className="text-sm text-red-500">
+                                Vui lòng nhập số tài khoản.
+                            </p>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label>Tên chủ tài khoản *</Label>
+
+                        <Input
+                            value={bankAccountName}
+                            onChange={(e) => setBankAccountName(e.target.value)}
+                            placeholder="Nhập tên chủ tài khoản"
+                        />
+
+                        {bankAccountNameError && (
+                            <p className="text-sm text-red-500">
+                                Vui lòng nhập tên chủ tài khoản.
+                            </p>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t px-6 py-4">
+                    <Button variant="outline" onClick={handleClose}>
+                        Hủy
+                    </Button>
+
+                    <Button onClick={handleSubmit}>Thêm</Button>
+                </div>
+            </div>
         </div>
-
-        <div className="space-y-5 p-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Mã ngân hàng *</Label>
-              <Input
-                value={formValue.bankCode}
-                onChange={(e) => setFormValue({ ...formValue, bankCode: e.target.value })}
-                placeholder="Ví dụ: Vietcombank"
-              />
-              {bankCodeError && <p className="text-xs text-red-500">{bankCodeError}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Tên ngân hàng *</Label>
-              <Input
-                value={formValue.bankName}
-                onChange={(e) => setFormValue({ ...formValue, bankName: e.target.value })}
-                placeholder="Nhập tên ngân hàng"
-              />
-              {bankNameError && <p className="text-xs text-red-500">{bankNameError}</p>}
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label>Số tài khoản *</Label>
-              <Input
-                value={formValue.accountNumber}
-                onChange={(e) => setFormValue({ ...formValue, accountNumber: e.target.value })}
-                placeholder="Nhập số tài khoản"
-              />
-              {accountNumberError && <p className="text-xs text-red-500">{accountNumberError}</p>}
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label>Chủ tài khoản *</Label>
-              <Input
-                value={formValue.bankAccountName}
-                onChange={(e) => setFormValue({ ...formValue, bankAccountName: e.target.value })}
-                placeholder="Nhập tên chủ tài khoản"
-              />
-              {bankAccountNameError && <p className="text-xs text-red-500">{bankAccountNameError}</p>}
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={handleClose} disabled={loading}>
-            Hủy
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Đang lưu..." : "Lưu tài khoản"}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }

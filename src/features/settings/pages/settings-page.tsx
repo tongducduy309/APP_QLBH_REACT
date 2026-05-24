@@ -14,8 +14,8 @@ import { defaultSettings, useSettingsStore } from "../store/settings-store";
 import type { UserSettings } from "../types/settings.types";
 import { OrderStorageCard } from "../components/order-storage-card";
 import { usePermission } from "@/app/hooks/usePermission";
-import { useAppSettingsStore } from "../store/app-settings-store";
 import { AppSettings } from "../types/app-settings.types";
+import { useAppSettingsStore } from "../store/app-settings-store";
 
 const paperSizeOptions = [
   { label: "A4", value: "A4" },
