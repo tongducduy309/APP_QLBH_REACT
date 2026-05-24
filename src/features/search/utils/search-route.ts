@@ -4,7 +4,10 @@ import { SearchSuggestion } from "@/types/search";
 export function resolveSearchItemRoute(item: SearchSuggestion) {
   switch (item.entityType) {
     case "ORDER":
-      return `/transactions/${item.entityId}`;
+      return `/transactions/order/${item.entityId}`;
+
+    case "BANK_TRANSFER":
+      return `/transactions/bank-transfer/${item.entityId}`;
 
     case "PRODUCT":
       return `/inventory/${item.entityId}`;

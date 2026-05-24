@@ -22,6 +22,7 @@ import { EmployeesPage } from "@/features/employees/pages/employees-page";
 import { EmployeeDetailPage } from "@/features/employees/pages/employee-detail-page";
 import { RoleGuard } from "@/routes/role-guard";
 import DatabaseChangeLogPage from "@/features/database/pages/database-change-log-page";
+import { BankTransferDetailPage } from "@/features/transactions/pages/BankTranferDetailPage";
 
 const isElectron = window.location.protocol === "file:";
 
@@ -47,7 +48,8 @@ export const router = (isElectron ? createHashRouter : createBrowserRouter)([
             { path: "/customers", element: <CustomersPage /> },
             { path: "/customers/:id", element: <CustomerDetailPage /> },
             { path: "/transactions", element: <TransactionsPage /> },
-            { path: "/transactions/:id", element: <OrderDetailPage /> },
+            { path: "/transactions/order/:id", element: <OrderDetailPage /> },
+            { path: "/transactions/bank-transfer/:id", element: <BankTransferDetailPage /> },
             { path: "/transactions/edit/:id", element: <OrderEditPage /> },
             { path: "/reports/quotes", element: <QuoteReportPage /> },
             { path: "/statistics", element: <StatisticsPage /> },

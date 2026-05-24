@@ -3,6 +3,7 @@ export type SearchEntityType =
   | "PRODUCT"
   | "CUSTOMER"
   | "PURCHASE_RECEIPT"
+  | "BANK_TRANSFER"
   | "EMPLOYEE";
 
 export type SearchSuggestion = {

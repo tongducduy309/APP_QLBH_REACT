@@ -33,9 +33,10 @@ type Props = {
   checkoutLoading?: boolean;
   checkedPrintInvoice?: boolean;
   onCheckedPrintInvoice: (value: boolean) => void;
+  onCheckedCreatePaymentQr?: (value: boolean) => void;
   onDownloadQuote: () => void;
   onSaveDraft: () => void;
-
+  checkedCreatePaymentQr ?: boolean;
   editMode?: boolean;
   checkoutLabel?: string;
   checkoutLoadingLabel?: string;
@@ -163,7 +164,7 @@ export function PaymentSummaryCard(props: Props) {
         </div>
       </div>
 
-      <label className="inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all">
+      <label className="inline-flex mb-2 w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all">
         <Checkbox
           checked={props.checkedPrintInvoice}
           onCheckedChange={(checked) =>
@@ -171,6 +172,16 @@ export function PaymentSummaryCard(props: Props) {
           }
         />
         <span>{printInvoiceLabel}</span>
+      </label>
+
+      <label className="inline-flex w-full cursor-pointer items-center gap-3 rounded-md border px-3 py-3 text-sm font-medium transition-all">
+        <Checkbox
+          checked={props.checkedCreatePaymentQr}
+          onCheckedChange={(checked) =>
+            props.onCheckedCreatePaymentQr?.(Boolean(checked))
+          }
+        />
+        <span>Tạo mã thanh toán QR</span>
       </label>
 
       <div className="flex w-full items-start gap-3">

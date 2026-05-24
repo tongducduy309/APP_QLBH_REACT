@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageShell } from "@/components/layout/page-shell";
 import {
   createOrder,
-  getOrderById,
+  getOrderByIdOrCode,
   updateOrder as updateOrderApi,
 } from "@/services/order-api";
 import { OrderProductDialog } from "../components/order-product-dialog";
@@ -37,7 +37,7 @@ import { useSalesOrders } from "../hooks/useSalesOrder";
 import { mapSalesDraftToOrderRes } from "@/features/print/utils/order-print-mapper";
 import { printInvoice } from "@/features/print/services/Invoice-pdf-print.service";
 import { downloadQuotation } from "@/features/print/services/Quotation-pdf-print.service";
-import { OrderStatus, type OrderUpdateReq } from "@/types/order";
+import { OrderRes, OrderStatus, type OrderUpdateReq } from "@/types/order";
 import {
   mapOrderDetailsToCartItems,
   mapOrderToCustomerOrderInfo,
@@ -49,6 +49,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { sortOrderResDetails } from "@/utils/order.helper";
 import checkoutSuccessSound from "@/assets/sounds/checkout.mp3";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
+import { InvoiceQrPaymentDialog } from "@/features/transactions/components/InvoiceQrPaymentDialog";
 
 const quickExpenseTemplates = [
   { description: "Công uốn", unit: "tấm" },
@@ -82,14 +83,22 @@ export function SalesPage({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customerOrderDialogOpen, setCustomerOrderDialogOpen] = useState(false);
   const [customerPickerOpen, setCustomerPickerOpen] = useState(false);
-  const [missingCustomerDialogOpen, setMissingCustomerDialogOpen] =
-    useState(false);
+  const [missingCustomerDialogOpen, setMissingCustomerDialogOpen] = useState(false);
+  const [openQr, setOpenQr] = useState(false);
 
   const [products, setProducts] = useState<Product[]>([]);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkedPrintInvoice, setCheckedPrintInvoice] = useState(false);
-  const [selectedCustomerFromPicker, setSelectedCustomerFromPicker] =
-    useState<CustomerItem | null>(null);
+  const [checkedCreatePaymentQr, setCheckedCreatePaymentQr] = useState(false);
+  const [selectedCustomerFromPicker, setSelectedCustomerFromPicker] = useState<CustomerItem | null>(null);
+
+  const [orderPaymenting, setOrderPaymenting] = useState<{
+    orderCode: string;
+    remainingAmount: number;
+  }>({
+    orderCode: "",
+    remainingAmount: 0
+  });
 
   const [closingOrderId, setClosingOrderId] = useState<number | null>(null);
   const [draggingOrderId, setDraggingOrderId] = useState<number | null>(null);
@@ -186,7 +195,7 @@ export function SalesPage({
         setLoadingEditOrder(true);
         setLoadEditOrderFailed(false);
 
-        const order = await getOrderById(Number(orderId));
+        const order = await getOrderByIdOrCode(orderId);
 
         sales.setWholeOrderForEdit({
           cartItems: mapOrderDetailsToCartItems(sortOrderResDetails(order)),
@@ -342,10 +351,19 @@ export function SalesPage({
 
   const afterSubmitSuccess = async (
     messageText: string,
-    finalOrderId?: string
+    finalOrderId?: string,
+    order?: OrderRes
   ) => {
     if (checkedPrintInvoice && printableOrder) {
       printInvoice(printableOrder);
+    }
+
+    if (checkedCreatePaymentQr && printableOrder && order) {
+      setOrderPaymenting({
+        orderCode: order.code,
+        remainingAmount: order.remainingAmount ?? 0
+      });
+      setOpenQr(true);
     }
 
     if (!isEditMode) triggerCheckoutSuccessEffect();
@@ -362,7 +380,7 @@ export function SalesPage({
       sales.clearPersistedState();
 
       if (finalOrderId) {
-        navigate(`/transactions/${finalOrderId}`, { replace: true });
+        navigate(`/transactions/order/${finalOrderId}`, { replace: true });
         return;
       }
 
@@ -383,14 +401,17 @@ export function SalesPage({
       setCheckoutLoading(true);
 
       if (isEditMode && orderId) {
-        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.CONFIRMED));
-        await afterSubmitSuccess("Cập nhật hóa đơn thành công.", orderId);
+        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.CONFIRMED)).then(async (order) => {
+          await afterSubmitSuccess("Cập nhật hóa đơn thành công.", orderId,order as OrderRes);
+        });
+        
       } else {
         const payload = buildCreatePayload(OrderStatus.CONFIRMED);
         const created = await createOrder(payload);
         await afterSubmitSuccess(
           "Tạo đơn hàng thành công.",
-          created.id.toString()
+          created.id.toString(),
+          created as OrderRes
         );
       }
 
@@ -414,8 +435,9 @@ export function SalesPage({
       setCheckoutLoading(true);
 
       if (isEditMode && orderId) {
-        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.DRAFT));
-        await afterSubmitSuccess("Cập nhật bản nháp thành công.", orderId);
+        await updateOrderApi(orderId, buildUpdatePayload(OrderStatus.DRAFT)).then(async (order) => {
+          await afterSubmitSuccess("Cập nhật bản nháp thành công.");
+        });
       } else {
         const payload = buildCreatePayload(OrderStatus.DRAFT);
         const created = await createOrder(payload);
@@ -503,7 +525,7 @@ export function SalesPage({
         {isEditMode && (
           <AntdButton
             icon={<ArrowLeft className="h-4 w-4" />}
-            onClick={() => navigate(`/transactions/${orderId}`, { replace: true })}
+            onClick={() => navigate(`/transactions/order/${orderId}`, { replace: true })}
           >
             Quay lại
           </AntdButton>
@@ -656,7 +678,9 @@ export function SalesPage({
               checkoutLoading={checkoutLoading}
               onDownloadQuote={handleDownloadQuote}
               checkedPrintInvoice={checkedPrintInvoice}
+              checkedCreatePaymentQr={checkedCreatePaymentQr}
               onCheckedPrintInvoice={setCheckedPrintInvoice}
+              onCheckedCreatePaymentQr={setCheckedCreatePaymentQr}
               onSaveDraft={handleSaveDraft}
               editMode={isEditMode}
               onCopyInvoiceImage={handleCopyInvoiceImage}
@@ -809,6 +833,13 @@ export function SalesPage({
           </div>
         </div>
       )}
+
+      <InvoiceQrPaymentDialog
+        open={openQr}
+        onOpenChange={setOpenQr}
+        amount={orderPaymenting.remainingAmount}
+        invoiceCode={orderPaymenting.orderCode}
+      />
     </PageShell>
   );
 }

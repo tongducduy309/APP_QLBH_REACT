@@ -4,30 +4,128 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-function parseNumberInput(value: string) {
-  // đổi dấu . thành rỗng và , thành .
-  const normalized = value.replace(/\./g, "").replace(",", ".");
+export function parseNumberInput(value: string): number {
+  if (!value || value === "-" || value === "," || value === "-,") return 0;
+
+  const normalized = value
+    .replace(/\./g, "") // remove thousand separator
+    .replace(",", "."); // decimal separator
+
   const parsed = Number(normalized);
 
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function formatNumberInput(value: number | string) {
-  if (value === "" || value === null || value === undefined) return "";
-
-  const text = String(value).replace(/\./g, "").replace(",", ".");
-
-  if (text.endsWith(",")) {
-    const intPart = text.slice(0, -1);
-    return `${Number(intPart || 0).toLocaleString("vi-VN")},`;
+export function formatNumberInput(value: string | number): string {
+  if (value === "" || value === null || value === undefined) {
+    return "";
   }
 
-  const [integerPart, decimalPart] = text.split(".");
-  const formattedInteger = Number(integerPart || 0).toLocaleString("vi-VN");
+  // Nếu là number từ JS: 4.4 => 4,4
+  if (typeof value === "number") {
+    if (Number.isNaN(value)) return "";
 
-  return decimalPart !== undefined
-    ? `${formattedInteger},${decimalPart}`
-    : formattedInteger;
+    const [integerPart, decimalPart] = String(value).split(".");
+
+    const formattedInteger = integerPart.replace(
+      /\B(?=(\d{3})+(?!\d))/g,
+      "."
+    );
+
+    return decimalPart !== undefined
+      ? `${formattedInteger},${decimalPart}`
+      : formattedInteger;
+  }
+
+  // Nếu là string user đang nhập: 4,4 giữ nguyên dấu ,
+  const raw = value;
+
+  const isNegative = raw.startsWith("-");
+
+  const clean = raw
+    .replace(/-/g, "")
+    .replace(/\./g, "");
+
+  const endsWithComma = clean.endsWith(",");
+
+  const [integerRaw, decimalRaw] = clean.split(",");
+
+  const formattedInteger = (integerRaw || "0").replace(
+    /\B(?=(\d{3})+(?!\d))/g,
+    "."
+  );
+
+  const sign = isNegative ? "-" : "";
+
+  if (endsWithComma) return `${sign}${formattedInteger},`;
+
+  if (decimalRaw !== undefined) {
+    return `${sign}${formattedInteger},${decimalRaw}`;
+  }
+
+  return `${sign}${formattedInteger}`;
+}
+
+type HandleChangeOptions = {
+  integerOnly?: boolean;
+};
+
+export function handleNumberInputChange(
+  rawValue: string,
+  options?: HandleChangeOptions,
+) {
+  const integerOnly = options?.integerOnly ?? false;
+
+  let sanitized = rawValue;
+
+  // chỉ cho phép:
+  // số
+  // dấu .
+  // dấu ,
+  // dấu -
+  sanitized = integerOnly
+    ? sanitized.replace(/[^\d-]/g, "")
+    : sanitized.replace(/[^\d.,-]/g, "");
+
+  // chỉ cho phép 1 dấu ,
+  if (!integerOnly) {
+    const parts = sanitized.split(",");
+
+    if (parts.length > 2) {
+      sanitized = `${parts[0]},${parts
+        .slice(1)
+        .join("")}`;
+    }
+  }
+
+  // chỉ cho phép dấu - ở đầu
+  if (sanitized.includes("-")) {
+    sanitized =
+      (sanitized.startsWith("-") ? "-" : "") +
+      sanitized.replace(/-/g, "");
+  }
+
+  // trạng thái nhập đặc biệt
+  if (
+    sanitized === "" ||
+    sanitized === "-" ||
+    sanitized === ","
+  ) {
+    return {
+      displayValue: sanitized,
+      numberValue: null,
+    };
+  }
+
+  const numberValue =
+    parseNumberInput(sanitized);
+
+  return {
+    displayValue: formatNumberInput(
+      sanitized,
+    ),
+    numberValue,
+  };
 }
 
 type NumberInputProps = Omit<
@@ -86,8 +184,8 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     );
 
     React.useEffect(() => {
-      setDisplayValue(value ? formatNumberInput(value) : "");
-    }, [value]);
+  setDisplayValue(value !== null && value !== undefined ? formatNumberInput(value) : "");
+}, [value]);
 
     const updateValue = (next: number) => {
       const clamped = clampValue(next);
@@ -96,68 +194,72 @@ export const NumberInput = React.forwardRef<HTMLInputElement, NumberInputProps>(
     };
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const input = event.target;
-      const cursor = input.selectionStart ?? 0;
-      const rawValue = input.value;
+  const input = event.target;
+  const cursor = input.selectionStart ?? 0;
+  const rawValue = input.value;
 
-      let sanitized = rawValue.replace(/,/g, "");
+  let sanitized = rawValue;
 
-      sanitized = integerOnly
-        ? sanitized.replace(/[^\d-]/g, "")
-        : sanitized.replace(/[^\d.-]/g, "");
+  sanitized = integerOnly
+    ? sanitized.replace(/[^\d-]/g, "")
+    : sanitized.replace(/[^\d.,-]/g, "");
 
-      const minusCount = (sanitized.match(/-/g) || []).length;
-      if (minusCount > 1 || (sanitized.includes("-") && !sanitized.startsWith("-"))) {
-        sanitized = sanitized.replace(/-/g, "");
+  const isNegative = sanitized.startsWith("-");
+  sanitized = sanitized.replace(/-/g, "");
+  if (isNegative) sanitized = `-${sanitized}`;
+
+  if (integerOnly) {
+    sanitized = sanitized.replace(/\./g, "").replace(/,/g, "");
+  } else {
+    const parts = sanitized.split(",");
+    if (parts.length > 2) {
+      sanitized = `${parts[0]},${parts.slice(1).join("")}`;
+    }
+  }
+
+  if (
+    sanitized === "" ||
+    sanitized === "-" ||
+    sanitized === "," ||
+    sanitized === "-,"
+  ) {
+    setDisplayValue(sanitized);
+    onValueChange(0);
+    return;
+  }
+
+  const parsedValue = parseNumberInput(sanitized);
+  const nextValue = clampValue(parsedValue);
+  const formatted = formatNumberInput(sanitized);
+
+  setDisplayValue(formatted);
+  onValueChange(nextValue);
+
+  requestAnimationFrame(() => {
+    const rawBeforeCursor = rawValue.slice(0, cursor).replace(/\./g, "");
+
+    let newCursor = 0;
+    let rawCount = 0;
+
+    while (newCursor < formatted.length && rawCount < rawBeforeCursor.length) {
+      if (formatted[newCursor] !== ".") {
+        rawCount++;
       }
+      newCursor++;
+    }
 
-      if (!integerOnly) {
-        const parts = sanitized.split(".");
-        if (parts.length > 2) {
-          sanitized = `${parts[0]}.${parts.slice(1).join("")}`;
-        }
-      }
-
-      if (sanitized === "" || sanitized === "-" || sanitized === ".") {
-        setDisplayValue(sanitized);
-        onValueChange(0);
-        return;
-      }
-
-      const parsedValue = parseNumberInput(sanitized);
-      const nextValue = clampValue(parsedValue);
-
-      const formatted = formatNumberInput(sanitized);
-
-      setDisplayValue(formatted);
-      onValueChange(nextValue);
-
-      requestAnimationFrame(() => {
-        const rawBeforeCursor = rawValue
-          .slice(0, cursor)
-          .replace(/\./g, "")
-          .replace(/,/g, "");
-
-        let newCursor = 0;
-        let rawCount = 0;
-
-        while (newCursor < formatted.length && rawCount < rawBeforeCursor.length) {
-          if (formatted[newCursor] !== "." && formatted[newCursor] !== ",") {
-            rawCount++;
-          }
-          newCursor++;
-        }
-
-        input.setSelectionRange(newCursor, newCursor);
-      });
-    };
+    input.setSelectionRange(newCursor, newCursor);
+  });
+};
 
     const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-      const nextValue = clampValue(parseNumberInput(displayValue));
-      setDisplayValue(nextValue ? formatNumberInput(nextValue) : "");
-      onValueChange(nextValue);
-      props.onBlur?.(event);
-    };
+  const nextValue = clampValue(parseNumberInput(displayValue));
+
+  setDisplayValue(nextValue ? formatNumberInput(nextValue) : "");
+  onValueChange(nextValue);
+
+  props.onBlur?.(event);
+};
 
     const handleDecrease = () => {
       updateValue(Number(value || 0) - step);

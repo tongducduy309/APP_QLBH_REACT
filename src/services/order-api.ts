@@ -1,17 +1,29 @@
 import { OrderCreateReq } from "@/features/sales/types/sales.types";
 import apiClient from "@/lib/api-client";
-import { OrderRecentRes, OrderRes, OrderUpdateReq, PayOrderReq, SendInvoiceEmailReq } from "@/types/order";
+import {
+  OrderRecentRes,
+  OrderRes,
+  OrderUpdateReq,
+  PayOrderReq,
+  SendInvoiceEmailReq,
+} from "@/types/order";
+
+type ApiResponse<T> = {
+  status?: string;
+  message?: string;
+  data: T;
+};
 
 export async function getNextOrderCode(): Promise<string> {
   const { data } = await apiClient.get("/orders/next-code");
-  return data.data as string;
+  return data.data;
 }
 
 export async function createOrder(req: OrderCreateReq): Promise<OrderRes> {
   const { data } = await apiClient.post("/orders", req, {
     headers: { "Content-Type": "application/json" },
   });
-  return data.data as OrderRes;
+  return data.data;
 }
 
 export async function getOrders(): Promise<OrderRes[]> {
@@ -19,26 +31,23 @@ export async function getOrders(): Promise<OrderRes[]> {
   return (data.data ?? []) as OrderRes[];
 }
 
-export async function updateOrder(
-  id: string,
-  req: OrderUpdateReq
-): Promise<OrderRes> {
+export async function updateOrder(id: number, req: OrderUpdateReq): Promise<OrderRes> {
   const { data } = await apiClient.put(`/orders/${id}`, req, {
     headers: { "Content-Type": "application/json" },
   });
-  return data.data as OrderRes;
+  return data.data;
 }
 
-
-
 export async function getRecentOrders(amount: number): Promise<OrderRecentRes[]> {
-  const { data } = await apiClient.get(`/orders/recent?amount=${amount}`);
+  const { data } = await apiClient.get(
+    `/orders/recent?amount=${amount}`
+  );
   return (data.data ?? []) as OrderRecentRes[];
 }
 
-export async function getOrderById(id: number): Promise<OrderRes> {
+export async function getOrderByIdOrCode(id: number | string): Promise<OrderRes> {
   const { data } = await apiClient.get(`/orders/${id}`);
-  return data.data as OrderRes;
+  return data.data;
 }
 
 export async function cancelOrder(id: number): Promise<void> {
@@ -46,11 +55,9 @@ export async function cancelOrder(id: number): Promise<void> {
 }
 
 export async function payOrder(payload: PayOrderReq) {
-  const { data } = await apiClient.post(`/orders/amount`, payload);
-  return data;
+  const { data } = await apiClient.post<ApiResponse<any>>(`/orders/amount`, payload);
+  return data.data;
 }
-
-
 
 export async function sendInvoiceEmail(req: SendInvoiceEmailReq): Promise<void> {
   const formData = new FormData();

@@ -32,7 +32,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatCurrency } from "@/lib/utils";
 import { OrderStatus, type OrderDetailRes, type OrderRes } from "@/types/order";
-import { cancelOrder, getOrderById, payOrder } from "@/services/order-api";
+import { cancelOrder, getOrderByIdOrCode, payOrder } from "@/services/order-api";
 import {
   downloadInvoice,
   previewInvoice,
@@ -48,6 +48,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { formatDateToDDMMYYYY } from "@/utils/date";
 import { usePermission } from "@/app/hooks/usePermission";
 import { InvoiceQrPaymentDialog } from "../components/InvoiceQrPaymentDialog";
+import { useAppSettingsStore } from "@/features/settings/store/app-settings-store";
 
 export function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -67,19 +68,21 @@ export function OrderDetailPage() {
   const invoiceCopyRef = useRef<HTMLDivElement | null>(null);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
 
+  const appSettingsStore = useAppSettingsStore();
+
   const { hasRole } = usePermission();
-  
+
   const canEditOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
   const canCancelOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
   const canSendEmail = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
-   const canPayOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
+  const canPayOrder = hasRole(["ADMIN", "STORE_MANAGER", "OFFICE_STAFF"]);
 
   const fetchOrder = async () => {
     if (!id) return;
 
     try {
       setLoading(true);
-      const res = await getOrderById(Number(id));
+      const res = await getOrderByIdOrCode(id);
       console.log("res", res);
       setOrder(sortOrderResDetails(res));
     } catch (error) {
@@ -326,7 +329,7 @@ export function OrderDetailPage() {
           <DropdownMenuContent align="end" className="w-52">
             <DropdownMenuGroup>
               {order.status === OrderStatus.CONFIRMED &&
-                (order.remainingAmount ?? 0) > 0 && 
+                (order.remainingAmount ?? 0) > 0 &&
                 canPayOrder && (
                   <DropdownMenuItem
                     onClick={() => setPaymentDialogOpen(true)}
@@ -371,10 +374,14 @@ export function OrderDetailPage() {
                 In hóa đơn
               </DropdownMenuItem>
 
-              <DropdownMenuItem onClick={() => setOpenQr(true)}>
-                <QrCode className="mr-2 h-4 w-4" />
-                Tạo mã QR thanh toán
-              </DropdownMenuItem>
+              {
+                !appSettingsStore.appSettings.fh && (
+                  <DropdownMenuItem onClick={() => setOpenQr(true)}>
+                    <QrCode className="mr-2 h-4 w-4" />
+                    Tạo mã QR thanh toán
+                  </DropdownMenuItem>
+                )
+              }
 
               {
                 canCancelOrder && (
@@ -723,10 +730,6 @@ export function OrderDetailPage() {
       <InvoiceQrPaymentDialog
         open={openQr}
         onOpenChange={setOpenQr}
-        bankCode="STB"
-        bankName="Sacombank"
-        bankAccount="060280886699"
-        accountName="TONG DUC DUY"
         amount={order.remainingAmount}
         invoiceCode={order.code}
       />

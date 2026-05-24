@@ -6,7 +6,7 @@ export interface LoginReq {
 }
 
 export interface AuthUserRes {
-  id: number | string;
+  id: number | null;
   username: string;
   fullName?: string;
   roles?: Role[];

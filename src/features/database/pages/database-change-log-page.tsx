@@ -51,7 +51,9 @@ function prettyJson(value?: string | null) {
 function getLink(entityName: string, entityId: string|null) {
   switch (entityName) {
     case "ORDER":
-      return `/transactions/${entityId}`;
+      return `/transactions/order/${entityId}`;
+    case "BANK_TRANSFER":
+      return `/transactions/bank-transfer/${entityId}`;
     case "CUSTOMER":
       return `/customers/${entityId}`;
     case "PRODUCT":

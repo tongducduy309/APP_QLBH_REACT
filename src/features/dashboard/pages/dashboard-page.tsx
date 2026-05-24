@@ -125,7 +125,7 @@ export function DashboardPage() {
                   <div
                     key={item.id}
                     className="cursor-pointer rounded-2xl border p-4 transition hover:bg-muted/40"
-                    onClick={() => navigate(`/transactions/${item.id}`)}
+                    onClick={() => navigate(`/transactions/order/${item.id}`)}
                   >
                     <div className="flex items-center justify-between gap-4">
                       <div className="min-w-0">

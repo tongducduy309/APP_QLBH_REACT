@@ -1,5 +1,5 @@
 import apiClient from "@/lib/api-client";
-import type { AuthRes, LoginReq } from "@/features/auth/types/auth.types";
+import type { AuthRes, AuthUserRes, LoginReq } from "@/features/auth/types/auth.types";
 
 
 export async function login(payload: LoginReq): Promise<AuthRes> {
@@ -21,4 +21,9 @@ export async function confirmPassword(password: string): Promise<void> {
 export async function checkUsernameNotExists(username: string): Promise<boolean> {
   const response = await apiClient.get<{ data: boolean }>(`/users/check-username?username=${encodeURIComponent(username)}`);
   return response.data.data;
+}
+
+export async function getProfile(): Promise<AuthUserRes> {
+  const {data} = await apiClient.get(`/auth/me`);
+  return data.data;
 }
