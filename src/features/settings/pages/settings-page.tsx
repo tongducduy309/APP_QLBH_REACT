@@ -1,4 +1,5 @@
-import { Button, Input, InputNumber, Select, Switch, message } from "antd";
+import { Button, Input, InputNumber, Select, Spin, Switch, message } from "antd";
+import { Button as ShadcnButton } from "@/components/ui/button";
 import { Save, RotateCcw, Printer } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PageShell } from "@/components/layout/page-shell";
@@ -12,6 +13,9 @@ import {
 import { defaultSettings, useSettingsStore } from "../store/settings-store";
 import type { UserSettings } from "../types/settings.types";
 import { OrderStorageCard } from "../components/order-storage-card";
+import { usePermission } from "@/app/hooks/usePermission";
+import { useAppSettingsStore } from "../store/app-settings-store";
+import { AppSettings } from "../types/app-settings.types";
 
 const paperSizeOptions = [
   { label: "A4", value: "A4" },
@@ -25,17 +29,43 @@ const pageOrientationOptions = [
 ];
 
 export function SettingsPage() {
-  const { settings, saveSettings, loading } = useSettingsStore();
-  const [form, setForm] = useState<UserSettings>(settings);
+  const settingsStore = useSettingsStore();
+  const appSettingsStore = useAppSettingsStore();
+  const [form, setForm] = useState<UserSettings>(settingsStore.settings);
+  const [appForm, setAppForm] = useState<Partial<AppSettings>>(appSettingsStore?.appSettings || {});
+  const { hasRole } = usePermission();
+
+  const canFeatureHide = hasRole(["ADMIN", "STORE_MANAGER"]);
 
   useEffect(() => {
-    setForm(settings);
-  }, [settings]);
+    settingsStore.hydrate();
+  }, [settingsStore.hydrate]);
 
+  useEffect(() => {
+    appSettingsStore.hydrate();
+  }, [appSettingsStore.hydrate]);
+
+  useEffect(() => {
+    setForm(settingsStore.settings);
+  }, [settingsStore.settings]);
+
+  useEffect(() => {
+    setAppForm(appSettingsStore.appSettings);
+  }, [appSettingsStore.appSettings]);
+
+  const handleAppSettingsChange = (key: keyof AppSettings, value: any) => {
+    setAppForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+    appSettingsStore.saveSettings(key, value).catch((error) => {
+      console.error("Không thể lưu cài đặt lên server. Vui lòng thử lại.");
+    });
+  };
 
   async function handleSave() {
     try {
-      await saveSettings({
+      await settingsStore.saveSettings({
         ...form,
         printOptions: {
           paperSize: form.printOptions?.paperSize || "A4",
@@ -45,11 +75,12 @@ export function SettingsPage() {
         },
       });
 
-      message.success("Lưu cài đặt thành công");
+
     } catch (error) {
-      message.warning("Đã lưu tạm cài đặt ở local, nhưng chưa đồng bộ được server");
+      console.error("Không thể lưu cài đặt lên server. Vui lòng thử lại.");
     }
   }
+
 
   function handleReset() {
     setForm(defaultSettings);
@@ -169,29 +200,8 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center justify-between rounded-2xl border p-4">
-                <div>
-                  <p className="font-medium">Thông báo email</p>
-                  <p className="text-sm text-muted-foreground">
-                    Gửi email khi phát sinh hóa đơn mới
-                  </p>
-                </div>
-                <Switch
-                  checked={form.emailNotify}
-                  onChange={(checked) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      emailNotify: checked,
-                    }))
-                  }
-                />
-              </div>
-
-            </div>
-
             <div className="flex flex-wrap gap-3">
-              <Button type="primary" size="large" onClick={handleSave} loading={loading}>
+              <Button type="primary" size="large" onClick={handleSave} loading={settingsStore.loading}>
                 <Save className="mr-2 h-4 w-4" />
                 Lưu cài đặt
               </Button>
@@ -238,6 +248,42 @@ export function SettingsPage() {
           </CardContent>
         </Card>
         <OrderStorageCard />
+
+        <div>
+          {
+            canFeatureHide && !appForm.fh && (
+              <Spin spinning={appSettingsStore.loading}>
+                <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-2xl border p-4 bg-white">
+                  <div>
+                    <p className="font-medium">Ứng dụng ẩn</p>
+                    <p className="text-sm text-muted-foreground">
+                      Vui lòng không sử dụng tính năng này, chỉ sử dụng khi trường hợp đặc biệt
+                    </p>
+                  </div>
+                  <ShadcnButton variant="default" size="sm" onClick={() => handleAppSettingsChange("fh", true)}>
+                    Bật
+                  </ShadcnButton>
+                </div>
+                <div className="flex items-center justify-between rounded-2xl border p-4 bg-white">
+                  <div>
+                    <p className="font-medium">Thông báo email</p>
+                    <p className="text-sm text-muted-foreground">
+                      Gửi email khi phát sinh hóa đơn mới
+                    </p>
+                  </div>
+                  <Switch
+                    checked={appForm.emailNotify}
+                    onChange={(checked) =>
+                      handleAppSettingsChange("emailNotify", checked)
+                    }
+                  />
+                </div>
+              </div>
+              </Spin>
+            )
+          }
+        </div>
       </div>
     </PageShell>
   );
