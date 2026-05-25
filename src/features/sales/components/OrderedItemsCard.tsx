@@ -8,6 +8,7 @@ import {
   type DisplayInventoryGroup,
   type DisplayNonInventoryGroup,
 } from "../types/sales.types";
+import { Tooltip } from "antd";
 
 type OrderedItem = DisplayInventoryGroup | DisplayNonInventoryGroup | DisplayExpenseLine;
 
@@ -125,12 +126,17 @@ export function OrderedItemsCard({
                     Kích thước đã chọn:{" "}
                     <div className="mb-1 flex flex-wrap items-center gap-1">
                       {line.sizeLines.map((item, idx) => (
-                        <span
+                        <Tooltip
+                          key={`${line.groupKey}-${idx}`}
+                          title="Chiều dài x Số lượng"
+                        >
+                          <span
                           key={`${line.groupKey}-${idx}`}
                           className="rounded-full bg-sky-50 px-3 py-1 text-xs font-medium text-sky-700"
                         >
-                          {item.length ? (`${item.length} mét x `) : ""} {item.quantity} {item.length?"":line.unit}
+                          {item.length ? (`${item.length} x `) : ""} {item.quantity} {item.length?"":line.unit}
                         </span>
+                        </Tooltip>
                       ))}
                     </div>
                   </div>

@@ -25,7 +25,7 @@ const quickNoteTemplates = [
   "Giao hàng buổi chiều",
   "Giao hàng vào ngày mai",
   "Giao hàng khi có người liên hệ",
-  "Giao hàng bằng xe tải"
+  "Gọi trước khi giao",
 ]
 
 const MAX_NOTE_LENGTH = 250;

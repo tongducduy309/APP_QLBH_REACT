@@ -6,6 +6,7 @@ import type {
   DisplayInventoryGroup,
   DisplayNonInventoryGroup,
 } from "../types/sales.types";
+import { getEffectiveQuantity } from "./sales-calculations";
 
 export const buildProductGroupKey = (item: CartLineItem) =>
   [
@@ -50,7 +51,10 @@ export const groupProductItems = (
       quantity: item.quantity,
       lineTotal: item.lineTotal,
     });
-    current.totalQuantity += item.quantity;
+    current.totalQuantity += getEffectiveQuantity({
+      quantity: item.quantity,
+      length: item.length,
+    });
     current.totalAmount += item.lineTotal;
   }
 

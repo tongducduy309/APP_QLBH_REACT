@@ -200,6 +200,27 @@ export function SettingsPage() {
               </div>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="flex items-center justify-between rounded-2xl border p-4">
+                <div>
+                  <p className="font-medium">Hiển thị chi phí</p>
+                  <p className="text-sm text-muted-foreground">
+                    Hiển thị chi phí trong bán hàng
+                  </p>
+                </div>
+                <Switch
+                  checked={form.showCostInSales}
+                  onChange={(checked) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      showCostInSales: checked,
+                    }))
+                  }
+                />
+              </div>
+
+            </div>
+
             <div className="flex flex-wrap gap-3">
               <Button type="primary" size="large" onClick={handleSave} loading={settingsStore.loading}>
                 <Save className="mr-2 h-4 w-4" />

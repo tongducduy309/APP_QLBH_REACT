@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getEffectiveQuantity } from "../utils/sales-calculations";
 import { LineKind, OrderedProduct } from "../types/sales.types";
 import { Select } from "antd";
+import { useSettingsStore } from "@/features/settings/store/settings-store";
 
 type ProductType = "A" | "B" | "C" | "D";
 type PriceMode = "A" | "B";
@@ -142,6 +143,7 @@ export function OrderProductDialog({
 
   const lengthRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const settingsStore = useSettingsStore();
 
 
   useEffect(() => {
@@ -826,7 +828,9 @@ export function OrderProductDialog({
               </div>
 
 
-              <div className="flex items-center justify-between gap-4">
+              {
+                settingsStore.settings.showCostInSales && (
+                  <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Giá vốn chênh lệch</span>
                 <span
                   className={
@@ -838,6 +842,8 @@ export function OrderProductDialog({
                   {formatCurrency(profitAmount)}
                 </span>
               </div>
+                )
+              }
 
               {/* <div className="flex items-center justify-between gap-4">
                 <span className="text-muted-foreground">Đơn giá thực tế khi lưu</span>
